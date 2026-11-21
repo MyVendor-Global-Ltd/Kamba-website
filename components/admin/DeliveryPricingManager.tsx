@@ -10,7 +10,10 @@ type Zone={id:string;name:string;slug:string;zone_type:string;is_active:boolean}
 type Rule={id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
 
 async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
- const response=await fetch(`/api/backend${path}`,{...init,credentials:"same-origin",cache:"no-store",headers:{"Content-Type":"application/json","Accept":"application/json",...(init.headers||{})}});
+ const headers=new Headers(init.headers);
+ headers.set("Content-Type","application/json");
+ headers.set("Accept","application/json");
+ const response=await fetch(`/api/backend${path}`,{...init,credentials:"same-origin",cache:"no-store",headers});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.success)throw new Error(data.message||data.error||"The request could not be completed.");
  return data.result as T;
@@ -50,8 +53,8 @@ export function DeliveryPricingManager(){
  const loadUniversities=useCallback(async()=>{
   const result=await apiRequest<{universities:University[]}>("/delivery/admin/universities");
   setUniversities(result.universities||[]);
-  if(!selectedUniversityId&&result.universities?.length)setSelectedUniversityId(result.universities[0].id);
- },[selectedUniversityId]);
+  if(result.universities?.length)setSelectedUniversityId(current=>current||result.universities[0].id);
+ },[]);
 
  const loadUniversityData=useCallback(async(id:string)=>{
   const university=universities.find(item=>item.id===id);
@@ -63,8 +66,10 @@ export function DeliveryPricingManager(){
   setZones(zoneResult.zones||[]);
   setRules(ruleResult.pricing_rules||[]);
   setSchedule({timezone:university.timezone,opening_time:shortTime(university.opening_time),closing_time:shortTime(university.closing_time)});
-  setStoreZoneId(current=>current||(zoneResult.zones?.[0]?.id||""));
-  setRuleForm(current=>({...current,origin_zone_id:current.origin_zone_id||(zoneResult.zones?.[0]?.id||""),destination_zone_id:current.destination_zone_id||(zoneResult.zones?.[1]?.id||zoneResult.zones?.[0]?.id||"")}));
+  const firstZoneId=zoneResult.zones?.[0]?.id||"";
+  const secondZoneId=zoneResult.zones?.[1]?.id||firstZoneId;
+  setStoreZoneId(firstZoneId);
+  setRuleForm(current=>({...current,origin_zone_id:firstZoneId,destination_zone_id:secondZoneId}));
  },[universities]);
 
  useEffect(()=>{
