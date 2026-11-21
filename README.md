@@ -60,3 +60,7 @@ All writes go through the same-origin `/api/backend/*` proxy and the existing Ex
 
 - `/delivery`: delivery-provider application, verification status, availability control, offer acceptance/decline, assignment status updates and earnings history. Existing accepted assignments remain visible when a provider stops accepting new offers.
 - `/admin/disputes`: administrator queue for open and resolved order disputes, including buyer/seller/order context and full-refund or full-release resolution.
+
+- `/services/[slug]`: service detail with booking or quotation requests.
+- `/service-requests` and `/service-requests/[requestId]`: buyer service request history, quote acceptance, payment initiation, completion confirmation and issue reporting.
+- `/vendor/services`: vendor service request queue, quotation submission and service scheduling/status updates.
