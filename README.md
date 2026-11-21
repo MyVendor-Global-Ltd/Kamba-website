@@ -44,3 +44,14 @@ npm run build
 - GitHub Actions validation workflow.
 
 Authentication, cart and checkout, Paystack, buyer order management, vendor dashboards, provider dashboards and admin operations remain integration milestones. The backend is authoritative for prices, fees, stock, permissions and payment state.
+
+## Buyer commerce routes
+
+- `/products` and `/products/[productId]`: public catalogue and product details.
+- `/cart`: authenticated buyer cart, quantity updates and removal.
+- `/checkout`: pickup or university/zone-based express delivery quote and order creation.
+- `/orders` and `/orders/[orderId]`: buyer order history, payment status, retry payment and unpaid-order cancellation.
+
+All writes go through the same-origin `/api/backend/*` proxy and the existing Express API. The server recalculates product prices, the platform fee, stock and delivery pricing; client totals are only previews.
+
+**Current backend constraints:** one store per cart/checkout, express delivery only in buyer checkout, and batch delivery is still disabled until shared multi-order dispatch is implemented. A real Paystack adapter and the approved delayed-payout arrangement are not yet configured, so payment initiation remains unavailable until that integration is completed.
