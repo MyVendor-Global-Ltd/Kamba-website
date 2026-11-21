@@ -69,6 +69,7 @@ export function DeliveryPricingManager(){
   setZones(zoneResult.zones||[]);
   setRules(ruleResult.pricing_rules||[]);
   setStores(storeResult.stores||[]);
+  setStoreId("");
   setSchedule({timezone:university.timezone,opening_time:shortTime(university.opening_time),closing_time:shortTime(university.closing_time)});
   const firstZoneId=zoneResult.zones?.[0]?.id||"";
   const secondZoneId=zoneResult.zones?.[1]?.id||firstZoneId;
@@ -150,6 +151,7 @@ export function DeliveryPricingManager(){
   if(!selectedUniversity) return;
   await runAction(async()=>{
    await apiRequest(`/delivery/admin/stores/${encodeURIComponent(storeId.trim())}/delivery-location`,{method:"PATCH",body:JSON.stringify({university_id:selectedUniversity.id,zone_id:storeZoneId})});
+   await loadUniversityData(selectedUniversity.id);
    setMessage("Store delivery coverage assigned.");
   });
  }
