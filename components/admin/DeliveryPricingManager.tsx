@@ -7,6 +7,7 @@ import styles from "./DeliveryPricingManager.module.css";
 
 type University={id:string;name:string;slug:string;city:string;state:string;timezone:string;opening_time:string;closing_time:string;is_active:boolean};
 type Zone={id:string;name:string;slug:string;zone_type:string;is_active:boolean};
+type Store={id:string;store_name:string;slug:string;delivery_zone_name:string|null};
 type Rule={id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
 
 async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
@@ -36,6 +37,7 @@ export function DeliveryPricingManager(){
  const [universities,setUniversities]=useState<University[]>([]);
  const [selectedUniversityId,setSelectedUniversityId]=useState("");
  const [zones,setZones]=useState<Zone[]>([]);
+ const [stores,setStores]=useState<Store[]>([]);
  const [rules,setRules]=useState<Rule[]>([]);
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
@@ -59,12 +61,14 @@ export function DeliveryPricingManager(){
  const loadUniversityData=useCallback(async(id:string)=>{
   const university=universities.find(item=>item.id===id);
   if(!university)return;
-  const [zoneResult,ruleResult]=await Promise.all([
+  const [zoneResult,ruleResult,storeResult]=await Promise.all([
    apiRequest<{zones:Zone[]}>(`/delivery/admin/universities/${encodeURIComponent(university.slug)}/zones`),
-   apiRequest<{pricing_rules:Rule[]}>(`/delivery/admin/pricing-rules?university_id=${encodeURIComponent(id)}`)
+   apiRequest<{pricing_rules:Rule[]}>(`/delivery/admin/pricing-rules?university_id=${encodeURIComponent(id)}`),
+   apiRequest<{stores:Store[]}>(`/delivery/admin/stores?university_id=${encodeURIComponent(id)}`)
   ]);
   setZones(zoneResult.zones||[]);
   setRules(ruleResult.pricing_rules||[]);
+  setStores(storeResult.stores||[]);
   setSchedule({timezone:university.timezone,opening_time:shortTime(university.opening_time),closing_time:shortTime(university.closing_time)});
   const firstZoneId=zoneResult.zones?.[0]?.id||"";
   const secondZoneId=zoneResult.zones?.[1]?.id||firstZoneId;
@@ -228,9 +232,9 @@ export function DeliveryPricingManager(){
 
      <form className={styles.card} onSubmit={assignStore}>
       <div className={styles.cardHead}><span>04 / VENDOR COVERAGE</span><strong>Assign a store</strong></div>
-      <p className={styles.cardText}>Every store needs an origin zone before Kamba can quote delivery from it.</p>
-      <div className={styles.two}><label className={styles.label}>Store ID<input required value={storeId} onChange={e=>setStoreId(e.target.value)} placeholder="Store UUID"/></label><label className={styles.label}>Pickup zone<select required value={storeZoneId} onChange={e=>setStoreZoneId(e.target.value)}><option value="">Choose zone</option>{zones.map(zone=><option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label></div>
-      <button className={styles.secondary} disabled={busy||!zones.length}>Assign store location</button>
+      <p className={styles.cardText}>Every store needs an origin zone before Kamba can quote delivery from it. Only active stores that are unassigned or already belong to this university are listed.</p>
+      <div className={styles.two}><label className={styles.label}>Store<select required value={storeId} onChange={e=>setStoreId(e.target.value)}><option value="">Choose a store</option>{stores.map(store=><option key={store.id} value={store.id}>{store.store_name} {store.delivery_zone_name?(`· ${store.delivery_zone_name}`):"· Unassigned"}</option>)}</select></label><label className={styles.label}>Pickup zone<select required value={storeZoneId} onChange={e=>setStoreZoneId(e.target.value)}><option value="">Choose zone</option>{zones.map(zone=><option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label></div>
+      <button className={styles.secondary} disabled={busy||!zones.length||!storeId}>Assign store location</button>
      </form>
 
      <form className={styles.card} onSubmit={submitRule}>
