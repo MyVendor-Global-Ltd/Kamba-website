@@ -57,3 +57,5 @@ All writes go through the same-origin `/api/backend/*` proxy and the existing Ex
 **Current backend constraints:** one store per cart/checkout, express delivery only in buyer checkout, and batch delivery is still disabled until shared multi-order dispatch is implemented. A real Paystack adapter and the approved delayed-payout arrangement are not yet configured, so payment initiation remains unavailable until that integration is completed.
 
 - `/vendor`: vendor product publishing, product availability/archive actions, order status updates and payment records. The current backend vendor-order API does not yet expose full buyer contact/line-item fulfilment data.
+
+- `/delivery`: delivery-provider application, verification status, availability control, offer acceptance/decline, assignment status updates and earnings history. Existing accepted assignments remain visible when a provider stops accepting new offers.
