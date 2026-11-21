@@ -7,7 +7,7 @@ import styles from "./DeliveryPricingManager.module.css";
 
 type University={id:string;name:string;slug:string;city:string;state:string;timezone:string;opening_time:string;closing_time:string;is_active:boolean};
 type Zone={id:string;name:string;slug:string;zone_type:string;is_active:boolean};
-type Store={id:string;store_name:string;slug:string;delivery_zone_name:string|null};
+type Store={id:string;store_name:string;slug:string;delivery_zone_id:string|null;delivery_zone_name:string|null};
 type Rule={id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
 
 async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
@@ -137,7 +137,7 @@ export function DeliveryPricingManager(){
   event.preventDefault();
   if(!selectedUniversity)return;
   await runAction(async()=>{
-   const result=await apiRequest<{zone:Zone}>(`/delivery/admin/universities/${selectedUniversity.id}/zones`,{method:"POST",body:JSON.stringify(zoneForm)});
+   const result=await apiRequest<{zone:Zone}>(`/delivery/admin/universities/${selectedUniversity.id}/zones`,{method:"POST",body:JSON.stringify({...zoneForm,description:zoneForm.description.trim()||undefined})});
    setZones(current=>[...current,result.zone]);
    setStoreZoneId(result.zone.id);
    setRuleForm(current=>({...current,origin_zone_id:current.origin_zone_id||result.zone.id,destination_zone_id:current.destination_zone_id||result.zone.id}));
@@ -235,7 +235,7 @@ export function DeliveryPricingManager(){
      <form className={styles.card} onSubmit={assignStore}>
       <div className={styles.cardHead}><span>04 / VENDOR COVERAGE</span><strong>Assign a store</strong></div>
       <p className={styles.cardText}>Every store needs an origin zone before Kamba can quote delivery from it. Only active stores that are unassigned or already belong to this university are listed.</p>
-      <div className={styles.two}><label className={styles.label}>Store<select required value={storeId} onChange={e=>setStoreId(e.target.value)}><option value="">Choose a store</option>{stores.map(store=><option key={store.id} value={store.id}>{store.store_name} {store.delivery_zone_name?(`· ${store.delivery_zone_name}`):"· Unassigned"}</option>)}</select></label><label className={styles.label}>Pickup zone<select required value={storeZoneId} onChange={e=>setStoreZoneId(e.target.value)}><option value="">Choose zone</option>{zones.map(zone=><option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label></div>
+      <div className={styles.two}><label className={styles.label}>Store<select required value={storeId} onChange={e=>{const id=e.target.value;setStoreId(id);const store=stores.find(item=>item.id===id);if(store?.delivery_zone_id)setStoreZoneId(store.delivery_zone_id);}}><option value="">Choose a store</option>{stores.map(store=><option key={store.id} value={store.id}>{store.store_name} {store.delivery_zone_name?(`· ${store.delivery_zone_name}`):"· Unassigned"}</option>)}</select></label><label className={styles.label}>Pickup zone<select required value={storeZoneId} onChange={e=>setStoreZoneId(e.target.value)}><option value="">Choose zone</option>{zones.map(zone=><option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label></div>
       <button className={styles.secondary} disabled={busy||!zones.length||!storeId}>Assign store location</button>
      </form>
 
