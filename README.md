@@ -55,3 +55,5 @@ Authentication, cart and checkout, Paystack, buyer order management, vendor dash
 All writes go through the same-origin `/api/backend/*` proxy and the existing Express API. The server recalculates product prices, the platform fee, stock and delivery pricing; client totals are only previews.
 
 **Current backend constraints:** one store per cart/checkout, express delivery only in buyer checkout, and batch delivery is still disabled until shared multi-order dispatch is implemented. A real Paystack adapter and the approved delayed-payout arrangement are not yet configured, so payment initiation remains unavailable until that integration is completed.
+
+- `/vendor`: vendor product publishing, product availability/archive actions, order status updates and payment records. The current backend vendor-order API does not yet expose full buyer contact/line-item fulfilment data.
