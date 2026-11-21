@@ -8,7 +8,7 @@ import styles from "./DeliveryPricingManager.module.css";
 type University={id:string;name:string;slug:string;city:string;state:string;timezone:string;opening_time:string;closing_time:string;is_active:boolean};
 type Zone={id:string;name:string;slug:string;zone_type:string;is_active:boolean};
 type Store={id:string;store_name:string;slug:string;delivery_zone_id:string|null;delivery_zone_name:string|null};
-type Rule={id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
+type Rule={id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;additional_dropoff_provider_payout_kobo:number;additional_dropoff_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
 
 async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
  const headers=new Headers(init.headers);
@@ -253,12 +253,12 @@ export function DeliveryPricingManager(){
        <label className={styles.label}>Buyer / extra drop-off (₦)<input inputMode="decimal" value={ruleForm.additional_dropoff_buyer_charge} onChange={e=>setRuleForm({...ruleForm,additional_dropoff_buyer_charge:e.target.value})} placeholder="0"/></label>
        <label className={styles.label}>Kamba delivery margin (₦)<input inputMode="decimal" value={ruleForm.kamba_margin} onChange={e=>setRuleForm({...ruleForm,kamba_margin:e.target.value})} placeholder="200"/></label>
       </div>
-      <button className={styles.primary} disabled={busy||zones.length<2}>Save route pricing <span>→</span></button>
+      <button className={styles.primary} disabled={busy||zones.length<1}>Save route pricing <span>→</span></button>
      </form>
 
      <div className={styles.card}>
       <div className={styles.cardHead}><span>06 / ACTIVE CONFIGURATION</span><strong>Configured routes</strong></div>
-      {rules.length?<div className={styles.ruleList}>{rules.map(rule=><div className={styles.rule} key={rule.id}><div><strong>{rule.origin_zone_name} <span>→</span> {rule.destination_zone_name}</strong><small>{rule.delivery_mode} · {rule.is_active?"Active":"Disabled"}</small></div><div className={styles.rulePrices}><span>Provider {formatKobo(rule.base_provider_payout_kobo)}</span><span>Buyer {formatKobo(rule.base_buyer_charge_kobo+rule.kamba_margin_kobo)}</span></div></div>)}</div>:<p className={styles.empty}>No route pricing has been configured for this university.</p>}
+      {rules.length?<div className={styles.ruleList}>{rules.map(rule=><div className={styles.rule} key={rule.id}><div><strong>{rule.origin_zone_name} <span>→</span> {rule.destination_zone_name}</strong><small>{rule.delivery_mode} · {rule.is_active?"Active":"Disabled"}</small></div><div className={styles.rulePrices}><span>Provider base {formatKobo(rule.base_provider_payout_kobo)}</span><span>Buyer base + margin {formatKobo(rule.base_buyer_charge_kobo+rule.kamba_margin_kobo)}</span><span>Extra pickup · provider {formatKobo(rule.additional_pickup_provider_payout_kobo)} / buyer {formatKobo(rule.additional_pickup_buyer_charge_kobo)}</span><span>Extra drop-off · provider {formatKobo(rule.additional_dropoff_provider_payout_kobo)} / buyer {formatKobo(rule.additional_dropoff_buyer_charge_kobo)}</span></div></div>)}</div>:<p className={styles.empty}>No route pricing has been configured for this university.</p>}
      </div>
     </>:<div className={styles.card}><p className={styles.empty}>Create or select a university to configure its delivery zones and prices.</p></div>}
    </div>
