@@ -17,7 +17,7 @@ async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
  const response=await fetch(`/api/backend${path}`,{...init,credentials:"same-origin",cache:"no-store",headers});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.success)throw new Error(data.message||data.error||"The request could not be completed.");
- return data.result as T;
+ return (data.result ?? data) as T;
 }
 function nairaToKobo(value:string){
  const normalized=value.trim().replace(/,/g,"");
