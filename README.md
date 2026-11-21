@@ -38,7 +38,8 @@ npm run build
 - Shop directory and shop detail page.
 - Product detail page.
 - Service directory.
-- Account entry placeholder.
+- Cookie-based email/password registration and login through a same-origin backend proxy.
+- Username availability checks, referral code support, account dashboard and logout.
 - Responsive layout and Kamba visual language.
 - GitHub Actions validation workflow.
 
