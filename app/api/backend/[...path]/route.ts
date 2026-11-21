@@ -48,7 +48,7 @@ async function proxy(request:NextRequest,context:{params:Promise<{path:string[]}
       responseHeaders.append("set-cookie",value.replace(/;\s*Domain=[^;]*/i,""));
     }
 
-    const responseBody=method==="HEAD"?null:await upstream.arrayBuffer();
+    const responseBody=method==="HEAD"||upstream.status===204||upstream.status===304?null:await upstream.arrayBuffer();
     return new Response(responseBody,{status:upstream.status,headers:responseHeaders});
   }catch{
     return Response.json({success:false,message:"Kamba is temporarily unavailable. Please try again."},{status:503});
