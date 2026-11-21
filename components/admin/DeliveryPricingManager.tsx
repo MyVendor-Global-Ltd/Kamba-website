@@ -8,7 +8,7 @@ import styles from "./DeliveryPricingManager.module.css";
 type University={id:string;name:string;slug:string;city:string;state:string;timezone:string;opening_time:string;closing_time:string;is_active:boolean};
 type Zone={id:string;name:string;slug:string;zone_type:string;is_active:boolean};
 type Store={id:string;store_name:string;slug:string;delivery_zone_id:string|null;delivery_zone_name:string|null};
-type Rule={id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;additional_dropoff_provider_payout_kobo:number;additional_dropoff_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
+type Rule={id:string;origin_zone_id:string;destination_zone_id:string;origin_zone_name:string;destination_zone_name:string;delivery_mode:string;base_provider_payout_kobo:number;base_buyer_charge_kobo:number;additional_pickup_provider_payout_kobo:number;additional_pickup_buyer_charge_kobo:number;additional_dropoff_provider_payout_kobo:number;additional_dropoff_buyer_charge_kobo:number;kamba_margin_kobo:number;is_active:boolean};
 
 async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
  const headers=new Headers(init.headers);
@@ -39,6 +39,7 @@ export function DeliveryPricingManager(){
  const [zones,setZones]=useState<Zone[]>([]);
  const [stores,setStores]=useState<Store[]>([]);
  const [rules,setRules]=useState<Rule[]>([]);
+ const [editingRuleId,setEditingRuleId]=useState<string|null>(null);
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
  const [busy,setBusy]=useState(false);
@@ -160,11 +161,7 @@ export function DeliveryPricingManager(){
   event.preventDefault();
   if(!selectedUniversity)return;
   await runAction(async()=>{
-   const body={
-    university_id:selectedUniversity.id,
-    origin_zone_id:ruleForm.origin_zone_id,
-    destination_zone_id:ruleForm.destination_zone_id,
-    delivery_mode:ruleForm.delivery_mode,
+   const amounts={
     base_provider_payout_kobo:nairaToKobo(ruleForm.base_provider_payout),
     base_buyer_charge_kobo:nairaToKobo(ruleForm.base_buyer_charge),
     additional_pickup_provider_payout_kobo:nairaToKobo(ruleForm.additional_pickup_provider_payout),
@@ -172,12 +169,49 @@ export function DeliveryPricingManager(){
     additional_dropoff_provider_payout_kobo:nairaToKobo(ruleForm.additional_dropoff_provider_payout),
     additional_dropoff_buyer_charge_kobo:nairaToKobo(ruleForm.additional_dropoff_buyer_charge),
     kamba_margin_kobo:nairaToKobo(ruleForm.kamba_margin),
-    currency:"NGN",
    };
-   await apiRequest("/delivery/admin/pricing-rules",{method:"POST",body:JSON.stringify(body)});
+   if(editingRuleId){
+    await apiRequest(`/delivery/admin/pricing-rules/${editingRuleId}`,{method:"PATCH",body:JSON.stringify(amounts)});
+   }else{
+    await apiRequest("/delivery/admin/pricing-rules",{method:"POST",body:JSON.stringify({
+     university_id:selectedUniversity.id,
+     origin_zone_id:ruleForm.origin_zone_id,
+     destination_zone_id:ruleForm.destination_zone_id,
+     delivery_mode:ruleForm.delivery_mode,
+     currency:"NGN",
+     ...amounts,
+    })});
+   }
    const refreshed=await apiRequest<{pricing_rules:Rule[]}>(`/delivery/admin/pricing-rules?university_id=${selectedUniversity.id}`);
    setRules(refreshed.pricing_rules||[]);
-   setMessage("Route pricing rule saved. New delivery quotes will use this configuration.");
+   setEditingRuleId(null);
+   setMessage(editingRuleId?"Route pricing updated. New quotes will use the updated amounts.":"Route pricing rule saved. New delivery quotes will use this configuration.");
+  });
+ }
+
+ function editRule(rule:Rule){
+  setEditingRuleId(rule.id);
+  setRuleForm({
+   origin_zone_id:rule.origin_zone_id,
+   destination_zone_id:rule.destination_zone_id,
+   delivery_mode:rule.delivery_mode,
+   base_provider_payout:(rule.base_provider_payout_kobo/100).toFixed(2),
+   base_buyer_charge:(rule.base_buyer_charge_kobo/100).toFixed(2),
+   additional_pickup_provider_payout:(rule.additional_pickup_provider_payout_kobo/100).toFixed(2),
+   additional_pickup_buyer_charge:(rule.additional_pickup_buyer_charge_kobo/100).toFixed(2),
+   additional_dropoff_provider_payout:(rule.additional_dropoff_provider_payout_kobo/100).toFixed(2),
+   additional_dropoff_buyer_charge:(rule.additional_dropoff_buyer_charge_kobo/100).toFixed(2),
+   kamba_margin:(rule.kamba_margin_kobo/100).toFixed(2),
+  });
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+ }
+
+ async function toggleRule(rule:Rule){
+  await runAction(async()=>{
+   await apiRequest(`/delivery/admin/pricing-rules/${rule.id}`,{method:"PATCH",body:JSON.stringify({is_active:!rule.is_active})});
+   const refreshed=await apiRequest<{pricing_rules:Rule[]}>(`/delivery/admin/pricing-rules?university_id=${selectedUniversityId}`);
+   setRules(refreshed.pricing_rules||[]);
+   setMessage(rule.is_active?"Route pricing disabled.":"Route pricing enabled.");
   });
  }
 
@@ -240,7 +274,7 @@ export function DeliveryPricingManager(){
      </form>
 
      <form className={styles.card} onSubmit={submitRule}>
-      <div className={styles.cardHead}><span>05 / ROUTE ECONOMICS</span><strong>Configure a delivery price</strong></div>
+      <div className={styles.cardHead}><span>05 / ROUTE ECONOMICS</span><strong>{editingRuleId?"Edit route pricing":"Configure a delivery price"}</strong></div>
       <p className={styles.cardText}>Set what the provider earns separately from what the buyer pays. The Kamba delivery margin is recorded separately. The first pickup and first drop-off are included in the base price.</p>
       <div className={styles.two}><label className={styles.label}>Pickup zone<select required value={ruleForm.origin_zone_id} onChange={e=>setRuleForm({...ruleForm,origin_zone_id:e.target.value})}><option value="">Select origin</option>{zones.map(zone=><option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label><label className={styles.label}>Destination zone<select required value={ruleForm.destination_zone_id} onChange={e=>setRuleForm({...ruleForm,destination_zone_id:e.target.value})}><option value="">Select destination</option>{zones.map(zone=><option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label></div>
       <label className={styles.label}>Delivery mode<select value={ruleForm.delivery_mode} onChange={e=>setRuleForm({...ruleForm,delivery_mode:e.target.value})}><option value="express">Express</option><option value="batch">Batch (configuration only — dispatch not enabled)</option></select></label>
@@ -253,12 +287,12 @@ export function DeliveryPricingManager(){
        <label className={styles.label}>Buyer / extra drop-off (₦)<input inputMode="decimal" value={ruleForm.additional_dropoff_buyer_charge} onChange={e=>setRuleForm({...ruleForm,additional_dropoff_buyer_charge:e.target.value})} placeholder="0"/></label>
        <label className={styles.label}>Kamba delivery margin (₦)<input inputMode="decimal" value={ruleForm.kamba_margin} onChange={e=>setRuleForm({...ruleForm,kamba_margin:e.target.value})} placeholder="200"/></label>
       </div>
-      <button className={styles.primary} disabled={busy||zones.length<1}>Save route pricing <span>→</span></button>
+      <div className={styles.formActions}><button className={styles.primary} disabled={busy||zones.length<1}>{editingRuleId?"Save pricing changes":"Save route pricing"} <span>→</span></button>{editingRuleId&&<button type="button" className={styles.cancel} onClick={()=>setEditingRuleId(null)}>Cancel edit</button>}</div>
      </form>
 
      <div className={styles.card}>
       <div className={styles.cardHead}><span>06 / ACTIVE CONFIGURATION</span><strong>Configured routes</strong></div>
-      {rules.length?<div className={styles.ruleList}>{rules.map(rule=><div className={styles.rule} key={rule.id}><div><strong>{rule.origin_zone_name} <span>→</span> {rule.destination_zone_name}</strong><small>{rule.delivery_mode} · {rule.is_active?"Active":"Disabled"}</small></div><div className={styles.rulePrices}><span>Provider base {formatKobo(rule.base_provider_payout_kobo)}</span><span>Buyer base + margin {formatKobo(rule.base_buyer_charge_kobo+rule.kamba_margin_kobo)}</span><span>Extra pickup · provider {formatKobo(rule.additional_pickup_provider_payout_kobo)} / buyer {formatKobo(rule.additional_pickup_buyer_charge_kobo)}</span><span>Extra drop-off · provider {formatKobo(rule.additional_dropoff_provider_payout_kobo)} / buyer {formatKobo(rule.additional_dropoff_buyer_charge_kobo)}</span></div></div>)}</div>:<p className={styles.empty}>No route pricing has been configured for this university.</p>}
+      {rules.length?<div className={styles.ruleList}>{rules.map(rule=><div className={styles.rule} key={rule.id}><div><strong>{rule.origin_zone_name} <span>→</span> {rule.destination_zone_name}</strong><small>{rule.delivery_mode} · {rule.is_active?"Active":"Disabled"}</small></div><div className={styles.rulePrices}><span>Provider base {formatKobo(rule.base_provider_payout_kobo)}</span><span>Buyer base + margin {formatKobo(rule.base_buyer_charge_kobo+rule.kamba_margin_kobo)}</span><span>Extra pickup · provider {formatKobo(rule.additional_pickup_provider_payout_kobo)} / buyer {formatKobo(rule.additional_pickup_buyer_charge_kobo)}</span><span>Extra drop-off · provider {formatKobo(rule.additional_dropoff_provider_payout_kobo)} / buyer {formatKobo(rule.additional_dropoff_buyer_charge_kobo)}</span></div><div className={styles.ruleActions}><button type="button" className={styles.miniButton} onClick={()=>editRule(rule)}>Edit</button><button type="button" className={styles.miniButton} onClick={()=>toggleRule(rule)} disabled={busy}>{rule.is_active?"Disable":"Enable"}</button></div></div>)}</div>:<p className={styles.empty}>No route pricing has been configured for this university.</p>}
      </div>
     </>:<div className={styles.card}><p className={styles.empty}>Create or select a university to configure its delivery zones and prices.</p></div>}
    </div>
