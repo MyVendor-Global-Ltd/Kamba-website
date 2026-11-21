@@ -1,4 +1,4 @@
 import type {Metadata} from "next";
 import Link from "next/link";
 export const metadata:Metadata={title:"Account"};
-export default function AccountPage(){return <section className="catalog-page"><div className="account-panel"><p className="eyebrow">WELCOME TO KAMBA</p><h1>Your community<br/><em>is waiting.</em></h1><p>Account sign-in and registration will connect to Kamba&apos;s existing authentication API in the authentication integration milestone.</p><Link className="button" href="/">Back to marketplace →</Link></div></section>;}
+export default function AccountPage(){return <section className="catalog-page"><div className="account-panel"><p className="eyebrow">YOUR KAMBA ACCOUNT</p><h1>Your community<br/><em>is waiting.</em></h1><p>Sign in to continue or create an account to start exploring your local marketplace.</p><div className="account-actions"><Link className="button" href="/account/register">Create account →</Link><Link className="account-secondary" href="/account/login">I already have an account</Link></div></div></section>;}
