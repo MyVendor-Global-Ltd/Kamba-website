@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
 import styles from "./Commerce.module.css";
 import {naira} from "@/lib/api";
@@ -13,8 +13,8 @@ export function OrdersClient(){
 }
 export function OrderDetailClient({orderId}:{orderId:string}){
  const [order,setOrder]=useState<any>(null);const [payment,setPayment]=useState<any>(null);const [loading,setLoading]=useState(true);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [message,setMessage]=useState("");
- async function load(){setLoading(true);setError("");try{const results=await Promise.all([request("/commerce/orders/"+encodeURIComponent(orderId)),request("/commerce/orders/"+encodeURIComponent(orderId)+"/payment")]);setOrder(results[0].order??results[0]);setPayment(results[1]);}catch(e){setError(e instanceof Error?e.message:"Could not load this order.");}finally{setLoading(false);}}
- useEffect(()=>{load();},[orderId]);
+ const load=useCallback(async()=>{setLoading(true);setError("");try{const results=await Promise.all([request("/commerce/orders/"+encodeURIComponent(orderId)),request("/commerce/orders/"+encodeURIComponent(orderId)+"/payment")]);setOrder(results[0].order??results[0]);setPayment(results[1]);}catch(e){setError(e instanceof Error?e.message:"Could not load this order.");}finally{setLoading(false);}},[orderId]);
+ useEffect(()=>{load();},[load]);
  async function pay(){setBusy(true);setError("");try{const d=await request("/commerce/orders/"+encodeURIComponent(orderId)+"/payment",{method:"POST"});if(!d.checkout_url||!d.checkout_url.startsWith("https://"))throw new Error("Payment provider returned an invalid checkout URL.");window.location.assign(d.checkout_url);}catch(e){setError(e instanceof Error?e.message:"Could not start payment.");}finally{setBusy(false);}}
  async function cancel(){setBusy(true);setError("");try{await request("/commerce/orders/"+encodeURIComponent(orderId)+"/cancel",{method:"POST"});setMessage("Order cancelled.");await load();}catch(e){setError(e instanceof Error?e.message:"Could not cancel order.");}finally{setBusy(false);}}
  if(loading)return <section className={styles.page}><p>Loading order…</p></section>;
