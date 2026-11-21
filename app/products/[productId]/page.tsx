@@ -1,0 +1,7 @@
+import type {Metadata} from "next";
+import Link from "next/link";
+import {notFound} from "next/navigation";
+import {getProduct,naira} from "@/lib/api";
+export const dynamic="force-dynamic";
+export async function generateMetadata({params}:{params:Promise<{productId:string}>}):Promise<Metadata>{const {productId}=await params;try{const product=await getProduct(productId);return {title:product?.name||"Product"};}catch{return {title:"Product"};}}
+export default async function ProductDetailPage({params}:{params:Promise<{productId:string}>}){const {productId}=await params;let product=null;try{product=await getProduct(productId);}catch{}if(!product)notFound();return <section className="catalog-page detail-page"><Link className="back-link" href="/products">← Back to products</Link><div className="detail-layout"><div className="detail-art"><span>k.</span></div><div className="detail-copy"><p className="eyebrow">{product.category||"KAMBA MARKETPLACE"}</p><h1>{product.name}</h1><strong className="detail-price">{naira(product.price)}</strong><p>{product.description||"Product details will be provided by the vendor."}</p><p className="detail-store">Sold by <Link href={product.store_slug?`/shops/${encodeURIComponent(product.store_slug)}`:"/shops"}>{product.store_name||"Kamba vendor"}</Link></p><div className="notice">Checkout and payment are handled securely through Kamba. The final price and availability are confirmed by the backend.</div><Link className="button" href="/account">Sign in to continue →</Link></div></div></section>;}
