@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'next/navigation'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
 import { Store, Product } from '@/types'
 
@@ -17,19 +17,27 @@ export default function StoreDetailPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let active = true
+
     Promise.all([
-      apiJson<{ store: Store }>(`/vendors/stores/${slug}`),
-      apiJson<{ products: Product[] }>(`/commerce/stores/${slug}/products`),
+      apiJson<{ store: Store }>(`/vendors/stores/${encodeURIComponent(slug)}`),
+      apiJson<{ products: Product[] }>(`/commerce/stores/${encodeURIComponent(slug)}/products`),
     ])
       .then(([storeRes, productsRes]) => {
+        if (!active) return
         setStore(storeRes.store)
         setProducts(productsRes.products || [])
         setLoading(false)
       })
       .catch((err) => {
+        if (!active) return
         setError(err.message || 'Failed to load store')
         setLoading(false)
       })
+
+    return () => {
+      active = false
+    }
   }, [slug])
 
   if (loading) {
@@ -42,8 +50,9 @@ export default function StoreDetailPage() {
 
   if (!store) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-muted-foreground">Store not found.</p>
+      <div className="flex h-[60vh] flex-col items-center justify-center gap-3">
+        <p className="text-muted-foreground">{error || 'Store not found.'}</p>
+        <Link href="/marketplace/stores" className="text-primary underline">Browse stores</Link>
       </div>
     )
   }
@@ -61,7 +70,7 @@ export default function StoreDetailPage() {
       </div>
 
       {error && (
-        <div className="p-4 rounded bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+        <div role="alert" className="p-4 rounded bg-destructive/10 border border-destructive/20 text-destructive text-sm">
           {error}
         </div>
       )}
@@ -72,13 +81,13 @@ export default function StoreDetailPage() {
           <Card key={product.id}>
             <CardHeader>
               <CardTitle>{product.name}</CardTitle>
-            </CardContent>
+            </CardHeader>
             <CardContent className="space-y-4">
               {product.description && <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>}
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold">₦{(product.price / 100).toFixed(2)}</span>
-                <Link href={`/marketplace/products/${product.id}`}>
-                  <button className="text-sm font-medium text-primary hover:underline">View</button>
+                <Link className="text-sm font-medium text-primary hover:underline" href={`/marketplace/products/${product.id}`}>
+                  View product
                 </Link>
               </div>
             </CardContent>
