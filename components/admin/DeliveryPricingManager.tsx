@@ -215,7 +215,7 @@ export function DeliveryPricingManager(){
     {selectedUniversity?<>
      <form className={styles.card} onSubmit={submitSchedule}>
       <div className={styles.cardHead}><span>02 / OPERATIONS</span><strong>Operating window</strong></div>
-      <p className={styles.cardText}>New delivery orders and dispatch offers are accepted only inside this university's operating window. Already accepted jobs can continue after closing.</p>
+      <p className={styles.cardText}>New delivery orders and dispatch offers are accepted only inside this university&apos;s operating window. Already accepted jobs can continue after closing.</p>
       <div className={styles.scheduleGrid}>
        <label className={styles.label}>Time zone<input required value={schedule.timezone} onChange={e=>setSchedule({...schedule,timezone:e.target.value})}/></label>
        <label className={styles.label}>Opening time<input type="time" required value={schedule.opening_time} onChange={e=>setSchedule({...schedule,opening_time:e.target.value})}/></label>
