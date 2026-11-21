@@ -59,3 +59,4 @@ All writes go through the same-origin `/api/backend/*` proxy and the existing Ex
 - `/vendor`: vendor product publishing, product availability/archive actions, order status updates and payment records. The current backend vendor-order API does not yet expose full buyer contact/line-item fulfilment data.
 
 - `/delivery`: delivery-provider application, verification status, availability control, offer acceptance/decline, assignment status updates and earnings history. Existing accepted assignments remain visible when a provider stops accepting new offers.
+- `/admin/disputes`: administrator queue for open and resolved order disputes, including buyer/seller/order context and full-refund or full-release resolution.
