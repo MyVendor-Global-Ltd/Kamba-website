@@ -1,0 +1,134 @@
+'use client'
+
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+interface OnboardingFormProps {
+  onSubmit: (data: {
+    business_name: string
+    business_type: 'products' | 'services' | 'both'
+    phone: string
+    email?: string
+    address?: string
+    city?: string
+    state?: string
+  }) => Promise<void>
+  loading: boolean
+}
+
+export function OnboardingForm({ onSubmit, loading }: OnboardingFormProps) {
+  const [businessName, setBusinessName] = useState('')
+  const [businessType, setBusinessType] = useState<'products' | 'services' | 'both'>('products')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    try {
+      await onSubmit({
+        business_name: businessName,
+        business_type: businessType,
+        phone,
+        email,
+        address,
+        city,
+        state,
+      })
+    } catch (err: any) {
+      setError(err.message || 'Onboarding failed')
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vendor onboarding</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && (
+          <div className="p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Business name</label>
+            <Input
+              placeholder="My Store"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Business type</label>
+            <select
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value as any)}
+              className="flex h-10 w-full rounded-medium border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="products">Products only</option>
+              <option value="services">Services only</option>
+              <option value="both">Both products and services</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Phone number</label>
+            <Input
+              type="tel"
+              placeholder="+234 801 234 5678"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Email address</label>
+            <Input
+              type="email"
+              placeholder="business@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Address</label>
+            <Input
+              placeholder="123 Street, Lagos"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">City</label>
+              <Input
+                placeholder="Lagos"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">State</label>
+              <Input
+                placeholder="Lagos"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Onboarding...' : 'Complete onboarding'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}

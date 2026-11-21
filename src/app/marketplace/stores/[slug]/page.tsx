@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'next/navigation'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -72,7 +73,7 @@ export default function StoreDetailPage() {
           <Card key={product.id}>
             <CardHeader>
               <CardTitle>{product.name}</CardTitle>
-            </CardContent>
+            </CardHeader>
             <CardContent className="space-y-4">
               {product.description && <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>}
               <div className="flex items-center justify-between">

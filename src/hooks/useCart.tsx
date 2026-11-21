@@ -61,8 +61,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart(null)
   }, [])
 
+  const ctxValue = { cart, addItem, updateItem, removeItem, clear }
+
   return (
-    <CartContext.Provider value={{ cart, addItem, updateItem, removeItem, clear }}>
+    <CartContext.Provider value={ctxValue}>
       {children}
     </CartContext.Provider>
   )
