@@ -1,0 +1,6 @@
+import type {Metadata} from "next";
+import Link from "next/link";
+import {getStores} from "@/lib/api";
+export const metadata:Metadata={title:"Shops"};
+export const dynamic="force-dynamic";
+export default async function ShopsPage(){let stores:Awaited<ReturnType<typeof getStores>>=[];let unavailable=false;try{stores=await getStores();}catch{unavailable=true;}return <section className="catalog-page"><div className="catalog-heading"><p className="eyebrow">MEET YOUR LOCAL BUSINESSES</p><h1>Good people.<br/><em>Good places.</em></h1><p>Explore shops and vendors that make your community what it is.</p></div>{unavailable?<div className="empty"><h3>Shop directory unavailable</h3><p>We couldn&apos;t load shops right now. Please try again shortly.</p></div>:stores.length?<div className="store-grid">{stores.map(store=><Link className="store-card" key={store.id} href={`/shops/${encodeURIComponent(store.slug)}`}><div className="store-art"><span>⌂</span><small>{store.category||"LOCAL SHOP"}</small></div><div className="card-copy"><h3>{store.store_name}</h3><p>{store.location_text||"Campus community"}</p><strong>Visit shop →</strong></div></Link>)}</div>:<div className="empty"><h3>Your neighbourhood is joining Kamba.</h3><p>There are no public shops to display yet. Check back soon.</p></div>}</section>;}
