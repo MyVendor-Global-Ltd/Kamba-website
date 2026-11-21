@@ -46,3 +46,6 @@
 .dashboard-meta{display:flex;justify-content:space-between;align-items:center;margin-top:25px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px}
 .dashboard-meta span{color:var(--soft);text-transform:capitalize}
 .dashboard-meta strong{color:var(--green);text-transform:capitalize}
+
+.service-card{display:block;color:inherit;text-decoration:none;transition:transform .18s ease,border-color .18s ease}
+.service-card:hover{transform:translateY(-3px);border-color:var(--green)}
