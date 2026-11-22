@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { useCartContext } from '@/context/CartContext'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +11,7 @@ import { cn } from '@/lib/utils'
 
 export function Header() {
   const { state, logout } = useAuth()
+  const { cart } = useCartContext()
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -89,9 +91,9 @@ export function Header() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a2 2 0 00-2-2H6a2 2 0 00-2 2v18a2 2 0 002 2h12a2 2 0 002-2v-4" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11l2 2m0 0l2-2m-2 2l-2-2" />
               </svg>
-              {state.cartCount > 0 && (
+              {cart.itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-coral text-ink text-[10px] font-bold">
-                  {state.cartCount > 99 ? '99+' : state.cartCount}
+                                {cart.itemCount > 99 ? '99+' : cart.itemCount}
                 </span>
               )}
             </Link>

@@ -45,7 +45,10 @@ export default function ProductDetailPage() {
       addItem({
         product_id: product.id,
         quantity,
-        product,
+          name: product.name,
+          price_kobo: product.price,
+          store_id: product.store_id || '',
+          image_url: product.image_url,
       })
       addToast({
         type: 'success',

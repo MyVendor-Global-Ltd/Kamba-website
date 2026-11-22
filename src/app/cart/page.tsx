@@ -1,13 +1,53 @@
 'use client'
 
 import Link from 'next/link'
-import { useCart } from '@/hooks/useCart'
+import { useCartContext } from '@/context/CartContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatKobo } from '@/lib/formatting'
 
 export default function CartPage() {
-  const { cart, updateItem, removeItem, clear } = useCart()
+  const { cart, updateItem, removeItem, clear, isLoading } = useCartContext()
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
+        <div className="space-y-4 animate-pulse">
+          <div className="h-10 w-1/3 bg-ink-raised/50 rounded-lg" />
+          <div className="h-6 w-1/2 bg-ink-raised/50 rounded-lg" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="md:col-span-2 space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} variant="elevated">
+                <CardContent className="p-4">
+                  <div className="flex gap-4">
+                    <div className="h-20 w-20 bg-ink-raised/50 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 w-1/4 bg-ink-raised/50 rounded" />
+                      <div className="h-4 w-1/2 bg-ink-raised/50 rounded" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card variant="elevated">
+            <CardContent className="p-4 space-y-4">
+              <div className="h-6 w-1/3 bg-ink-raised/50 rounded" />
+              <div className="space-y-2">
+                <div className="h-4 w-full bg-ink-raised/50 rounded" />
+                <div className="h-4 w-full bg-ink-raised/50 rounded" />
+              </div>
+              <div className="h-4 w-full bg-ink-raised/50 rounded" />
+              <div className="h-4 w-full bg-ink-raised/50 rounded" />
+              <div className="h-10 w-full bg-ink-raised/50 rounded" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   if (!cart || cart.items.length === 0) {
     return (

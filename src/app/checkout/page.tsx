@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,11 +10,11 @@ import { Badge } from "@/components/ui/badge"
 import { formatKobo } from "@/lib/formatting"
 import { CartItem } from "@/types/cart"
 import { apiJson } from "@/lib/api"
+import { useCartContext } from "@/context/CartContext"
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const { cart, isLoading, refresh } = useCartContext()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -26,24 +26,10 @@ export default function CheckoutPage() {
     paymentMethod: "card",
   })
 
-  useEffect(() => {
-    async function fetchCart() {
-      try {
-        const data = await apiJson<{ items: CartItem[] }>("/api/cart")
-        setCartItems(data.items || [])
-      } catch (err) {
-        console.error("Failed to fetch cart:", err)
-        setError("Failed to load cart")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchCart()
-  }, [])
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price_kobo * item.quantity, 0)
-  const shipping = subtotal > 0 ? 150000 : 0 // ₦1,500 shipping
-  const total = subtotal + shipping
+  const cartItems = cart.items
+  const subtotal = cart.subtotal
+  const shipping = cart.delivery_fee
+  const total = cart.total
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,6 +43,10 @@ export default function CheckoutPage() {
           items: cartItems.map((item) => ({
             product_id: item.product_id,
             quantity: item.quantity,
+              price_kobo: item.price_kobo,
+              name: item.name,
+              image_url: item.image_url,
+              store_id: item.store_id,
           })),
           shipping_address: {
             address: formData.shippingAddress,
@@ -76,7 +66,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (loading) {
+    if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
         <div className="space-y-4 animate-pulse">
@@ -116,7 +106,7 @@ export default function CheckoutPage() {
     )
   }
 
-  if (cartItems.length === 0) {
+  if (cartItems.length === 0 || isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 lg:py-24 animate-fade-in">
         <Card variant="outlined" className="max-w-md mx-auto text-center p-8">
