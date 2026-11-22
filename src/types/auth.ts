@@ -14,6 +14,7 @@ export interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+  cartCount: number
 }
 
 export interface LoginCredentials {

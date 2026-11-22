@@ -17,6 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    cartCount: 0,
   })
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: data.user || data,
           isAuthenticated: true,
           isLoading: false,
+          cartCount: data.cartCount || 0,
         })
       })
       .catch(() => {
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: null,
           isAuthenticated: false,
           isLoading: false,
+          cartCount: 0,
         })
       })
   }, [])
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      cartCount: 0,
     })
   }
 
@@ -63,12 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: data.user || data,
         isAuthenticated: true,
         isLoading: false,
+        cartCount: data.cartCount || 0,
       })
     } catch {
       setState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        cartCount: 0,
       })
     }
   }

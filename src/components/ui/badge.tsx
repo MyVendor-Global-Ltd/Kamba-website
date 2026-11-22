@@ -4,17 +4,19 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline'
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'gold' | 'verification'
+  size?: 'default' | 'sm' | 'md' | 'lg'
 }
 
 const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant = 'default', ...props }, ref) => {
+  ({ className, variant = 'default', size = 'default', ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
-          'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+          'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200',
           variants[variant],
+          sizes[size],
           className
         )}
         {...props}
@@ -25,10 +27,20 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
 Badge.displayName = 'Badge'
 
 const variants = {
-  default: 'bg-primary text-primary-foreground',
-  secondary: 'bg-secondary text-secondary-foreground',
-  destructive: 'bg-destructive text-destructive-foreground',
-  outline: 'border-input bg-transparent',
+  default: 'bg-coral text-ink shadow-sm shadow-coral/20',
+  secondary: 'bg-navy text-text-primary',
+  destructive: 'bg-destructive/20 text-destructive border border-destructive/30',
+  outline: 'border-2 border-border bg-transparent hover:bg-accent hover:text-accent-foreground',
+  success: 'bg-green-500/20 text-green-400 border border-green-500/30',
+  gold: 'bg-gold/20 text-gold border border-gold/30',
+  verification: 'bg-coral-dim text-coral border border-coral/30',
+}
+
+const sizes = {
+  default: 'px-3 py-1 text-xs',
+  sm: 'px-2.5 py-0.5 text-[10px]',
+  md: 'px-3 py-1 text-xs',
+  lg: 'px-4 py-1.5 text-sm',
 }
 
 export { Badge }

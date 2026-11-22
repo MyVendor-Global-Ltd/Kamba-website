@@ -1,117 +1,132 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCart } from '@/hooks/useCart'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatKobo } from '@/lib/formatting'
 
 export default function CartPage() {
   const { cart, updateItem, removeItem, clear } = useCart()
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(false)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center mt-20">
-        <h2 className="text-xl font-semibold">Your cart is empty</h2>
-        <p className="text-muted-foreground mt-2">Add some products to get started.</p>
+      <div className="container mx-auto px-4 py-8 lg:py-12 flex flex-col items-center justify-center text-center min-h-[60vh]">
+        <div className="w-20 h-20 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-6 text-text-tertiary">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold font-display text-text-primary mb-2">Your cart is empty</h2>
+        <p className="text-text-secondary mb-6 max-w-sm">Add some products to get started.</p>
         <Link href="/marketplace/products">
-          <Button className="mt-4">Browse products</Button>
+          <Button size="lg">Browse products</Button>
         </Link>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Shopping Cart</h1>
-        <p className="text-muted-foreground">Review your items before checkout.</p>
-      </div>
+    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+      <header className="animate-fade-in">
+        <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Shopping Cart</h1>
+        <p className="text-text-secondary mt-2">Review your items before checkout.</p>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
         <div className="lg:col-span-2 space-y-4">
           {cart.items.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="p-4 flex gap-4">
-                <div className="w-20 h-20 bg-muted rounded-lg flex-shrink-0">
+            <Card key={item.id} variant="elevated" className="p-4">
+              <div className="flex gap-4">
+                <div className="w-20 h-20 bg-ink-raised/50 rounded-xl flex-shrink-0 overflow-hidden">
                   {item.product?.image_url ? (
-                    <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover rounded-lg" />
+                    <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Image</div>
+                    <div className="w-full h-full flex items-center justify-center text-text-tertiary">
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold">{item.product?.name || 'Product'}</h3>
-                  <p className="text-sm text-muted-foreground">₦{(item.product?.price || 0) / 100}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-text-primary truncate">{item.product?.name || 'Product'}</h3>
+                  <p className="text-sm text-text-tertiary">{formatKobo(item.product?.price || 0)}</p>
                   <div className="mt-4 flex items-center gap-2">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => updateItem(item.product_id, Math.max(1, (item.quantity || 1) - 1))}
-                      className="w-8 h-8 border rounded-lg flex items-center justify-center text-sm"
+                      aria-label="Decrease quantity"
                     >
-                      −
-                    </button>
-                    <span className="w-8 text-center">{item.quantity}</span>
-                    <button
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                      </svg>
+                    </Button>
+                    <span className="w-10 text-center font-medium text-text-primary">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => updateItem(item.product_id, (item.quantity || 1) + 1)}
-                      className="w-8 h-8 border rounded-lg flex items-center justify-center text-sm"
+                      aria-label="Increase quantity"
                     >
-                      +
-                    </button>
-                    <button
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => removeItem(item.product_id)}
-                      className="ml-4 text-sm text-destructive hover:underline"
+                      className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                       Remove
-                    </button>
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
 
         <div className="lg:col-span-1">
-          <Card>
+          <Card variant="elevated" className="sticky top-24">
             <CardHeader>
-              <CardTitle>Order summary</CardTitle>
+              <CardTitle className="text-text-primary">Order summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
-                <span>{formatKobo(cart.subtotal)}</span>
+                <span className="text-text-secondary">Subtotal</span>
+                <span className="text-text-primary font-medium">{formatKobo(cart.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Platform fee</span>
-                <span>{formatKobo(cart.platform_fee)}</span>
+                <span className="text-text-secondary">Platform fee</span>
+                <span className="text-text-primary font-medium">{formatKobo(cart.platform_fee)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Delivery fee</span>
-                <span>{formatKobo(cart.delivery_fee)}</span>
+                <span className="text-text-secondary">Delivery fee</span>
+                <span className="text-text-primary font-medium">{formatKobo(cart.delivery_fee)}</span>
               </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-4">
+              <div className="flex justify-between text-lg font-bold font-display text-text-primary border-t border-ink-raised/30 pt-4">
                 <span>Total</span>
                 <span>{formatKobo(cart.total)}</span>
               </div>
-              <Button className="w-full" onClick={() => clear()}>
-                Clear cart
-              </Button>
-              <Link href="/checkout">
-                <Button className="w-full">Proceed to checkout</Button>
-              </Link>
+              <div className="space-y-3 pt-2">
+                <Button variant="outline" className="w-full" onClick={() => clear()}>
+                  Clear cart
+                </Button>
+                <Link href="/checkout">
+                  <Button variant="default" size="lg" className="w-full">
+                    Proceed to checkout
+                    <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -27,49 +27,122 @@ function normalizeResponse<T>(data: any): T {
   return data
 }
 
+export interface ApiErrorResponse {
+  message: string
+  status: number
+  code?: string
+  details?: Record<string, string[]>
+}
+
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly message: string,
+    public readonly code?: string,
+    public readonly details?: Record<string, string[]>
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+export interface RequestOptions extends RequestInit {
+  params?: Record<string, string | number | boolean | undefined>
+  signal?: AbortSignal
+  timeout?: number
+}
+
+function buildUrl(path: string, params?: Record<string, string | number | boolean | undefined>): string {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+  if (!params) return url
+  const searchParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      searchParams.append(key, String(value))
+    }
+  })
+  const query = searchParams.toString()
+  return query ? `${url}?${query}` : url
+}
+
 export async function apiFetch(
   path: string,
-  options: RequestInit = {}
+  options: RequestOptions = {}
 ): Promise<Response> {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+  const { params, signal, timeout, ...fetchOptions } = options
+  const url = buildUrl(path, params)
 
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
+  const controller = new AbortController()
+  const timeoutId = timeout ? setTimeout(() => controller.abort(), timeout) : null
 
-  if (res.status === 401) {
-    const newToken = await refreshAccessToken()
-    if (newToken) {
-      return fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      })
-    }
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort())
   }
 
-  return res
+  try {
+    const res = await fetch(url, {
+      ...fetchOptions,
+      credentials: 'include',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...fetchOptions.headers,
+      },
+    })
+
+    if (res.status === 401) {
+      const newToken = await refreshAccessToken()
+      if (newToken) {
+        return fetch(url, {
+          ...fetchOptions,
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...fetchOptions.headers,
+          },
+        })
+      }
+    }
+
+    return res
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
 }
 
 export async function apiJson<T = any>(
   path: string,
-  options: RequestInit = {}
+  options: RequestOptions = {}
 ): Promise<T> {
   const res = await apiFetch(path, options)
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))
-    throw new Error(error.message || `API error: ${res.status}`)
+    throw new ApiError(
+      res.status,
+      error.message || `API error: ${res.status}`,
+      error.code,
+      error.details
+    )
   }
   const data = await res.json()
   return normalizeResponse<T>(data)
+}
+
+export async function apiPaginated<T = any>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<PaginatedResponse<T>> {
+  return apiJson<PaginatedResponse<T>>(path, options)
 }
 
 export { API_BASE }
