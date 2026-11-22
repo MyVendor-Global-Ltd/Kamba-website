@@ -6,10 +6,12 @@ export interface Product {
   stock_quantity: number
   category?: string
   image_url?: string
+  images?: string[]
   store_id: string
   store_name?: string
   compare_at_price?: number
   is_active: boolean
+  in_stock?: boolean
   created_at: string
   updated_at: string
 }

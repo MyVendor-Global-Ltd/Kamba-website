@@ -1,19 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
 import { ServiceProfile } from '@/types/vendor'
+import { formatKobo } from '@/lib/formatting'
+import { useToast } from '@/components/ui/toast'
+import { Calendar, Clock, Star, MapPin, Phone, Mail, Shield, CheckCircle, XCircle, ChevronLeft, ChevronRight, MessageSquare, User, Briefcase } from 'lucide-react'
 
 export default function ServiceDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const slug = params.slug as string
   const [service, setService] = useState<ServiceProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState<'details' | 'booking' | 'reviews'>('details')
+  const [bookingStep, setBookingStep] = useState<'select' | 'details' | 'confirm'>('select')
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedTime, setSelectedTime] = useState<string>('')
+  const [bookingDetails, setBookingDetails] = useState({ notes: '', address: '' })
+  const { toast } = useToast()
 
   useEffect(() => {
     apiJson<{ service: ServiceProfile }>(`/vendors/services/${slug}`)
@@ -26,6 +37,33 @@ export default function ServiceDetailPage() {
         setLoading(false)
       })
   }, [slug])
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!service) return
+
+    try {
+      // In a real app, this would call the booking API
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        type: 'success',
+        title: 'Booking Request Sent',
+        description: 'The service provider will contact you shortly to confirm.',
+      })
+      setBookingStep('select')
+      setSelectedDate(null)
+      setSelectedTime('')
+      setBookingDetails({ notes: '', address: '' })
+    } catch {
+      toast({
+        type: 'error',
+        title: 'Booking Failed',
+        description: 'Please try again or contact the provider directly.',
+      })
+    }
+  }
+
+  const availableTimes = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
   if (loading) {
     return (
@@ -62,7 +100,8 @@ export default function ServiceDetailPage() {
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Service not found</h2>
           <p className="text-text-tertiary">The service you're looking for doesn't exist or has been removed.</p>
-          <Button variant="outline" className="mt-4" onClick={() => window.history.back()}>
+          <Button variant="outline" className="mt-4" onClick={() => router.back()}>
+            <ChevronLeft className="w-4 h-4 mr-2" />
             Back to services
           </Button>
         </div>
@@ -72,20 +111,27 @@ export default function ServiceDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+      {/* Header */}
       <header className="animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
+            <Link href="/marketplace/services" className="inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-coral transition-colors mb-4">
+              <ChevronLeft className="w-4 h-4" />
+              All Services
+            </Link>
             <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">{service.name}</h1>
             <p className="text-text-secondary mt-2">{service.description || 'No description available'}</p>
             <div className="flex flex-wrap items-center gap-3 mt-4">
               {service.verification_status !== 'pending' && (
                 <Badge variant="verification" size="md">
+                  <Shield className="w-3.5 h-3.5 mr-1.5" />
                   {service.verification_status === 'business' ? 'Business Verified' : 
                    service.verification_status === 'nin' ? 'NIN Verified' : 'Basic Verified'}
                 </Badge>
               )}
               {service.category && (
                 <Badge variant="secondary" size="sm">
+                  <Briefcase className="w-3.5 h-3.5 mr-1.5" />
                   {service.category}
                 </Badge>
               )}
@@ -100,90 +146,367 @@ export default function ServiceDetailPage() {
         </div>
       )}
 
+      {/* Main Content */}
       <section className="animate-slide-up" style={{ animationDelay: '100ms' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-text-primary">Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {service.category && (
-                <div className="flex justify-between items-center py-2 border-b border-ink-raised/30">
-                  <span className="text-sm text-text-tertiary">Category</span>
-                  <span className="font-medium text-text-primary">{service.category}</span>
-                </div>
-              )}
-              {service.city && service.state && (
-                <div className="flex justify-between items-center py-2 border-b border-ink-raised/30">
-                  <span className="text-sm text-text-tertiary">Location</span>
-                  <span className="font-medium text-text-primary">{service.city}, {service.state}</span>
-                </div>
-              )}
-              {service.phone && (
-                <div className="flex justify-between items-center py-2 border-b border-ink-raised/30">
-                  <span className="text-sm text-text-tertiary">Phone</span>
-                  <a href={`tel:${service.phone}`} className="font-medium text-coral hover:text-coral/80 transition-colors">
-                    {service.phone}
-                  </a>
-                </div>
-              )}
-              {service.email && (
-                <div className="flex justify-between items-center py-2 border-b border-ink-raised/30">
-                  <span className="text-sm text-text-tertiary">Email</span>
-                  <a href={`mailto:${service.email}`} className="font-medium text-coral hover:text-coral/80 transition-colors">
-                    {service.email}
-                  </a>
-                </div>
-              )}
-              {service.address && (
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-text-tertiary">Address</span>
-                  <span className="font-medium text-text-primary text-right max-w-[60%]">{service.address}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Service Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Tabs */}
+            <div className="flex border-b border-ink-raised/30">
+              {[
+                { id: 'details', label: 'Details', icon: Briefcase },
+                { id: 'booking', label: 'Book Service', icon: Calendar },
+                { id: 'reviews', label: 'Reviews', icon: Star },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px ${
+                    activeTab === tab.id
+                      ? 'text-coral border-coral'
+                      : 'text-text-tertiary hover:text-text-secondary border-transparent'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-text-primary">Contact & Book</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-text-secondary text-sm">
-                Ready to book this service? Get in touch with the provider directly.
-              </p>
-              <div className="flex flex-col gap-3 pt-2">
+            {/* Details Tab */}
+            {activeTab === 'details' && (
+              <Card variant="elevated">
+                <CardContent className="space-y-6 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Service Information</h3>
+                      {service.category && (
+                        <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
+                          <Briefcase className="w-5 h-5 text-coral" />
+                          <div>
+                            <p className="text-xs text-text-tertiary">Category</p>
+                            <p className="font-medium text-text-primary">{service.category}</p>
+                          </div>
+                        </div>
+                      )}
+                      {service.city && service.state && (
+                        <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
+                          <MapPin className="w-5 h-5 text-coral" />
+                          <div>
+                            <p className="text-xs text-text-tertiary">Location</p>
+                            <p className="font-medium text-text-primary">{service.city}, {service.state}</p>
+                          </div>
+                        </div>
+                      )}
+                      {service.address && (
+                        <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
+                          <MapPin className="w-5 h-5 text-coral" />
+                          <div>
+                            <p className="text-xs text-text-tertiary">Address</p>
+                            <p className="font-medium text-text-primary">{service.address}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Contact Details</h3>
+                      {service.phone && (
+                        <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
+                          <Phone className="w-5 h-5 text-coral" />
+                          <div>
+                            <p className="text-xs text-text-tertiary">Phone</p>
+                            <a href={`tel:${service.phone}`} className="font-medium text-coral hover:text-coral/80 transition-colors">
+                              {service.phone}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      {service.email && (
+                        <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
+                          <Mail className="w-5 h-5 text-coral" />
+                          <div>
+                            <p className="text-xs text-text-tertiary">Email</p>
+                            <a href={`mailto:${service.email}`} className="font-medium text-coral hover:text-coral/80 transition-colors">
+                              {service.email}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {service.description && (
+                    <div className="pt-4 border-t border-ink-raised/30">
+                      <h3 className="text-lg font-semibold text-text-primary mb-3">About this Service</h3>
+                      <p className="text-text-secondary leading-relaxed">{service.description}</p>
+                    </div>
+                  )}
+
+                  {/* Verification Badges */}
+                  <div className="pt-4 border-t border-ink-raised/30">
+                    <h3 className="text-lg font-semibold text-text-primary mb-3">Verification Status</h3>
+                    <div className="flex flex-wrap gap-3">
+                      <Badge variant={service.verification_status === 'business' ? 'success' : 'outline'} size="md">
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Business Registration
+                      </Badge>
+                      <Badge variant={service.verification_status === 'nin' ? 'success' : 'outline'} size="md">
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        NIN Verified
+                      </Badge>
+                      <Badge variant="outline" size="md">
+                        <Shield className="w-3.5 h-3.5 mr-1.5" />
+                        Platform Protected
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Booking Tab */}
+            {activeTab === 'booking' && (
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  {bookingStep === 'select' && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-text-primary mb-4">Select Date & Time</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-2">Date</label>
+                            <input
+                              type="date"
+                              min={new Date().toISOString().split('T')[0]}
+                              value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                              onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : null)}
+                              className="w-full flex h-12 px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-2">Time</label>
+                            <select
+                              value={selectedTime}
+                              onChange={(e) => setSelectedTime(e.target.value)}
+                              className="w-full flex h-12 px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
+                            >
+                              <option value="">Select a time</option>
+                              {availableTimes.map((time) => (
+                                <option key={time} value={time}>{time}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <Button variant="outline" className="flex-1" onClick={() => setBookingStep('select')}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          variant="default" 
+                          className="flex-1" 
+                          onClick={() => {
+                            if (selectedDate && selectedTime) {
+                              setBookingStep('details')
+                            } else {
+                              toast({
+                                type: 'error',
+                                title: 'Missing Information',
+                                description: 'Please select both date and time.',
+                              })
+                            }
+                          }}
+                        >
+                          Continue
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {bookingStep === 'details' && (
+                    <form onSubmit={handleBookingSubmit} className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-text-primary mb-4">Booking Details</h3>
+                        <div className="p-4 bg-ink-raised/30 rounded-xl mb-4">
+                          <p className="text-sm text-text-secondary">Service: <span className="font-medium text-text-primary">{service.name}</span></p>
+                          <p className="text-sm text-text-secondary">Date: <span className="font-medium text-text-primary">{selectedDate?.toLocaleDateString()}</span></p>
+                          <p className="text-sm text-text-secondary">Time: <span className="font-medium text-text-primary">{selectedTime}</span></p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="address" className="block text-sm font-medium text-text-secondary mb-2">
+                          Service Address <span className="text-coral">*</span>
+                        </label>
+                        <textarea
+                          id="address"
+                          value={bookingDetails.address}
+                          onChange={(e) => setBookingDetails({ ...bookingDetails, address: e.target.value })}
+                          rows={3}
+                          placeholder="Where should the service be provided?"
+                          className="w-full px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="notes" className="block text-sm font-medium text-text-secondary mb-2">
+                          Additional Notes
+                        </label>
+                        <textarea
+                          id="notes"
+                          value={bookingDetails.notes}
+                          onChange={(e) => setBookingDetails({ ...bookingDetails, notes: e.target.value })}
+                          rows={3}
+                          placeholder="Any special requirements or instructions for the provider..."
+                          className="w-full px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <Button variant="outline" type="button" className="flex-1" onClick={() => setBookingStep('select')}>
+                          <ChevronLeft className="w-4 h-4 mr-2" />
+                          Back
+                        </Button>
+                        <Button variant="default" type="submit" className="flex-1">
+                          Confirm Booking
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Reviews Tab */}
+            {activeTab === 'reviews' && (
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-text-primary">Customer Reviews</h3>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-5 h-5 text-gold fill-current" />
+                      <span className="text-xl font-bold text-text-primary">4.8</span>
+                      <span className="text-text-tertiary">(24 reviews)</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {[
+                      { name: 'Adebayo K.', date: '2 days ago', rating: 5, text: 'Excellent service! Very professional and arrived on time. Highly recommended.' },
+                      { name: 'Fatima A.', date: '1 week ago', rating: 5, text: 'Great experience. The provider was knowledgeable and completed the job perfectly.' },
+                      { name: 'Chinedu O.', date: '2 weeks ago', rating: 4, text: 'Good service overall. Minor delay but quality of work was excellent.' },
+                    ].map((review, i) => (
+                      <div key={i} className="p-4 bg-ink-raised/30 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-coral/20 flex items-center justify-center">
+                              <User className="w-5 h-5 text-coral" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-text-primary">{review.name}</p>
+                              <p className="text-xs text-text-tertiary">{review.date}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, j) => (
+                              <Star key={j} className={`w-4 h-4 ${j < review.rating ? 'text-gold fill-current' : 'text-text-tertiary'}`} />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-text-secondary">{review.text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="text-center pt-6">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Write a Review
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Quick Actions */}
+          <div className="space-y-6">
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle className="text-text-primary">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 {service.phone && (
                   <a href={`tel:${service.phone}`}>
                     <Button variant="default" className="w-full justify-start gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                      <span>Call {service.phone}</span>
+                      <Phone className="w-5 h-5" />
+                      <span>Call Now</span>
                     </Button>
                   </a>
                 )}
                 {service.email && (
                   <a href={`mailto:${service.email}`}>
                     <Button variant="outline" className="w-full justify-start gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      <span>Email provider</span>
+                      <Mail className="w-5 h-5" />
+                      <span>Email Provider</span>
                     </Button>
                   </a>
                 )}
-                {!service.phone && !service.email && (
-                  <Button variant="outline" className="w-full justify-start gap-3" disabled>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span>No contact info available</span>
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                <Button variant="outline" className="w-full justify-start gap-3" onClick={() => setActiveTab('booking')}>
+                  <Calendar className="w-5 h-5" />
+                  <span>Book Service</span>
+                </Button>
+                <Button variant="ghost" className="w-full justify-start gap-3">
+                  <MessageSquare className="w-5 h-5" />
+                  <span>Message Provider</span>
+                </Button>
+                <Button variant="ghost" className="w-full justify-start gap-3">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  <span>Share Service</span>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Provider Info Card */}
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle className="text-text-primary">Provider</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-coral/20 flex items-center justify-center">
+                    <User className="w-7 h-7 text-coral" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-text-primary">{service.name}</p>
+                    <p className="text-sm text-text-tertiary">Service Provider</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-ink-raised/30 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <Briefcase className="w-4 h-4 text-coral" />
+                    <span>{service.category || 'General Services'}</span>
+                  </div>
+                  {service.city && service.state && (
+                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                      <MapPin className="w-4 h-4 text-coral" />
+                      <span>{service.city}, {service.state}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <Shield className="w-4 h-4 text-coral" />
+                    <span>{service.verification_status === 'business' ? 'Business Verified' : service.verification_status === 'nin' ? 'NIN Verified' : 'Basic Verified'}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
     </div>

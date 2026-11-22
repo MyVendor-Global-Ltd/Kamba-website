@@ -17,7 +17,11 @@ export interface Store {
   created_at: string
   updated_at: string
   distance_km?: number
+  logo_url?: string
+  category?: string
 }
+
+export type StoreProfile = Store
 
 export interface ServiceProfile {
   id: string
@@ -39,6 +43,22 @@ export interface ServiceProfile {
   created_at: string
   updated_at: string
   distance_km?: number
+  logo_url?: string
+}
+
+export type Service = ServiceProfile
+
+export interface VendorOnboardingData {
+  business_name: string
+  business_type: 'products' | 'services' | 'both'
+  phone: string
+  email?: string
+  address?: string
+  city?: string
+  state?: string
+  country?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface VendorOnboardingData {
