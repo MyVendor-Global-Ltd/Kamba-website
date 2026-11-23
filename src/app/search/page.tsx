@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,7 +23,7 @@ interface SearchResult {
   total: number
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
@@ -551,4 +551,8 @@ function ServiceResults({ services, loading }: { services: ServiceProfile[]; loa
       {services.map((service) => <ServiceSearchCard key={service.id} service={service} />)}
     </div>
   )
+}
+
+export default function SearchPage() {
+  return <Suspense fallback={<div className="container mx-auto px-4 py-12"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>}><SearchPageContent /></Suspense>
 }
