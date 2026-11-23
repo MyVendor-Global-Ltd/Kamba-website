@@ -29,8 +29,8 @@ export default function VendorOnboardPage() {
       }
       submitMockVendorApplication({ business_name: businessName, business_type: businessType, phone, email, address, city, state })
       router.push('/vendor/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Onboarding failed')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Onboarding failed')
     } finally {
       setLoading(false)
     }
@@ -62,7 +62,7 @@ export default function VendorOnboardPage() {
             <label className="text-sm font-medium">Business type</label>
             <select
               value={businessType}
-              onChange={(e) => setBusinessType(e.target.value as any)}
+              onChange={(e) => setBusinessType(e.target.value as 'products' | 'services' | 'both')}
               className="flex h-10 w-full rounded-medium border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="products">Products only</option>
