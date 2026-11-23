@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { apiJson } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,15 +27,13 @@ export default function ServicesPage() {
     refresh,
   } = useServiceSearch({ pageSize: 12 })
 
-  const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
 
   // Fetch categories on mount
   useEffect(() => {
-    fetch('/api/categories')
-      .then((res) => res.json())
+    apiJson<{ categories: string[] }>('/api/categories')
       .then((data) => setCategories(data.categories || []))
-      .catch(() => setCategories(['Cleaning', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Repair', 'Photography']))
+      .catch(() => setCategories(['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography']))
   }, [])
 
   // Load more on scroll
@@ -94,7 +93,7 @@ export default function ServicesPage() {
             placeholder="Search services, providers, categories..."
             value={filters.query}
             onChange={(e) => setFilters({ query: e.target.value })}
-            className="w-full flex h-12 pl-12 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
+            className="w-full flex h-12 pl-12 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary"
           />
         </div>
       </header>
@@ -105,12 +104,13 @@ export default function ServicesPage() {
         </div>
       )}
 
-      <div className="flex gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         {/* Filters Sidebar */}
         <ProductFilters
           filters={filters}
           onFiltersChange={setFilters}
           categories={categories}
+          mode='services'
           onClearAll={clearFilters}
           hasActiveFilters={hasActiveFilters}
         />
