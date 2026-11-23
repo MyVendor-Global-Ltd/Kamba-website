@@ -6,7 +6,7 @@ import { isMockMode } from '@/lib/mock-api'
 import type { MarketplaceFilterState } from '@/components/marketplace/product-filters'
 import type { Service } from '@/types/vendor'
 
-export interface ServiceFilters extends MarketplaceFilterState {}
+export type ServiceFilters = MarketplaceFilterState
 
 export interface UseServiceSearchOptions {
   initialFilters?: Partial<ServiceFilters>
