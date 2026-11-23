@@ -200,7 +200,7 @@ export function Header() {
                   </Link>
                   {state.user?.role === 'vendor' && (
                     <Link
-                      href="/vendor"
+                      href="/vendor/dashboard"
                       className="px-4 py-3 rounded-lg text-base font-medium text-coral hover:bg-coral-dim transition-all duration-200"
                       onClick={() => setMobileMenuOpen(false)}
                     >
