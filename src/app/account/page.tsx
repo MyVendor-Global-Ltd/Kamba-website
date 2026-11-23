@@ -277,13 +277,13 @@ export default function AccountPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                           label="First Name"
-                          value={formData.first_name}
+                          value={String(formData.first_name ?? '')}
                           onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                           required
                         />
                         <Input
                           label="Last Name"
-                          value={formData.last_name}
+                          value={String(formData.last_name ?? '')}
                           onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                           required
                         />
@@ -291,7 +291,7 @@ export default function AccountPage() {
                       <Input
                         label="Phone Number"
                         type="tel"
-                        value={formData.phone}
+                        value={String(formData.phone ?? '')}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />
                       <div className="flex gap-3 pt-4">
@@ -413,39 +413,39 @@ export default function AccountPage() {
                     <form onSubmit={handleAddAddress} className="space-y-4">
                       <Input
                         label="Label (e.g., Home, Work)"
-                        value={formData.label}
+                        value={String(formData.label ?? '')}
                         onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                         required
                       />
                       <Input
                         label="Street Address"
-                        value={formData.address}
+                        value={String(formData.address ?? '')}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         required
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <Input
                           label="City"
-                          value={formData.city}
+                          value={String(formData.city ?? '')}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                           required
                         />
                         <Input
                           label="State"
-                          value={formData.state}
+                          value={String(formData.state ?? '')}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                           required
                         />
                       </div>
                       <Input
                         label="Postal Code (Optional)"
-                        value={formData.postal_code}
+                        value={String(formData.postal_code ?? '')}
                         onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                       />
                       <label className="flex items-center gap-2 text-sm text-text-secondary">
                         <input
                           type="checkbox"
-                          checked={formData.is_default}
+                          checked={Boolean(formData.is_default)}
                           onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                           className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
                         />
@@ -544,7 +544,7 @@ export default function AccountPage() {
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-2">Type</label>
                         <select
-                          value={formData.type}
+                          value={String(formData.type ?? '')}
                           onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                           className="w-full px-4 py-3 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
                         >
@@ -575,7 +575,7 @@ export default function AccountPage() {
                       <label className="flex items-center gap-2 text-sm text-text-secondary">
                         <input
                           type="checkbox"
-                          checked={formData.is_default}
+                          checked={Boolean(formData.is_default)}
                           onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                           className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
                         />
