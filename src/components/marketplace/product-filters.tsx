@@ -59,7 +59,7 @@ export function ProductFilters({
           Search {isProducts ? 'products' : 'services'}
         </label>
         <input
-          id={`marketplace-filter-query-${mode}`}
+          id={`marketplace-filter-query-${mode}-${surface}`}
           type="search"
           value={filters.query}
           onChange={(event) => onFiltersChange({ query: event.target.value })}
@@ -73,7 +73,7 @@ export function ProductFilters({
           Location
         </label>
         <input
-          id={`marketplace-filter-location-${mode}`}
+          id={`marketplace-filter-location-${mode}-${surface}`}
           type="search"
           value={filters.location}
           onChange={(event) => onFiltersChange({ location: event.target.value })}
@@ -154,7 +154,7 @@ export function ProductFilters({
           </label>
 
           <div>
-            <label htmlFor="product-sort" className="mb-2 block text-sm font-medium text-text-secondary">Sort products</label>
+            <label htmlFor={`product-sort-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">Sort products</label>
             <select
               id={`product-sort-${surface}`}
               value={filters.sortBy}
