@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,31 +38,27 @@ interface Order {
   }
   payment_method: string
   items: OrderItem[]
-  customer: {
-    name: string
-    email: string
-    phone?: string
-  }
+  customer: { name: string }
+  item_count?: number
+  delivery_type?: 'pickup' | 'delivery'
 }
 
 const statusFlow = [
-  { key: 'pending', label: 'Pending', next: 'confirmed' },
+  { key: 'paid_held', label: 'Paid — awaiting confirmation', next: 'confirmed' },
   { key: 'confirmed', label: 'Confirmed', next: 'processing' },
   { key: 'processing', label: 'Processing', next: 'shipped' },
-  { key: 'shipped', label: 'Shipped', next: 'delivered' },
+  { key: 'shipped', label: 'Shipped', next: null },
   { key: 'delivered', label: 'Delivered', next: null },
   { key: 'cancelled', label: 'Cancelled', next: null },
-  { key: 'return_requested', label: 'Return Requested', next: null },
 ]
 
-const statusColors: Record<string, string> = {
-  pending: 'outline',
+const statusColors: Record<string, NonNullable<React.ComponentProps<typeof Badge>['variant']>> = {
+  paid_held: 'warning',
   confirmed: 'secondary',
   processing: 'secondary',
   shipped: 'secondary',
   delivered: 'success',
   cancelled: 'destructive',
-  return_requested: 'warning',
 }
 
 export default function VendorOrdersPage() {
@@ -77,22 +73,51 @@ export default function VendorOrdersPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadOrders()
-  }, [])
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await apiJson<{ orders: Order[] }>('/commerce/vendor/orders')
-      setOrders(data.orders || [])
+      const data = await apiJson<{ orders: Array<{
+        id: string
+        status: string
+        total_amount: number
+        subtotal: number
+        platform_fee: number
+        shipping_amount: number
+        delivery_type: 'pickup' | 'delivery'
+        created_at: string
+        store_name?: string
+        item_count: number
+      }> }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } })
+      setOrders((data.orders || []).map((order) => ({
+        id: order.id,
+        order_number: order.id,
+        status: order.status,
+        payment_status: order.status === 'paid_held' ? 'held' : 'status managed by Kamba',
+        delivery_status: 'not available',
+        delivery_type: order.delivery_type,
+        subtotal: order.subtotal,
+        platform_fee: order.platform_fee,
+        delivery_fee: order.shipping_amount,
+        total: order.total_amount,
+        created_at: order.created_at,
+        updated_at: order.created_at,
+        shipping_address: { address: order.delivery_type === 'pickup' ? 'Vendor pickup' : 'Open order details for the delivery address', city: '', state: '' },
+        payment_method: 'Managed by Kamba',
+        customer: { name: 'Buyer details protected' },
+        item_count: order.item_count,
+        items: [],
+      })))
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void Promise.resolve().then(loadOrders)
+  }, [loadOrders])
 
   const filteredOrders = orders
     .filter(order => {
@@ -104,7 +129,6 @@ export default function VendorOrdersPage() {
         return (
           order.order_number.toLowerCase().includes(query) ||
           order.customer.name.toLowerCase().includes(query) ||
-          order.customer.email.toLowerCase().includes(query) ||
           order.items.some(item => item.product_name.toLowerCase().includes(query))
         )
       }
@@ -134,13 +158,13 @@ export default function VendorOrdersPage() {
       addToast({
         type: 'success',
         title: 'Order updated',
-        message: `Order status changed to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+        message: `Order status changed to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}.`,
       })
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Failed to update',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     } finally {
       setUpdatingOrder(null)
@@ -173,7 +197,7 @@ export default function VendorOrdersPage() {
         message: `${eligible.length} eligible orders moved to ${target}.`,
       })
       setSelectedOrders([])
-      loadOrders()
+      void loadOrders()
     } catch (err) {
       addToast({
         type: 'error',
@@ -321,19 +345,18 @@ export default function VendorOrdersPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
-                        <Badge variant={variant as any} size="sm">
+                        <Badge variant={variant} size="sm">
                           {formatOrderStatus(order.status)}
                         </Badge>
-                        <Badge variant={statusColors[order.payment_status.toLowerCase()] as any || 'outline'} size="sm">
-                          {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                        <Badge variant="outline" size="sm">
+                          {order.payment_status}
                         </Badge>
                       </div>
                       <p className="text-sm text-text-tertiary mt-1">
-                        {formatDateTime(order.created_at)} • {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                        {formatDateTime(order.created_at)} • {order.item_count ?? order.items.length} item{(order.item_count ?? order.items.length) !== 1 ? 's' : ''}
                       </p>
                       <p className="text-sm text-text-secondary mt-1">
-                        {order.customer.name} • {order.customer.email}
-                        {order.customer.phone && ` • ${order.customer.phone}`}
+                        {order.customer.name}
                       </p>
                     </div>
                   </div>
@@ -346,7 +369,7 @@ export default function VendorOrdersPage() {
                       <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)}>
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {}}>
+                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)} aria-label="View order details">
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
@@ -361,7 +384,7 @@ export default function VendorOrdersPage() {
                       <div className="md:col-span-2">
                         <h4 className="font-medium text-text-primary mb-3">Items</h4>
                         <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {order.items.map((item) => (
+                          {order.items.length > 0 ? order.items.map((item) => (
                             <div key={item.id} className="flex gap-3 p-3 bg-ink-raised/30 rounded-lg">
                               <div className="w-12 h-12 bg-ink-raised/50 rounded-lg flex-shrink-0 overflow-hidden">
                                 {item.image_url ? (
@@ -378,13 +401,13 @@ export default function VendorOrdersPage() {
                               </div>
                               <span className="font-medium text-text-primary whitespace-nowrap">{formatKobo(item.price * item.quantity)}</span>
                             </div>
-                          ))}
+                          )) : <p className="rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">Item details are available in the order record. The vendor list API currently returns item counts only.</p>}
                         </div>
                       </div>
 
                       {/* Shipping Address */}
                       <div>
-                        <h4 className="font-medium text-text-primary mb-3">Shipping Address</h4>
+                        <h4 className="font-medium text-text-primary mb-3">{order.delivery_type === 'pickup' ? 'Collection method' : 'Delivery address'}</h4>
                         <address className="text-text-secondary not-italic space-y-1 bg-ink-raised/30 p-3 rounded-lg">
                           <p className="font-medium text-text-primary">{order.shipping_address?.address}</p>
                           <p>{order.shipping_address?.city}, {order.shipping_address?.state}</p>
@@ -397,7 +420,7 @@ export default function VendorOrdersPage() {
                         <div className="space-y-2 bg-ink-raised/30 p-3 rounded-lg">
                           <div className="flex justify-between text-sm">
                             <span className="text-text-secondary">Method</span>
-                            <span className="text-text-primary capitalize">{order.payment_method.replace('_', ' ')}</span>
+                            <span className="text-text-primary capitalize">{order.payment_method}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-text-secondary">Platform Fee</span>
@@ -405,7 +428,7 @@ export default function VendorOrdersPage() {
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-text-secondary">Delivery Fee</span>
-                            <span className="text-text-primary">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : 'Free'}</span>
+                            <span className="text-text-primary">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : order.delivery_type === 'pickup' ? 'Pickup' : 'Not available'}</span>
                           </div>
                         </div>
                       </div>
