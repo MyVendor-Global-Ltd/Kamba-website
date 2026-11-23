@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { apiJson } from '@/lib/api'
+import { isMockMode } from '@/lib/mock-api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,7 +35,7 @@ export default function ProductsPage() {
   useEffect(() => {
     apiJson<{ categories: Array<string | { category?: string }> }>('/marketplace/categories')
       .then((data) => setCategories(data.categories.map((item) => typeof item === 'string' ? item : item.category || '').filter(Boolean)))
-      .catch(() => setCategories(['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Sports', 'Books']))
+      .catch(() => setCategories(['Electronics', 'Fashion', 'Home & Living', 'Books & Stationery']))
   }, [])
 
   // Load more on scroll
@@ -98,6 +99,12 @@ export default function ProductsPage() {
           />
         </div>
       </header>
+
+      {!isMockMode && filters.location.trim() && (
+        <p role="status" className="rounded-lg border border-gold-dim bg-gold-soft px-4 py-3 text-sm text-text-primary">
+          City-name filtering is available in prototype mode. The live product API supports nearby search using coordinates; browser location integration is a separate step.
+        </p>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up">
