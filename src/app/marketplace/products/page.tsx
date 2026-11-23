@@ -117,6 +117,7 @@ export default function ProductsPage() {
           onFiltersChange={setFilters}
           categories={categories}
           mode='products'
+          showSearch={false}
           onClearAll={clearFilters}
           hasActiveFilters={hasActiveFilters}
           supportsNearest
