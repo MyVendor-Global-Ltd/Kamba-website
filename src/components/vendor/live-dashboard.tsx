@@ -88,7 +88,7 @@ export function LiveVendorDashboard() {
             {orders.length === 0 ? <p className="py-8 text-center text-sm text-text-secondary">No vendor orders yet.</p> : orders.slice(0, 8).map((order) => (
               <div key={order.id} className="flex items-center justify-between gap-3 border-b border-border pb-3 last:border-0">
                 <div className="min-w-0"><p className="truncate text-sm font-medium text-text-primary">{order.id}</p><p className="text-xs text-text-tertiary">{order.store_name || 'Your store'} · {order.item_count} item(s) · {formatDateTime(order.created_at)}</p></div>
-                <div className="shrink-0 text-right"><p className="text-sm font-semibold text-text-primary">{formatKobo(order.total_amount)}</p><Badge variant={order.status === 'paid_held' ? 'warning' : order.status === 'delivered' || order.status === 'collected' ? 'success' : 'outline'}>{formatOrderStatus(order.status)}</Badge></div>
+                <div className="shrink-0 text-right"><p className="text-sm font-semibold text-text-primary">{formatKobo(Number(order.total_amount || 0))}</p><Badge variant={order.status === 'paid_held' ? 'warning' : order.status === 'delivered' || order.status === 'collected' ? 'success' : 'outline'}>{formatOrderStatus(order.status)}</Badge></div>
               </div>
             ))}
           </CardContent>
