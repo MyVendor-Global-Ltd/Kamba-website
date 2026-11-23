@@ -202,6 +202,50 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     return response({ products, stores, services, total: products.length + stores.length + services.length }) as T
   }
 
+  if (pathname === '/commerce/vendor/products' && method === 'GET') {
+    return response({ products: mockProducts.filter((product) => product.store_id === mockStores[0]?.id), pagination: { page: 1, limit: 100, total: mockProducts.length } }) as T
+  }
+  if (pathname === '/commerce/vendor/products' && method === 'POST') {
+    const store = mockStores[0]
+    if (!store) throw new Error('Create a storefront before adding products.')
+    if (typeof body.name !== 'string' || !body.name.trim() || typeof body.price !== 'number' || body.price <= 0) throw new Error('Product name and a valid price are required.')
+    const product = {
+      id: `demo-product-${Date.now()}`,
+      name: body.name.trim(),
+      description: typeof body.description === 'string' ? body.description : '',
+      price: body.price,
+      original_price: typeof body.original_price === 'number' ? body.original_price : null,
+      stock_quantity: typeof body.stock_quantity === 'number' ? body.stock_quantity : 0,
+      in_stock: typeof body.stock_quantity === 'number' && body.stock_quantity > 0,
+      category: typeof body.category === 'string' ? body.category : '',
+      tags: Array.isArray(body.tags) ? body.tags.filter((tag): tag is string => typeof tag === 'string') : [],
+      images: Array.isArray(body.images) ? body.images.filter((image): image is string => typeof image === 'string') : [],
+      is_available: body.is_available !== false,
+      is_active: true,
+      store_id: store.id,
+      store_name: store.store_name,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      view_count: 0,
+    } as Product
+    mockProducts.unshift(product)
+    return response({ product }) as T
+  }
+  const vendorProductMatch = pathname.match(/^\/commerce\/vendor\/products\/([^/]+)$/)
+  if (vendorProductMatch && method === 'PATCH') {
+    const product = mockProducts.find((item) => item.id === vendorProductMatch[1])
+    if (!product) throw new Error('Product not found in the prototype catalogue.')
+    Object.assign(product, body, { updated_at: new Date().toISOString() })
+    if (typeof body.stock_quantity === 'number') product.in_stock = body.stock_quantity > 0
+    return response({ product }) as T
+  }
+  if (vendorProductMatch && method === 'DELETE') {
+    const product = mockProducts.find((item) => item.id === vendorProductMatch[1])
+    if (!product) throw new Error('Product not found in the prototype catalogue.')
+    product.is_active = false
+    product.is_available = false
+    return response({ product: { id: product.id, is_active: false } }) as T
+  }
   const productMatch = pathname.match(/^\/commerce\/products\/([^/]+)$/)
   if (productMatch) { const product = mockProducts.find(p => p.id === productMatch[1]); if (!product) throw new Error('Product not found in the prototype catalogue.'); return response({ product: { ...product, store_slug: mockStores.find((store) => store.id === product.store_id)?.slug } }) as T }
   if (pathname === '/commerce/products') {
