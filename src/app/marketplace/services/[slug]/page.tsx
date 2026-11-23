@@ -54,7 +54,7 @@ export default function ServiceDetailPage() {
       const requestedStart = new Date(selectedDate)
       requestedStart.setHours(hours, minutes, 0, 0)
       const description = [bookingDetails.notes.trim(), `Preferred service location: ${bookingDetails.address.trim()}`].filter(Boolean).join('\n')
-      const result = await apiJson<{ request: { id: string; status: string } }>('/service-bookings/requests', {
+      await apiJson<{ request: { id: string; status: string } }>('/service-bookings/requests', {
         method: 'POST',
         headers: { 'Idempotency-Key': crypto.randomUUID() },
         body: JSON.stringify({
@@ -470,7 +470,7 @@ export default function ServiceDetailPage() {
                     <Briefcase className="w-4 h-4 text-coral" />
                     <span>{service.category || 'General Services'}</span>
                   </div>
-                  {service.city && service.state && (
+                  {(service.city || service.state) && (
                     <div className="flex items-center gap-2 text-sm text-text-secondary">
                       <MapPin className="w-4 h-4 text-coral" />
                       <span>{[service.city, service.state].filter(Boolean).join(', ')}</span>
