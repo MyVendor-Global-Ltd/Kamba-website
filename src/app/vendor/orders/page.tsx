@@ -102,7 +102,8 @@ export default function VendorOrdersPage() {
       const data = await apiJson<{ orders: Array<{
         id: string
         status: string
-        total_amount: number
+        total?: number
+        total_amount?: number
         subtotal: number
         platform_fee: number
         shipping_amount: number
@@ -121,7 +122,7 @@ export default function VendorOrdersPage() {
         subtotal: order.subtotal,
         platform_fee: order.platform_fee,
         delivery_fee: order.shipping_amount,
-        total: order.total_amount,
+        total: Number(order.total ?? order.total_amount ?? 0),
         created_at: order.created_at,
         updated_at: order.created_at,
         shipping_address: { address: order.delivery_type === 'pickup' ? 'Vendor pickup' : 'Open order details for the delivery address', city: '', state: '' },
