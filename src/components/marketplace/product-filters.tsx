@@ -25,6 +25,7 @@ export interface ProductFiltersProps {
   onClearAll: () => void
   hasActiveFilters: boolean
   mode?: 'products' | 'services'
+  showSearch?: boolean
 }
 
 export function ProductFilters({
@@ -34,6 +35,7 @@ export function ProductFilters({
   onClearAll,
   hasActiveFilters,
   mode = 'products',
+  showSearch = true,
 }: ProductFiltersProps) {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
@@ -50,6 +52,7 @@ export function ProductFilters({
   }, [showMobileFilters])
 
   const activeCount = [
+    filters.query.trim() !== '',
     filters.category !== '',
     filters.location.trim() !== '' || filters.latitude !== null || filters.longitude !== null,
     isProducts && filters.minPrice !== null,
@@ -59,7 +62,7 @@ export function ProductFilters({
 
   const controls = (surface: 'desktop' | 'mobile') => (
     <div className="space-y-5">
-      <div>
+      {showSearch && <div>
         <label htmlFor={`marketplace-filter-query-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
           Search {isProducts ? 'products' : 'services'}
         </label>
@@ -71,7 +74,7 @@ export function ProductFilters({
           placeholder={isProducts ? 'Name, brand or keyword' : 'Service or provider'}
           className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary focus:ring-2 focus:ring-primary/15"
         />
-      </div>
+      </div>}
 
       <div>
         <label htmlFor={`marketplace-filter-location-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
