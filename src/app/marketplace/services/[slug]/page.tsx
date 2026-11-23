@@ -366,7 +366,6 @@ export default function ServiceDetailPage() {
                           value={bookingDetails.address}
                           onChange={(e) => setBookingDetails({ ...bookingDetails, address: e.target.value })}
                           rows={3}
-                          min={new Date().toISOString().slice(0, 10)}
                           placeholder="Enter the service address or agreed meeting location"
                           className="w-full px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
                           required
