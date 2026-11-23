@@ -3,6 +3,14 @@ import type { Store, ServiceProfile } from '@/types/vendor'
 
 export const isMockMode = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_KAMBA_MOCK_MODE === 'true'
 
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const radians = (degrees: number) => degrees * Math.PI / 180
+  const dLat = radians(lat2 - lat1)
+  const dLng = radians(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(dLng / 2) ** 2
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 export const mockProducts: Product[] = [
   { id: 'prd-001', name: 'Wireless Headphones', description: 'Comfortable everyday headphones with clear sound and long battery life.', price: 2850000, stock_quantity: 18, category: 'Electronics', image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop', store_id: 'store-techhub', store_name: 'TechHub Electronics', is_active: true, in_stock: true, created_at: '2026-10-12T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z' },
   { id: 'prd-002', name: 'Leather Crossbody Bag', description: 'Locally finished crossbody bag for work and everyday use.', price: 4200000, stock_quantity: 7, category: 'Fashion', image_url: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&auto=format&fit=crop', store_id: 'store-stylecraft', store_name: 'StyleCraft', is_active: true, in_stock: true, created_at: '2026-10-20T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z' },
@@ -13,16 +21,16 @@ export const mockProducts: Product[] = [
 ]
 
 export const mockStores: Store[] = [
-  { id: 'store-techhub', name: 'TechHub Electronics', slug: 'techhub-electronics', description: 'Everyday tech, accessories and practical gadgets.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-01', is_active: true, verification_status: 'pending', created_at: '2026-08-01T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z', category: 'Electronics' },
-  { id: 'store-stylecraft', name: 'StyleCraft', slug: 'stylecraft', description: 'Locally made fashion pieces and accessories.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-02', is_active: true, verification_status: 'pending', created_at: '2026-08-04T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z', category: 'Fashion' },
-  { id: 'store-paperhouse', name: 'Paper House', slug: 'paper-house', description: 'Stationery and thoughtful gifts for study and work.', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-03', is_active: true, verification_status: 'pending', created_at: '2026-08-09T09:00:00.000Z', updated_at: '2026-11-08T09:00:00.000Z', category: 'Books & Stationery' },
-  { id: 'store-homefound', name: 'Home Found', slug: 'home-found', description: 'Useful home and study essentials.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-04', is_active: true, verification_status: 'pending', created_at: '2026-08-12T09:00:00.000Z', updated_at: '2026-11-13T09:00:00.000Z', category: 'Home & Living' },
+  { id: 'store-techhub', name: 'TechHub Electronics', slug: 'techhub-electronics', description: 'Everyday tech, accessories and practical gadgets.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8156, longitude: 7.0498, vendor_id: 'vendor-01', is_active: true, verification_status: 'pending', created_at: '2026-08-01T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z', category: 'Electronics' },
+  { id: 'store-stylecraft', name: 'StyleCraft', slug: 'stylecraft', description: 'Locally made fashion pieces and accessories.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8200, longitude: 7.0350, vendor_id: 'vendor-02', is_active: true, verification_status: 'pending', created_at: '2026-08-04T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z', category: 'Fashion' },
+  { id: 'store-paperhouse', name: 'Paper House', slug: 'paper-house', description: 'Stationery and thoughtful gifts for study and work.', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', latitude: 4.8500, longitude: 7.0500, vendor_id: 'vendor-03', is_active: true, verification_status: 'pending', created_at: '2026-08-09T09:00:00.000Z', updated_at: '2026-11-08T09:00:00.000Z', category: 'Books & Stationery' },
+  { id: 'store-homefound', name: 'Home Found', slug: 'home-found', description: 'Useful home and study essentials.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8100, longitude: 7.0600, vendor_id: 'vendor-04', is_active: true, verification_status: 'pending', created_at: '2026-08-12T09:00:00.000Z', updated_at: '2026-11-13T09:00:00.000Z', category: 'Home & Living' },
 ]
 
 export const mockServices: ServiceProfile[] = [
-  { id: 'svc-001', name: 'Home Cleaning', slug: 'bright-home-cleaning', description: 'One-off and recurring home cleaning with clear quotes before booking.', category: 'Cleaning', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-01', is_active: true, verification_status: 'pending', created_at: '2026-09-01T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z' },
-  { id: 'svc-002', name: 'Phone & Laptop Repairs', slug: 'fixpoint-repairs', description: 'Diagnostics and repairs for common phone and laptop issues.', category: 'Repairs', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-02', is_active: true, verification_status: 'pending', created_at: '2026-09-05T09:00:00.000Z', updated_at: '2026-11-11T09:00:00.000Z' },
-  { id: 'svc-003', name: 'Event Photography', slug: 'frame-by-frame', description: 'Portraits, small events and product photography. Request a quote.', category: 'Photography', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-03', is_active: true, verification_status: 'pending', created_at: '2026-09-12T09:00:00.000Z', updated_at: '2026-11-09T09:00:00.000Z' },
+  { id: 'svc-001', name: 'Home Cleaning', slug: 'bright-home-cleaning', description: 'One-off and recurring home cleaning with clear quotes before booking.', category: 'Cleaning', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8156, longitude: 7.0498, vendor_id: 'service-01', is_active: true, verification_status: 'pending', created_at: '2026-09-01T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z' },
+  { id: 'svc-002', name: 'Phone & Laptop Repairs', slug: 'fixpoint-repairs', description: 'Diagnostics and repairs for common phone and laptop issues.', category: 'Repairs', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8200, longitude: 7.0350, vendor_id: 'service-02', is_active: true, verification_status: 'pending', created_at: '2026-09-05T09:00:00.000Z', updated_at: '2026-11-11T09:00:00.000Z' },
+  { id: 'svc-003', name: 'Event Photography', slug: 'frame-by-frame', description: 'Portraits, small events and product photography. Request a quote.', category: 'Photography', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', latitude: 4.8500, longitude: 7.0500, vendor_id: 'service-03', is_active: true, verification_status: 'pending', created_at: '2026-09-12T09:00:00.000Z', updated_at: '2026-11-09T09:00:00.000Z' },
 ]
 
 export const mockCategories = ['Electronics', 'Fashion', 'Home & Living', 'Books & Stationery']
@@ -146,10 +154,14 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     const q = (query.get('search') || '').toLowerCase()
     const category = (query.get('category') || '').toLowerCase()
     const location = (query.get('location') || '').toLowerCase()
+    const lat = query.get('lat') === null ? null : Number(query.get('lat'))
+    const lng = query.get('lng') === null ? null : Number(query.get('lng'))
+    const radius = Number(query.get('radius') || 15)
     const rows = mockServices.filter((service) =>
       (!q || `${service.name} ${service.description} ${service.category}`.toLowerCase().includes(q)) &&
       (!category || service.category?.toLowerCase() === category) &&
-      (!location || `${service.city} ${service.state}`.toLowerCase().includes(location))
+      (!location || `${service.city} ${service.state}`.toLowerCase().includes(location)) &&
+      (lat === null || lng === null || (service.latitude !== undefined && service.longitude !== undefined && distanceKm(lat, lng, service.latitude, service.longitude) <= radius))
     ).sort((a, b) => b.created_at.localeCompare(a.created_at))
     const page = Math.max(1, Number(query.get('page') || 1))
     const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 20)))
@@ -177,6 +189,9 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     const q = (query.get('search') || '').toLowerCase()
     const category = (query.get('category') || '').toLowerCase()
     const location = (query.get('location') || '').toLowerCase()
+    const lat = query.get('lat') === null ? null : Number(query.get('lat'))
+    const lng = query.get('lng') === null ? null : Number(query.get('lng'))
+    const radius = Number(query.get('radius') || 15)
     const storeSlug = query.get('store') || ''
     const min = query.get('min_price') ? Number(query.get('min_price')) : 0
     const max = query.get('max_price') ? Number(query.get('max_price')) : Number.MAX_SAFE_INTEGER
@@ -189,6 +204,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
         (!category || product.category?.toLowerCase() === category) &&
         (!storeSlug || store?.slug === storeSlug) &&
         (!location || `${store?.city || ''} ${store?.state || ''}`.toLowerCase().includes(location)) &&
+        (lat === null || lng === null || (store?.latitude !== undefined && store.longitude !== undefined && distanceKm(lat, lng, store.latitude, store.longitude) <= radius)) &&
         product.price >= min && product.price <= max && matchesStock
     })
     const sort = query.get('sort') || 'newest'
