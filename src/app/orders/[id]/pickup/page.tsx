@@ -14,7 +14,16 @@ import { formatDateTime } from '@/lib/formatting'
 export default function BuyerPickupPage() {
   const params = useParams<{ id: string }>()
   const [pickup, setPickup] = useState<PickupDemo | null>(null)
-  useEffect(() => { if (isMockMode) void Promise.resolve().then(() => setPickup(getPickupDemo(params.id))) }, [params.id])
+  useEffect(() => {
+    if (!isMockMode) return
+    const refreshPickup = () => setPickup(getPickupDemo(params.id))
+    void Promise.resolve().then(refreshPickup)
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'kamba_pickup_prototype') refreshPickup()
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [params.id])
   if (!isMockMode) return <div className="container mx-auto max-w-2xl px-4 py-16"><Card><CardContent className="space-y-3 p-6"><AlertCircle className="h-7 w-7 text-gold" /><h1 className="text-2xl">Pickup verification is not connected yet</h1><p className="text-text-secondary">The backend currently documents pickup checkout, but not a vendor pickup-code issuance or collection-verification endpoint. This screen will activate when that contract is available.</p></CardContent></Card></div>
   const stage = pickup?.stage || 'awaiting_confirmation'
   return <div className="container mx-auto max-w-3xl space-y-6 px-4 py-10">
