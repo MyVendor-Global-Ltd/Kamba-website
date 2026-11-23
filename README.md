@@ -63,9 +63,9 @@ For testing on a physical Android device, use the development computer's LAN IP 
 | --- | --- |
 | Discovery | `/`, `/marketplace`, `/marketplace/products`, `/marketplace/services`, `/marketplace/stores`, `/marketplace/category/[slug]`, `/search` |
 | Product/store/service details | `/marketplace/products/[id]`, `/marketplace/stores/[slug]`, `/marketplace/services/[slug]` |
-| Buyer | `/cart`, `/checkout`, `/checkout/payment`, `/orders`, `/orders/[id]`, `/orders/[id]/track`, `/orders/[id]/pickup`, `/account` |
+| Buyer | `/cart`, `/checkout`, `/checkout/payment`, `/orders`, `/orders/[id]`, `/orders/[id]/track`, `/orders/[id]/pickup`, `/service-requests`, `/account` |
 | Authentication | `/auth/login`, `/auth/register`, `/auth/forgot-password`, OTP and profile steps |
-| Vendor | `/vendor/onboard`, `/vendor/dashboard`, `/vendor/products`, `/vendor/products/new`, `/vendor/products/[id]`, `/vendor/orders`, `/vendor/pickup`, `/vendor/payments`, `/vendor/profile` |
+| Vendor | `/vendor/onboard`, `/vendor/dashboard`, `/vendor/products`, `/vendor/products/new`, `/vendor/products/[id]`, `/vendor/orders`, `/vendor/service-requests`, `/vendor/pickup`, `/vendor/payments`, `/vendor/profile` |
 
 ## Development prototype boundaries
 
