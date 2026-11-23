@@ -116,6 +116,8 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   hydrateCart()
   hydrateWishlist()
   hydrateServiceRequests()
+  hydrateCheckouts()
+  hydrateOrders()
   const url = new URL(path, 'http://kamba.local')
   Object.entries(options.params || {}).forEach(([key, value]) => { if (value !== undefined && value !== null) url.searchParams.set(key, String(value)) })
   const pathname = url.pathname
