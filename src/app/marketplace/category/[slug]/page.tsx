@@ -142,11 +142,6 @@ export default function CategoryPage() {
     void Promise.resolve().then(fetchCategory)
   }, [slug, searchParams.get('page'), filters.sort, filters.minPrice, filters.maxPrice, filters.inStockOnly])
 
-  const handleFilterChange = (newFilters: typeof filters) => {
-    setFilters(newFilters)
-    router.push(`/marketplace/category/${slug}?page=1`)
-  }
-
   const clearFilters = () => {
     setFilters({ sort: 'newest', minPrice: '', maxPrice: '', inStockOnly: false })
     router.push(`/marketplace/category/${slug}?page=1`)
@@ -279,19 +274,23 @@ export default function CategoryPage() {
           )}
         </div>
 
-        {activeTab === 'products' && <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'price_asc' }))} className={filters.sort === 'price_asc' ? 'bg-coral border-coral text-white' : ''}>
-            Price: Low to High
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'price_desc' }))} className={filters.sort === 'price_desc' ? 'bg-coral border-coral text-white' : ''}>
-            Price: High to Low
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'newest' }))} className={filters.sort === 'newest' ? 'bg-coral border-coral text-white' : ''}>
-            Newest
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'popular' }))} className={filters.sort === 'popular' ? 'bg-coral border-coral text-white' : ''}>
-            Popular
-          </Button>
+        {activeTab === 'products' && <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            Min ₦
+            <input aria-label="Minimum price in naira" type="number" min="0" inputMode="numeric" value={filters.minPrice} onChange={(event) => setFilters((previous) => ({ ...previous, minPrice: event.target.value }))} className="h-9 w-24 rounded-lg border border-border bg-surface px-2 text-sm text-text-primary" />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            Max ₦
+            <input aria-label="Maximum price in naira" type="number" min="0" inputMode="numeric" value={filters.maxPrice} onChange={(event) => setFilters((previous) => ({ ...previous, maxPrice: event.target.value }))} className="h-9 w-24 rounded-lg border border-border bg-surface px-2 text-sm text-text-primary" />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            <input type="checkbox" checked={filters.inStockOnly} onChange={(event) => setFilters((previous) => ({ ...previous, inStockOnly: event.target.checked }))} className="h-4 w-4 accent-[var(--primary)]" />
+            In stock
+          </label>
+          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'price_asc' }))} className={filters.sort === 'price_asc' ? 'bg-coral border-coral text-white' : ''}>Price: Low to High</Button>
+          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'price_desc' }))} className={filters.sort === 'price_desc' ? 'bg-coral border-coral text-white' : ''}>Price: High to Low</Button>
+          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'newest' }))} className={filters.sort === 'newest' ? 'bg-coral border-coral text-white' : ''}>Newest</Button>
+          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'popular' }))} className={filters.sort === 'popular' ? 'bg-coral border-coral text-white' : ''}>Popular</Button>
         </div>}
       </div>
 
