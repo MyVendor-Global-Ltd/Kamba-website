@@ -49,6 +49,13 @@ function hydrateCart() {
   } catch { /* Ignore invalid local prototype data. */ }
 }
 const wishlist = new Set<string>()
+let wishlistHydrated = false
+function hydrateWishlist() {
+  if (wishlistHydrated || typeof window === 'undefined') return
+  wishlistHydrated = true
+  try { (JSON.parse(window.localStorage.getItem('kamba_demo_wishlist') || '[]') as string[]).forEach((id) => wishlist.add(id)) } catch { /* Ignore invalid prototype data. */ }
+}
+function persistWishlist() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_wishlist', JSON.stringify([...wishlist])) }
 const orders: Record<string, any> = {}
 let ordersHydrated = false
 function hydrateOrders() {
@@ -74,6 +81,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   await Promise.resolve()
   const method = (options.method || 'GET').toUpperCase()
   hydrateCart()
+  hydrateWishlist()
   const url = new URL(path, 'http://kamba.local')
   Object.entries(options.params || {}).forEach(([key, value]) => { if (value !== undefined && value !== null) url.searchParams.set(key, String(value)) })
   const pathname = url.pathname
@@ -98,10 +106,10 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     return response({ success: true, user, prototype: true }) as T
   }
   if (pathname === '/vendors/stores') return response({ stores: mockStores }) as T
-  if (pathname === '/marketplace/wishlist' && method === 'GET') return response({ items: [...wishlist] }) as T
-  const wishlistMatch = pathname.match(/^\\/marketplace\\/wishlist\\/([^/]+)$/)
-  if (wishlistMatch && method === 'POST') { wishlist.add(wishlistMatch[1]); return response({ saved: true, product_id: wishlistMatch[1] }) as T }
-  if (wishlistMatch && method === 'DELETE') { wishlist.delete(wishlistMatch[1]); return response({ removed: true, product_id: wishlistMatch[1] }) as T }
+  if (pathname === '/marketplace/wishlist' && method === 'GET') return response({ items: [...wishlist].map((product_id) => ({ product_id })) }) as T
+  const wishlistMatch = pathname.match(/^\/marketplace\/wishlist\/([^/]+)$/)
+  if (wishlistMatch && method === 'POST') { wishlist.add(wishlistMatch[1]); persistWishlist(); return response({ saved: true, product_id: wishlistMatch[1] }) as T }
+  if (wishlistMatch && method === 'DELETE') { wishlist.delete(wishlistMatch[1]); persistWishlist(); return response({ removed: true, product_id: wishlistMatch[1] }) as T }
   const storeMatch = pathname.match(/^\/vendors\/stores\/([^/]+)$/)
   if (storeMatch) { const store = mockStores.find(s => s.slug === storeMatch[1]); return response({ store: store || null, products: mockProducts.filter(p => p.store_id === store?.id) }) as T }
   const storeProductsMatch = pathname.match(/^\/commerce\/stores\/([^/]+)\/products$/)
