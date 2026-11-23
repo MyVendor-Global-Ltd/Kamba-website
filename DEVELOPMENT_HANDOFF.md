@@ -8,11 +8,11 @@ Last updated: 2026-11-23
 - Active branch: `feat/kamba-brand-prototype-pickup`
 - Do not work directly on `main`.
 - Do not merge this branch without the user's approval.
-- At the last check, this branch was 190 commits ahead of `main` and 0 commits behind.
+- At the last check, this branch was 192 commits ahead of `main` and 0 commits behind.
 
 ## Last verified checkpoint
 
-- Latest commit: `954d060f71b0a77e7bce7c4678e82c9a89c7e82a` (service-request navigation)
+- Latest commit: `72212122692b31fedc14023439b32ecdc2340baa` (service-request route documentation)
 - Latest deployment status check: Vercel reported `build-rate-limit` for both linked deployments; this is a deployment quota/limit result, not evidence that the new code built successfully. No GitHub Actions run was returned for this commit.
 - GitHub Actions run: https://github.com/MyVendor-Global-Ltd/Kamba-website/actions/runs/45177152750
 - Dependency installation: passed
