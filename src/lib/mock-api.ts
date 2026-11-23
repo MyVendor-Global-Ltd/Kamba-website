@@ -115,7 +115,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     return response({ success: true, user, prototype: true }) as T
   }
   if (pathname === '/vendors/stores') return response({ stores: mockStores }) as T
-  const publicServiceMatch = pathname.match(/^\\/vendors\\/services\\/([^/]+)$/)
+  const publicServiceMatch = pathname.match(/^\/vendors\/services\/([^/]+)$/)
   if (publicServiceMatch && method === 'GET') {
     const service = mockServices.find((item) => item.slug === publicServiceMatch[1])
     return response({ service_profile: service || null }) as T
@@ -128,7 +128,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     return response({ request, idempotent: false }) as T
   }
   if (pathname === '/service-bookings/requests' && method === 'GET') return response({ requests: Object.values(serviceRequests) }) as T
-  const serviceRequestMatch = pathname.match(/^\\/service-bookings\\/requests\\/([^/]+)$/)
+  const serviceRequestMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)$/)
   if (serviceRequestMatch && method === 'GET') {
     const request = serviceRequests[serviceRequestMatch[1]]
     if (!request) throw new Error('Service request not found in the prototype session.')
