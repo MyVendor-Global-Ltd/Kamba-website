@@ -122,7 +122,7 @@ export default function ProductDetailPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Product not found</h2>
-          <p className="text-text-tertiary">The product you're looking for doesn't exist or has been removed.</p>
+          <p className="text-text-tertiary">The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Button variant="outline" className="mt-4" onClick={() => window.history.back()}>
             Back to products
           </Button>
