@@ -7,19 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Filter, RotateCcw, Truck, RefreshCw, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Filter, RotateCcw, RefreshCw, X } from 'lucide-react'
+import { useCartContext } from '@/context/CartContext'
 
 interface Order {
   id: string
   order_number: string
   status: string
   payment_status: string
-  delivery_status: string
+  delivery_status?: string
+  delivery_type?: 'delivery' | 'pickup'
   total: number
   created_at: string
+  item_count?: number
+  store_name?: string
   items: Array<{
     id: string
     product_id: string
@@ -30,109 +34,114 @@ interface Order {
   }>
 }
 
-interface OrdersResponse {
-  orders: Order[]
-  pagination: {
-    page: number
-    limit: number
+interface OrderListResponse {
+  orders: Array<{
+    id: string
+    status: string
+    subtotal: number
+    platform_fee: number
+    shipping_amount: number
     total: number
-    totalPages: number
-  }
+    delivery_type: 'delivery' | 'pickup'
+    created_at: string
+    store_name?: string
+    item_count: number
+  }>
+}
+interface OrderDetailItem {
+  product_id: string
+  name?: string
+  product_name?: string
+  quantity: number
+  unit_amount?: number
+  price?: number
+  image_url?: string
+}
+interface OrderDetailResponse {
+  order?: { order_items?: OrderDetailItem[]; items?: OrderDetailItem[] }
+  order_items?: OrderDetailItem[]
+  items?: OrderDetailItem[]
 }
 
-type StatusFilter = 'all' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+type StatusFilter = 'all' | 'awaiting_payment' | 'paid_held' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'disputed' | 'cancelled'
 
 export default function OrdersPage() {
   const router = useRouter()
   const { addToast } = useToast()
+  const { refresh: refreshCart } = useCartContext()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalOrders, setTotalOrders] = useState(0)
   const limit = 10
 
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      })
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter)
-      }
-      const data = await apiJson<OrdersResponse>(`/api/orders?${params.toString()}`)
-      setOrders(data.orders || [])
-      setTotalPages(data.pagination?.totalPages || 1)
-      setTotalOrders(data.pagination?.total || 0)
+      const data = await apiJson<OrderListResponse>('/commerce/orders')
+      setOrders((data.orders || []).map((order) => ({
+        id: order.id,
+        order_number: order.id,
+        status: order.status,
+        payment_status: order.status === 'paid_held' ? 'held' : 'See order details',
+        delivery_status: 'not available',
+        delivery_type: order.delivery_type,
+        total: order.total,
+        created_at: order.created_at,
+        item_count: order.item_count,
+        store_name: order.store_name,
+        items: [],
+      })))
+      setPage(1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders')
     } finally {
       setLoading(false)
     }
-  }, [page, statusFilter])
+  }, [])
 
   useEffect(() => {
-    fetchOrders()
+    void Promise.resolve().then(fetchOrders)
   }, [fetchOrders])
+
+  const filteredOrders = orders.filter((order) => {
+    if (statusFilter === 'all') return true
+    if (statusFilter === 'awaiting_payment') return ['pending', 'pending_payment', 'payment_pending'].includes(order.status)
+    return order.status === statusFilter
+  })
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / limit))
+  const visibleOrders = filteredOrders.slice((page - 1) * limit, page * limit)
 
   const handleReorder = async (order: Order) => {
     try {
-      // Add all items from this order to cart
-      for (const item of order.items) {
-        await apiJson('/api/cart', {
+      const detail = await apiJson<OrderDetailResponse>(`/commerce/orders/${encodeURIComponent(order.id)}`)
+      const raw = detail.order || detail
+      const items = raw.order_items || raw.items || order.items
+      if (!items.length) throw new Error('The backend did not return the item snapshots required to reorder this purchase.')
+      for (const item of items) {
+        await apiJson('/commerce/cart/items', {
           method: 'POST',
-          body: JSON.stringify({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            name: item.product_name,
-            price_kobo: item.price,
-            image_url: item.image_url,
-          }),
+          body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
         })
       }
-      addToast({
-        type: 'success',
-        title: 'Items added to cart',
-        message: 'All items from this order have been added to your cart.',
-      })
+      addToast({ type: 'success', title: 'Items added to cart', message: 'Available items from this order have been added to your cart.' })
+      await refreshCart()
       router.push('/cart')
     } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to reorder',
-        message: 'Please try again.',
-      })
+      addToast({ type: 'error', title: 'Failed to reorder', message: err instanceof Error ? err.message : 'Please try again.' })
     }
   }
 
-  const handleRequestReturn = async (orderId: string) => {
-    if (!confirm('Are you sure you want to request a return for this order?')) return
-    try {
-      await apiJson(`/api/orders/${orderId}/return`, { method: 'POST' })
-      addToast({
-        type: 'success',
-        title: 'Return requested',
-        message: 'Your return request has been submitted. We\'ll contact you shortly.',
-      })
-      fetchOrders()
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to request return',
-        message: 'Please try again.',
-      })
-    }
-  }
+
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
         return 'success'
+      case 'paid_held':
+        return 'warning'
       case 'shipped':
       case 'processing':
         return 'secondary'
@@ -148,6 +157,7 @@ export default function OrdersPage() {
       case 'paid':
         return 'success'
       case 'pending':
+      case 'held':
         return 'warning'
       case 'failed':
         return 'destructive'
@@ -160,9 +170,6 @@ export default function OrdersPage() {
     return ['delivered', 'cancelled'].includes(status.toLowerCase())
   }
 
-  const canReturn = (status: string, deliveryStatus: string) => {
-    return status.toLowerCase() === 'delivered' && deliveryStatus.toLowerCase() === 'delivered'
-  }
 
   if (loading) {
     return (
@@ -206,15 +213,17 @@ export default function OrdersPage() {
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1) }}
               className="appearance-none pl-10 pr-8 py-2 bg-ink-raised/50 border border-border/50 rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-coral focus:border-transparent"
             >
               <option value="all">All Orders</option>
-              <option value="pending">Pending</option>
+              <option value="awaiting_payment">Awaiting payment</option>
+              <option value="paid_held">Paid — awaiting vendor</option>
               <option value="confirmed">Confirmed</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
+              <option value="disputed">Disputed</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -232,7 +241,7 @@ export default function OrdersPage() {
       )}
 
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '100ms' }}>
-        {orders.map((order) => (
+        {visibleOrders.map((order) => (
           <Card key={order.id} variant="elevated">
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -240,14 +249,14 @@ export default function OrdersPage() {
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
                     <Badge variant={getStatusVariant(order.status)} size="sm">
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {formatOrderStatus(order.status)}
                     </Badge>
                     <Badge variant={getPaymentStatusVariant(order.payment_status)} size="sm">
-                      {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                      {formatOrderStatus(order.payment_status)}
                     </Badge>
                   </div>
-                  <p className="text-sm text-text-tertiary">{formatDateTime(order.created_at)}</p>
-                  <p className="text-sm text-text-secondary mt-1">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-text-tertiary">{formatDateTime(order.created_at)} · {order.store_name || 'Kamba vendor'} · {order.delivery_type === 'pickup' ? 'Pickup' : 'Delivery'}</p>
+                  <p className="text-sm text-text-secondary mt-1">{order.item_count ?? order.items.length} item{(order.item_count ?? order.items.length) !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:ml-4">
                   <div className="text-right sm:text-left flex-1">
@@ -266,19 +275,14 @@ export default function OrdersPage() {
                         Reorder
                       </Button>
                     )}
-                    {canReturn(order.status, order.delivery_status) && (
-                      <Button variant="outline" size="sm" onClick={() => handleRequestReturn(order.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
-                        <Truck className="w-4 h-4 mr-1" />
-                        Return
-                      </Button>
-                    )}
+
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
-        {orders.length === 0 && (
+        {filteredOrders.length === 0 && (
           <div className="text-center py-16">
             <div className="w-20 h-20 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-6 text-text-tertiary">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -354,7 +358,7 @@ export default function OrdersPage() {
       )}
 
       <div className="text-center text-sm text-text-tertiary animate-fade-in" style={{ animationDelay: '300ms' }}>
-        Showing {orders.length} of {totalOrders} order{totalOrders !== 1 ? 's' : ''}
+        Showing {visibleOrders.length} of {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
       </div>
     </div>
   )

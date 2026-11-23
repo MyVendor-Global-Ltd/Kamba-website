@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ interface Order {
   created_at: string
 }
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('order_id')
   const [order, setOrder] = useState<Order | null>(null)
@@ -41,14 +41,16 @@ export default function OrderConfirmationPage() {
 
   useEffect(() => {
     if (!orderId) {
-      setError('No order ID provided')
-      setLoading(false)
+      void Promise.resolve().then(() => {
+        setError('No order ID provided')
+        setLoading(false)
+      })
       return
     }
 
     async function fetchOrder() {
       try {
-        const data = await apiJson<{ order: Order }>(`/api/orders/${orderId}`)
+        const data = await apiJson<{ order: Order }>(`/commerce/orders/${orderId}`)
         setOrder(data.order)
       } catch (err) {
         console.error('Failed to fetch order:', err)
@@ -318,4 +320,8 @@ export default function OrderConfirmationPage() {
       </div>
     </div>
   )
+}
+
+export default function OrderConfirmationPage() {
+  return <Suspense fallback={<div className="container mx-auto px-4 py-12"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>}><OrderConfirmationContent /></Suspense>
 }

@@ -1,128 +1,182 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { formatKobo } from "@/lib/formatting"
-import { CartItem } from "@/types/cart"
-import { apiJson } from "@/lib/api"
-import { useCartContext } from "@/context/CartContext"
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
+import { formatKobo } from '@/lib/formatting'
+import { apiJson } from '@/lib/api'
+import { useCartContext } from '@/context/CartContext'
+
+interface University {
+  id: string
+  slug: string
+  name: string
+  city?: string
+  state?: string
+}
+interface DeliveryZone {
+  id: string
+  name: string
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, isLoading, refresh } = useCartContext()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deliveryError, setDeliveryError] = useState<string | null>(null)
+  const [universities, setUniversities] = useState<University[]>([])
+  const [zones, setZones] = useState<DeliveryZone[]>([])
+  const [universitiesLoading, setUniversitiesLoading] = useState(true)
+  const [zonesLoading, setZonesLoading] = useState(false)
+  const [selectedUniversityId, setSelectedUniversityId] = useState('')
+  const [selectedZoneId, setSelectedZoneId] = useState('')
+  const [deliveryQuote, setDeliveryQuote] = useState<number | null>(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
   const [formData, setFormData] = useState({
-    email: "",
-    phone: "",
-    shippingAddress: "",
-    city: "",
-    state: "",
-    paymentMethod: "card",
+    recipientName: '',
+    phone: '',
+    shippingAddress: '',
+    city: '',
+    state: '',
+    deliveryType: 'pickup' as 'delivery' | 'pickup',
   })
 
   const cartItems = cart.items
   const subtotal = cart.subtotal
-  const shipping = cart.delivery_fee
-  const total = cart.total
+  const storeIds = useMemo(() => [...new Set(cartItems.map((item) => item.store_id).filter(Boolean))], [cartItems])
+  const shipping = formData.deliveryType === 'pickup' ? 0 : deliveryQuote ?? 0
+  const total = subtotal + cart.platform_fee + shipping
+  const selectedUniversity = universities.find((university) => university.id === selectedUniversityId)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    let active = true
+    apiJson<{ universities: University[] }>('/delivery/universities')
+      .then((data) => { if (active) setUniversities(data.universities || []) })
+      .catch((err) => { if (active) setDeliveryError(err instanceof Error ? err.message : 'Could not load delivery coverage.') })
+      .finally(() => { if (active) setUniversitiesLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (formData.deliveryType !== 'delivery' || !selectedUniversity) return
+    let active = true
+    const loadZones = async () => {
+      setZonesLoading(true)
+      try {
+        const data = await apiJson<{ zones: DeliveryZone[] }>(`/delivery/universities/${encodeURIComponent(selectedUniversity.slug)}/zones`)
+        if (active) setZones(data.zones || [])
+      } catch (err) {
+        if (active) setDeliveryError(err instanceof Error ? err.message : 'Could not load delivery zones.')
+      } finally {
+        if (active) setZonesLoading(false)
+      }
+    }
+    void loadZones()
+    return () => { active = false }
+  }, [formData.deliveryType, selectedUniversity])
+
+  useEffect(() => {
+    if (formData.deliveryType !== 'delivery' || !selectedUniversityId || !selectedZoneId || storeIds.length === 0) return
+    let active = true
+    const loadQuotes = async () => {
+      setQuoteLoading(true)
+      setDeliveryError(null)
+      try {
+        const quotes = await Promise.all(storeIds.map((storeId) => apiJson<{ quote: { buyer_delivery_charge_kobo: number } }>('/delivery/quote', {
+          method: 'POST',
+          body: JSON.stringify({
+            store_id: storeId,
+            university_id: selectedUniversityId,
+            destination_zone_id: selectedZoneId,
+            delivery_mode: 'express',
+          }),
+        })))
+        if (active) setDeliveryQuote(quotes.reduce((sum, result) => sum + Number(result.quote.buyer_delivery_charge_kobo || 0), 0))
+      } catch (err) {
+        if (active) {
+          setDeliveryQuote(null)
+          setDeliveryError(err instanceof Error ? err.message : 'Delivery is not available for one or more stores at this destination.')
+        }
+      } finally {
+        if (active) setQuoteLoading(false)
+      }
+    }
+    void loadQuotes()
+    return () => { active = false }
+  }, [formData.deliveryType, selectedUniversityId, selectedZoneId, storeIds])
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setSubmitting(true)
     setError(null)
 
     try {
-      await apiJson("/api/orders", {
-        method: "POST",
-        body: JSON.stringify({
-          items: cartItems.map((item) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-              price_kobo: item.price_kobo,
-              name: item.name,
-              image_url: item.image_url,
-              store_id: item.store_id,
-          })),
-          shipping_address: {
-            address: formData.shippingAddress,
-            city: formData.city,
-            state: formData.state,
-          },
-          payment_method: formData.paymentMethod,
-        }),
+      if (formData.deliveryType === 'delivery') {
+        if (!selectedUniversityId || !selectedZoneId || deliveryQuote === null) {
+          throw new Error('Select a supported university and delivery zone so Kamba can calculate the delivery charge.')
+        }
+        if (!formData.recipientName.trim() || !formData.phone.trim() || !formData.shippingAddress.trim() || !formData.city.trim() || !formData.state.trim()) {
+          throw new Error('Complete all delivery address fields before continuing.')
+        }
+      }
+
+      const idempotencyKey = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `kamba-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const checkoutBody = formData.deliveryType === 'pickup'
+        ? { delivery_type: 'pickup' }
+        : {
+            delivery_type: 'delivery',
+            delivery_mode: 'express',
+            delivery_address: {
+              recipient_name: formData.recipientName.trim(),
+              phone: formData.phone.trim(),
+              address_line: formData.shippingAddress.trim(),
+              city: formData.city.trim(),
+              state: formData.state.trim(),
+              university_id: selectedUniversityId,
+              zone_id: selectedZoneId,
+            },
+          }
+
+      const result = await apiJson<{ checkout: { id: string }; orders: Array<{ id: string }> }>('/commerce/marketplace-checkouts', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(checkoutBody),
       })
-      router.push("/orders")
-      router.refresh()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to place order"
-      setError(message)
+      await refresh()
+      router.push(`/checkout/payment?checkout_id=${encodeURIComponent(result.checkout.id)}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create your checkout. Please try again.')
     } finally {
       setSubmitting(false)
     }
   }
 
-    if (isLoading) {
+  if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
-        <div className="space-y-4 animate-pulse">
-          <div className="h-10 w-1/3 bg-ink-raised/50 rounded-lg" />
-          <div className="h-6 w-1/2 bg-ink-raised/50 rounded-lg" />
-        </div>
+      <div className="container mx-auto space-y-8 px-4 py-8 lg:py-12">
+        <div className="h-9 w-1/3 animate-pulse rounded-lg bg-surface-muted" />
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} variant="elevated">
-                <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    <div className="h-20 w-20 bg-ink-raised/50 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-5 w-1/4 bg-ink-raised/50 rounded" />
-                      <div className="h-4 w-1/2 bg-ink-raised/50 rounded" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <Card variant="elevated">
-            <CardContent className="p-4 space-y-4">
-              <div className="h-6 w-1/3 bg-ink-raised/50 rounded" />
-              <div className="space-y-2">
-                <div className="h-4 w-full bg-ink-raised/50 rounded" />
-                <div className="h-4 w-full bg-ink-raised/50 rounded" />
-              </div>
-              <div className="h-4 w-full bg-ink-raised/50 rounded" />
-              <div className="h-4 w-full bg-ink-raised/50 rounded" />
-              <div className="h-10 w-full bg-ink-raised/50 rounded" />
-            </CardContent>
-          </Card>
+          <div className="space-y-4 md:col-span-2">{[1, 2].map((item) => <div key={item} className="h-48 animate-pulse rounded-xl bg-surface-muted" />)}</div>
+          <div className="h-80 animate-pulse rounded-xl bg-surface-muted" />
         </div>
       </div>
     )
   }
 
-  if (cartItems.length === 0 || isLoading) {
+  if (cartItems.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 lg:py-24 animate-fade-in">
-        <Card variant="outlined" className="max-w-md mx-auto text-center p-8">
+      <div className="container mx-auto px-4 py-16 lg:py-24">
+        <Card variant="outlined" className="mx-auto max-w-md p-8 text-center">
           <CardContent className="space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-coral-dim flex items-center justify-center">
-              <svg className="w-8 h-8 text-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">Your cart is empty</h2>
-              <p className="text-text-secondary mt-1">Add some products to get started</p>
-            </div>
-            <Link href="/marketplace/products">
-              <Button className="w-full">Continue Shopping</Button>
-            </Link>
+            <h2 className="text-xl font-semibold text-text-primary">Your cart is empty</h2>
+            <p className="text-text-secondary">Add products before starting checkout.</p>
+            <Link href="/marketplace/products"><Button className="w-full">Continue shopping</Button></Link>
           </CardContent>
         </Card>
       </div>
@@ -130,172 +184,108 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12 animate-fade-in">
-      <div className="space-y-4 mb-8">
-        <h1 className="text-3xl lg:text-4xl font-bold text-text-primary tracking-tight">Checkout</h1>
-        <p className="text-text-secondary">Review your order and complete your purchase</p>
+    <div className="container mx-auto px-4 py-8 lg:py-12">
+      <div className="mb-8 space-y-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-text-primary lg:text-4xl">Checkout</h1>
+        <p className="text-text-secondary">Choose how to receive your order and review every charge before continuing.</p>
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="mb-6 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive" role="alert">{error}</div>}
 
       <form onSubmit={handleSubmit} className="grid gap-8 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-6">
+        <div className="space-y-6 md:col-span-2">
           <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-lg">Shipping Information</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-lg">How would you like to receive your order?</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="you@example.com"
-                  required
-                />
-                <Input
-                  label="Phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+234 800 000 0000"
-                  required
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={`flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${formData.deliveryType === 'pickup' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                  <input type="radio" name="deliveryType" value="pickup" checked={formData.deliveryType === 'pickup'} onChange={() => { setFormData((previous) => ({ ...previous, deliveryType: 'pickup' })); setZones([]); setSelectedZoneId(''); setDeliveryQuote(null); setDeliveryError(null) }} className="mt-1 accent-primary" />
+                  <span><span className="block font-semibold text-text-primary">Pick up from the vendor</span><span className="text-sm text-text-secondary">The approved collection point is shared when the order is ready.</span></span>
+                </label>
+                <label className={`flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${formData.deliveryType === 'delivery' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                  <input type="radio" name="deliveryType" value="delivery" checked={formData.deliveryType === 'delivery'} onChange={() => { setFormData((previous) => ({ ...previous, deliveryType: 'delivery' })); setDeliveryQuote(null); setDeliveryError(null) }} className="mt-1 accent-primary" />
+                  <span><span className="block font-semibold text-text-primary">Deliver to me</span><span className="text-sm text-text-secondary">Choose a supported university and delivery zone.</span></span>
+                </label>
               </div>
-              <Input
-                label="Shipping Address"
-                value={formData.shippingAddress}
-                onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
-                placeholder="123 Main Street, Apt 4B"
-                required
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="City"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="Lagos"
-                  required
-                />
-                <Input
-                  label="State"
-                  value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  placeholder="Lagos"
-                  required
-                />
-              </div>
+
+              {formData.deliveryType === 'pickup' ? (
+                <p className="rounded-lg bg-secondary px-4 py-3 text-sm text-secondary-foreground">
+                  Your vendor&apos;s approved collection point will only be shown after the order is confirmed and ready. Personal or residential addresses are not exposed.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {universitiesLoading ? <p className="text-sm text-text-secondary">Loading delivery coverage…</p> : universities.length === 0 ? (
+                    <p className="rounded-lg border border-gold-dim bg-gold-soft px-4 py-3 text-sm text-text-primary">No university delivery coverage is configured yet. Choose pickup or ask Kamba to configure your delivery area.</p>
+                  ) : (
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          University
+                          <select value={selectedUniversityId} onChange={(event) => { setSelectedUniversityId(event.target.value); setZones([]); setSelectedZoneId(''); setDeliveryQuote(null); setDeliveryError(null) }} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
+                            <option value="">Choose a university</option>
+                            {universities.map((university) => <option key={university.id} value={university.id}>{university.name}</option>)}
+                          </select>
+                        </label>
+                        <label className="block text-sm font-medium text-text-secondary">
+                          Delivery zone
+                          <select value={selectedZoneId} onChange={(event) => { setSelectedZoneId(event.target.value); setDeliveryQuote(null); setDeliveryError(null) }} required disabled={!selectedUniversityId || zonesLoading} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary disabled:opacity-50">
+                            <option value="">{zonesLoading ? 'Loading zones…' : 'Choose a zone'}</option>
+                            {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
+                          </select>
+                        </label>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Input label="Recipient name" value={formData.recipientName} onChange={(event) => setFormData((previous) => ({ ...previous, recipientName: event.target.value }))} placeholder="Full name" required />
+                        <Input label="Phone number" type="tel" value={formData.phone} onChange={(event) => setFormData((previous) => ({ ...previous, phone: event.target.value }))} placeholder="080… or +234…" required />
+                      </div>
+                      <Input label="Delivery address" value={formData.shippingAddress} onChange={(event) => setFormData((previous) => ({ ...previous, shippingAddress: event.target.value }))} placeholder="Street, building and room/flat" required />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Input label="City" value={formData.city} onChange={(event) => setFormData((previous) => ({ ...previous, city: event.target.value }))} placeholder="City" required />
+                        <Input label="State" value={formData.state} onChange={(event) => setFormData((previous) => ({ ...previous, state: event.target.value }))} placeholder="State" required />
+                      </div>
+                      {quoteLoading && <p role="status" className="text-sm text-text-secondary">Calculating delivery charges for each store…</p>}
+                      {deliveryError && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{deliveryError}</p>}
+                      {deliveryQuote !== null && !quoteLoading && <p className="rounded-lg bg-secondary px-4 py-3 text-sm text-secondary-foreground">Delivery quotes are available for all {storeIds.length} store{storeIds.length === 1 ? '' : 's'} in your cart.</p>}
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-lg">Payment Method</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-ink-raised hover:border-coral/30 hover:bg-coral-dim/20 transition-all cursor-pointer">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    checked={formData.paymentMethod === "card"}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-4 h-4 text-coral border-ink-raised focus:ring-coral"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-ink rounded flex items-center justify-center text-xs font-mono text-text-tertiary">CARD</div>
-                    <span className="text-text-primary font-medium">Credit / Debit Card</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-ink-raised hover:border-coral/30 hover:bg-coral-dim/20 transition-all cursor-pointer">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="transfer"
-                    checked={formData.paymentMethod === "transfer"}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-4 h-4 text-coral border-ink-raised focus:ring-coral"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-ink rounded flex items-center justify-center text-xs font-mono text-text-tertiary">BANK</div>
-                    <span className="text-text-primary font-medium">Bank Transfer</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-ink-raised hover:border-coral/30 hover:bg-coral-dim/20 transition-all cursor-pointer">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="ussd"
-                    checked={formData.paymentMethod === "ussd"}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-4 h-4 text-coral border-ink-raised focus:ring-coral"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-ink rounded flex items-center justify-center text-xs font-mono text-text-tertiary">USSD</div>
-                    <span className="text-text-primary font-medium">USSD Payment</span>
-                  </div>
-                </label>
-              </div>
+          <Card variant="outlined">
+            <CardHeader><CardTitle className="text-lg">Payment</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-sm leading-6 text-text-secondary">After you create the checkout, Kamba will request payment instructions from its configured payment provider. This website never marks a payment successful; only a verified provider confirmation can do that.</p>
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-6">
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-lg">Order Summary</CardTitle>
-            </CardHeader>
+          <Card variant="elevated" className="md:sticky md:top-24">
+            <CardHeader><CardTitle className="text-lg">Order summary</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="max-h-64 overflow-y-auto space-y-3">
+              <div className="max-h-64 space-y-3 overflow-y-auto">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="h-16 w-16 bg-ink-raised/50 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-medium text-text-primary truncate">{item.name}</p>
-                      <p className="text-sm text-text-secondary">Qty: {item.quantity}</p>
-                      <p className="text-sm font-medium text-text-primary">{formatKobo(item.price_kobo * item.quantity)}</p>
-                    </div>
+                  <div key={item.id} className="flex items-start justify-between gap-3 text-sm">
+                    <div className="min-w-0"><p className="truncate font-medium text-text-primary">{item.name}</p><p className="text-xs text-text-secondary">Qty {item.quantity} · {item.store_name || 'Kamba vendor'}</p></div>
+                    <span className="shrink-0 font-medium text-text-primary">{formatKobo(item.price_kobo * item.quantity)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-ink-raised pt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Subtotal</span>
-                  <span className="text-text-primary">{formatKobo(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Shipping</span>
-                  <span className="text-text-primary">{shipping > 0 ? formatKobo(shipping) : "Free"}</span>
-                </div>
-                <div className="flex justify-between text-lg font-semibold pt-2 border-t border-ink-raised">
-                  <span className="text-text-primary">Total</span>
-                  <span className="text-coral">{formatKobo(total)}</span>
-                </div>
+              <div className="space-y-2 border-t border-border pt-4 text-sm">
+                <div className="flex justify-between"><span className="text-text-secondary">Subtotal</span><span>{formatKobo(subtotal)}</span></div>
+                <div className="flex justify-between"><span className="text-text-secondary">Kamba platform fee</span><span>{formatKobo(cart.platform_fee)}</span></div>
+                <div className="flex justify-between"><span className="text-text-secondary">{formData.deliveryType === 'pickup' ? 'Pickup' : 'Delivery'}</span><span>{formData.deliveryType === 'pickup' ? 'No delivery fee' : quoteLoading ? 'Calculating…' : deliveryQuote !== null ? formatKobo(deliveryQuote) : 'Select a delivery zone'}</span></div>
               </div>
+              <div className="flex items-center justify-between border-t border-border pt-4"><span className="font-semibold text-text-primary">Estimated total</span><span className="font-display text-xl font-bold text-primary">{formatKobo(total)}</span></div>
+              <p className="text-xs leading-5 text-text-secondary">The server revalidates stock, route availability and all fees when checkout is created. The confirmed total is shown before payment.</p>
             </CardContent>
-            <CardFooter className="border-t border-ink-raised">
-              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-                {submitting ? "Placing Order..." : `Place Order - ${formatKobo(total)}`}
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={submitting || cartItems.length === 0 || (formData.deliveryType === 'delivery' && (universitiesLoading || !selectedUniversityId || !selectedZoneId || deliveryQuote === null || quoteLoading || Boolean(deliveryError)))}>
+                {submitting ? 'Creating checkout…' : 'Continue to payment'}
               </Button>
             </CardFooter>
-          </Card>
-
-          <Card variant="outlined" className="p-4">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-coral mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <div className="text-sm text-text-secondary space-y-1">
-                <p className="font-medium text-text-primary">Secure Checkout</p>
-                <p>Your payment information is encrypted and secure.</p>
-              </div>
-            </div>
           </Card>
         </div>
       </form>

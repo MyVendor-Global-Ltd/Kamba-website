@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
@@ -76,40 +76,44 @@ export default function AccountPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [editing, setEditing] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formData, setFormData] = useState<Record<string, string | number | boolean | null>>({})
   const [showAddAddress, setShowAddAddress] = useState(false)
   const [showAddPayment, setShowAddPayment] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [profileRes, addressesRes, paymentsRes, ordersRes] = await Promise.allSettled([
-        apiJson<{ user: UserProfile }>('/api/auth/me'),
-        apiJson<{ addresses: Address[] }>('/api/user/addresses'),
-        apiJson<{ payment_methods: PaymentMethod[] }>('/api/user/payment-methods'),
-        apiJson<{ orders: OrderSummary[] }>('/api/orders?limit=10'),
+      const [profileRes, ordersRes] = await Promise.allSettled([
+        apiJson<{ user: UserProfile }>('/auth/dashboard'),
+        apiJson<{ orders: OrderSummary[] }>('/commerce/orders?limit=10'),
       ])
 
       if (profileRes.status === 'fulfilled') setProfile(profileRes.value.user)
-      if (addressesRes.status === 'fulfilled') setAddresses(addressesRes.value.addresses)
-      if (paymentsRes.status === 'fulfilled') setPaymentMethods(paymentsRes.value.payment_methods)
       if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.orders)
+      // Saved-address and saved-payment-method APIs are not in the current backend contract.
+      setAddresses([])
+      setPaymentMethods([])
     } catch (err) {
       console.error('Failed to load account data:', err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void Promise.resolve().then(loadData)
+  }, [loadData])
 
   const handleSaveProfile = async () => {
     try {
-      await apiJson('/api/auth/me', {
+      await apiJson('/auth/profile', {
         method: 'PATCH',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          displayName: [formData.first_name, formData.last_name].filter(Boolean).join(' '),
+          username: formData.username,
+          phone: formData.phone,
+          email: formData.email,
+        }),
       })
       updateUser({ ...user, ...formData })
       setEditing(null)
@@ -122,14 +126,7 @@ export default function AccountPage() {
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await apiJson('/api/user/addresses', {
-        method: 'POST',
-        body: JSON.stringify(formData),
-      })
-      addToast({ type: 'success', title: 'Address added', message: 'Your new address has been saved.' })
-      setShowAddAddress(false)
-      setFormData({})
-      loadData()
+      addToast({ type: 'error', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })
     } catch (err) {
       addToast({ type: 'error', title: 'Failed to add address', message: 'Please try again.' })
     }
@@ -138,9 +135,7 @@ export default function AccountPage() {
   const handleDeleteAddress = async (id: string) => {
     if (!confirm('Are you sure you want to delete this address?')) return
     try {
-      await apiJson(`/api/user/addresses/${id}`, { method: 'DELETE' })
-      addToast({ type: 'success', title: 'Address deleted' })
-      loadData()
+      addToast({ type: 'error', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })
     } catch (err) {
       addToast({ type: 'error', title: 'Failed to delete', message: 'Please try again.' })
     }
@@ -148,8 +143,7 @@ export default function AccountPage() {
 
   const handleSetDefaultAddress = async (id: string) => {
     try {
-      await apiJson(`/api/user/addresses/${id}/default`, { method: 'POST' })
-      loadData()
+      addToast({ type: 'error', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })
     } catch (err) {
       addToast({ type: 'error', title: 'Failed to update', message: 'Please try again.' })
     }
@@ -283,13 +277,13 @@ export default function AccountPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                           label="First Name"
-                          value={formData.first_name}
+                          value={String(formData.first_name ?? '')}
                           onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                           required
                         />
                         <Input
                           label="Last Name"
-                          value={formData.last_name}
+                          value={String(formData.last_name ?? '')}
                           onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                           required
                         />
@@ -297,7 +291,7 @@ export default function AccountPage() {
                       <Input
                         label="Phone Number"
                         type="tel"
-                        value={formData.phone}
+                        value={String(formData.phone ?? '')}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />
                       <div className="flex gap-3 pt-4">
@@ -357,10 +351,7 @@ export default function AccountPage() {
           <div className="mt-6 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h2 className="text-xl font-semibold text-text-primary">Saved Addresses</h2>
-              <Button onClick={() => {
-                setFormData({ label: '', address: '', city: '', state: '', postal_code: '', is_default: false })
-                setShowAddAddress(true)
-              }}>
+              <Button onClick={() => addToast({ type: 'info', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Address
               </Button>
@@ -370,11 +361,8 @@ export default function AccountPage() {
               <Card variant="outlined" className="p-8 text-center">
                 <MapPin className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
                 <h3 className="text-lg font-semibold text-text-primary mb-2">No addresses saved</h3>
-                <p className="text-text-secondary mb-4">Add an address to speed up checkout.</p>
-                <Button onClick={() => {
-                  setFormData({ label: '', address: '', city: '', state: '', postal_code: '', is_default: false })
-                  setShowAddAddress(true)
-                }}>
+                <p className="text-text-secondary mb-4">Saved-address management is not connected yet. Enter delivery details during checkout.</p>
+                <Button onClick={() => addToast({ type: 'info', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Address
                 </Button>
@@ -425,39 +413,39 @@ export default function AccountPage() {
                     <form onSubmit={handleAddAddress} className="space-y-4">
                       <Input
                         label="Label (e.g., Home, Work)"
-                        value={formData.label}
+                        value={String(formData.label ?? '')}
                         onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                         required
                       />
                       <Input
                         label="Street Address"
-                        value={formData.address}
+                        value={String(formData.address ?? '')}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         required
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <Input
                           label="City"
-                          value={formData.city}
+                          value={String(formData.city ?? '')}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                           required
                         />
                         <Input
                           label="State"
-                          value={formData.state}
+                          value={String(formData.state ?? '')}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                           required
                         />
                       </div>
                       <Input
                         label="Postal Code (Optional)"
-                        value={formData.postal_code}
+                        value={String(formData.postal_code ?? '')}
                         onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                       />
                       <label className="flex items-center gap-2 text-sm text-text-secondary">
                         <input
                           type="checkbox"
-                          checked={formData.is_default}
+                          checked={Boolean(formData.is_default)}
                           onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                           className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
                         />
@@ -484,10 +472,7 @@ export default function AccountPage() {
           <div className="mt-6 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h2 className="text-xl font-semibold text-text-primary">Payment Methods</h2>
-              <Button onClick={() => {
-                setFormData({ type: 'card', is_default: false })
-                setShowAddPayment(true)
-              }}>
+              <Button onClick={() => addToast({ type: 'info', title: 'Saved payment methods are not connected', message: 'Checkout uses the configured payment provider. This website does not store card details or expose a saved-payment-method API.' })}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Payment Method
               </Button>
@@ -496,12 +481,9 @@ export default function AccountPage() {
             {paymentMethods.length === 0 && !showAddPayment ? (
               <Card variant="outlined" className="p-8 text-center">
                 <CreditCard className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
-                <h3 className="text-lg font-semibold text-text-primary mb-2">No payment methods saved</h3>
-                <p className="text-text-secondary mb-4">Add a payment method for faster checkout.</p>
-                <Button onClick={() => {
-                  setFormData({ type: 'card', is_default: false })
-                  setShowAddPayment(true)
-                }}>
+                <h3 className="text-lg font-semibold text-text-primary mb-2">Kamba does not store payment details here</h3>
+                <p className="text-text-secondary mb-4">Payment is completed through the configured checkout provider. This website does not store card details.</p>
+                <Button onClick={() => addToast({ type: 'info', title: 'Saved payment methods are not connected', message: 'Checkout uses the configured payment provider. This website does not store card details or expose a saved-payment-method API.' })}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Payment Method
                 </Button>
@@ -562,7 +544,7 @@ export default function AccountPage() {
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-2">Type</label>
                         <select
-                          value={formData.type}
+                          value={String(formData.type ?? '')}
                           onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                           className="w-full px-4 py-3 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
                         >
@@ -593,7 +575,7 @@ export default function AccountPage() {
                       <label className="flex items-center gap-2 text-sm text-text-secondary">
                         <input
                           type="checkbox"
-                          checked={formData.is_default}
+                          checked={Boolean(formData.is_default)}
                           onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                           className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
                         />
@@ -653,7 +635,7 @@ export default function AccountPage() {
                               order.status.toLowerCase() === 'cancelled' ? 'destructive' :
                               'secondary'
                             } size="sm">
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              {formatOrderStatus(order.status)}
                             </Badge>
                             <ChevronRight className="w-5 h-5 text-text-tertiary" />
                           </div>

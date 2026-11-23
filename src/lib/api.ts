@@ -1,3 +1,5 @@
+import { isMockMode, mockApiJson } from '@/lib/mock-api'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001'
 
 let refreshPromise: Promise<string | null> | null = null
@@ -63,7 +65,7 @@ export interface RequestOptions extends RequestInit {
 }
 
 function buildUrl(path: string, params?: Record<string, string | number | boolean | undefined>): string {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+  const url = path.startsWith('http') ? path : path.startsWith('/api/v1/') ? `${API_BASE}${path}` : path.startsWith('/api/') ? `${API_BASE}${path}` : `${API_BASE}/api/v1${path.startsWith('/') ? path : `/${path}`}`
   if (!params) return url
   const searchParams = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -124,6 +126,7 @@ export async function apiJson<T = any>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
+  if (isMockMode) return mockApiJson<T>(path, options)
   const res = await apiFetch(path, options)
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))

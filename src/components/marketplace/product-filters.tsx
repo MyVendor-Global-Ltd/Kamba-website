@@ -1,312 +1,273 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { X, Filter, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
+import { X, Filter } from 'lucide-react'
 
-export interface ProductFilters {
+export interface MarketplaceFilterState {
   query: string
   category: string
   minPrice: number | null
   maxPrice: number | null
-  sortBy: 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'rating'
+  sortBy: 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'nearest'
+  location: string
+  latitude: number | null
+  longitude: number | null
+  radius: number
   inStock: boolean
-  inStockOnly?: boolean
 }
 
 export interface ProductFiltersProps {
-  filters: ProductFilters
-  onFiltersChange: (filters: Partial<ProductFilters>) => void
+  filters: MarketplaceFilterState
+  onFiltersChange: (filters: Partial<MarketplaceFilterState>) => void
   categories: string[]
   onClearAll: () => void
   hasActiveFilters: boolean
+  mode?: 'products' | 'services'
+  showSearch?: boolean
+  showLocationText?: boolean
+  supportsNearest?: boolean
 }
 
-export function ProductFilters({ filters, onFiltersChange, categories, onClearAll, hasActiveFilters }: ProductFiltersProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+export function ProductFilters({
+  filters,
+  onFiltersChange,
+  categories,
+  onClearAll,
+  hasActiveFilters,
+  mode = 'products',
+  showSearch = true,
+  showLocationText = true,
+  supportsNearest = false,
+}: ProductFiltersProps) {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [isLocating, setIsLocating] = useState(false)
+  const [locationMessage, setLocationMessage] = useState('')
+  const isProducts = mode === 'products'
 
-  const handleSortChange = useCallback((sortBy: ProductFilters['sortBy']) => {
-    onFiltersChange({ sortBy })
-  }, [onFiltersChange])
+  useEffect(() => {
+    if (!showMobileFilters) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowMobileFilters(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showMobileFilters])
 
-  const handleCategoryChange = useCallback((category: string) => {
-    onFiltersChange({ category: category === filters.category ? '' : category })
-  }, [onFiltersChange, filters.category])
+  const activeCount = [
+    filters.query.trim() !== '',
+    filters.category !== '',
+    filters.location.trim() !== '' || filters.latitude !== null || filters.longitude !== null,
+    isProducts && filters.minPrice !== null,
+    isProducts && filters.maxPrice !== null,
+    isProducts && filters.inStock,
+    isProducts && filters.sortBy !== 'newest',
+  ].filter(Boolean).length
 
-  const handlePriceChange = useCallback((field: 'minPrice' | 'maxPrice', value: string) => {
-    const numValue = value === '' ? null : parseFloat(value)
-    if (numValue !== null && isNaN(numValue)) return
-    onFiltersChange({ [field]: numValue })
-  }, [onFiltersChange])
+  const controls = (surface: 'desktop' | 'mobile') => (
+    <div className="space-y-5">
+      {showSearch && <div>
+        <label htmlFor={`marketplace-filter-query-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
+          Search {isProducts ? 'products' : 'services'}
+        </label>
+        <input
+          id={`marketplace-filter-query-${mode}-${surface}`}
+          type="search"
+          value={filters.query}
+          onChange={(event) => onFiltersChange({ query: event.target.value })}
+          placeholder={isProducts ? 'Name, brand or keyword' : 'Service or provider'}
+          className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary focus:ring-2 focus:ring-primary/15"
+        />
+      </div>}
 
-  const handleInStockChange = useCallback((checked: boolean) => {
-    onFiltersChange({ inStock: checked })
-  }, [onFiltersChange])
+      <div>
+        <label htmlFor={`marketplace-filter-location-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
+          {showLocationText ? 'Location' : 'Nearby search'}
+        </label>
+        {showLocationText && <input
+          id={`marketplace-filter-location-${mode}-${surface}`}
+          type="search"
+          value={filters.location}
+          onChange={(event) => onFiltersChange({ location: event.target.value, latitude: null, longitude: null, sortBy: filters.sortBy === 'nearest' ? 'newest' : filters.sortBy })}
+          placeholder="City or state"
+          className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary focus:ring-2 focus:ring-primary/15"
+        />}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isLocating}
+            onClick={() => {
+              if (!navigator.geolocation) {
+                setLocationMessage('Location access is not supported by this browser.')
+                return
+              }
+              setIsLocating(true)
+              setLocationMessage('')
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  onFiltersChange({ location: '', latitude: position.coords.latitude, longitude: position.coords.longitude, sortBy: supportsNearest ? 'nearest' : filters.sortBy })
+                  setIsLocating(false)
+                  setLocationMessage('Nearby results are now being shown.')
+                },
+                (error) => {
+                  setIsLocating(false)
+                  setLocationMessage(error.code === error.PERMISSION_DENIED ? 'Location permission was denied. You can enter a city or state instead.' : 'Could not determine your location. Try entering a city or state.')
+                },
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+              )
+            }}
+          >
+            {isLocating ? 'Finding location…' : filters.latitude !== null ? 'Update my location' : 'Use my location'}
+          </Button>
+          {filters.latitude !== null && (
+            <label className="flex items-center gap-2 text-xs text-text-secondary">
+              Within
+              <select
+                aria-label="Nearby search radius"
+                value={filters.radius}
+                onChange={(event) => onFiltersChange({ radius: Number(event.target.value) })}
+                className="h-9 rounded-md border border-border bg-surface px-2 text-xs text-text-primary"
+              >
+                {[5, 10, 15, 25, 50].map((radius) => <option key={radius} value={radius}>{radius} km</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+        {locationMessage && <p role="status" className="mt-2 text-xs text-text-tertiary">{locationMessage}</p>}
+      </div>
 
-  const handleSearch = useCallback((query: string) => {
-    onFiltersChange({ query })
-  }, [onFiltersChange])
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-text-secondary">Category</legend>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant={filters.category === '' ? 'default' : 'outline'} aria-pressed={filters.category === ''} onClick={() => onFiltersChange({ category: '' })}>
+            All
+          </Button>
+          {categories.map((category) => (
+            <Button
+              key={category}
+              type="button"
+              size="sm"
+              variant={filters.category === category ? 'default' : 'outline'}
+              aria-pressed={filters.category === category}
+              onClick={() => onFiltersChange({ category: filters.category === category ? '' : category })}
+            >
+              {category}
+            </Button>
+          ))}
+        </div>
+      </fieldset>
 
-  const sortOptions = [
-    { value: 'newest', label: 'Newest' },
-    { value: 'price_asc', label: 'Price: Low to High' },
-    { value: 'price_desc', label: 'Price: High to Low' },
-    { value: 'popular', label: 'Most Popular' },
-    { value: 'rating', label: 'Top Rated' },
-  ] as const
+      {isProducts && (
+        <>
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-text-secondary">Price range (₦)</legend>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <input
+                aria-label="Minimum price in naira"
+                type="number"
+                min="0"
+                step="100"
+                inputMode="numeric"
+                placeholder="Min"
+                value={filters.minPrice ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value
+                  onFiltersChange({ minPrice: value === '' ? null : Math.max(0, Number(value)) })
+                }}
+                className="h-11 min-w-0 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              />
+              <span className="text-text-tertiary">to</span>
+              <input
+                aria-label="Maximum price in naira"
+                type="number"
+                min="0"
+                step="100"
+                inputMode="numeric"
+                placeholder="Max"
+                value={filters.maxPrice ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value
+                  onFiltersChange({ maxPrice: value === '' ? null : Math.max(0, Number(value)) })
+                }}
+                className="h-11 min-w-0 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              />
+            </div>
+            {filters.minPrice !== null && filters.maxPrice !== null && filters.minPrice > filters.maxPrice && (
+              <p className="mt-2 text-xs text-destructive" role="alert">Minimum price cannot exceed maximum price.</p>
+            )}
+          </fieldset>
+
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={filters.inStock}
+              onChange={(event) => onFiltersChange({ inStock: event.target.checked })}
+              className="h-4 w-4 rounded border-border accent-[var(--primary)]"
+            />
+            In-stock products only
+          </label>
+
+          <div>
+            <label htmlFor={`product-sort-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">Sort products</label>
+            <select
+              id={`product-sort-${surface}`}
+              value={filters.sortBy}
+              onChange={(event) => onFiltersChange({ sortBy: event.target.value as MarketplaceFilterState['sortBy'] })}
+              className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              <option value="newest">Newest first</option>
+              <option value="price_asc">Price: low to high</option>
+              <option value="price_desc">Price: high to low</option>
+              <option value="popular">Popular</option>
+              {supportsNearest && filters.latitude !== null && filters.longitude !== null && <option value="nearest">Nearest first</option>}
+            </select>
+          </div>
+        </>
+      )}
+
+      {hasActiveFilters && (
+        <Button type="button" variant="ghost" className="w-full justify-start" onClick={onClearAll}>
+          <X className="mr-2 h-4 w-4" /> Clear filters
+        </Button>
+      )}
+    </div>
+  )
 
   return (
     <>
-      {/* Mobile Filter Button */}
-      <div className="lg:hidden mb-4">
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          onClick={() => setShowMobileFilters(true)}
-        >
-          <Filter className="w-4 h-4 mr-2" />
-          <span>Filters</span>
-          {hasActiveFilters && (
-            <Badge variant="gold" size="sm">
-              {Object.entries(filters).filter(([key, value]) => {
-                if (key === 'query' || key === 'sortBy' || key === 'inStock') return false
-                return value !== '' && value !== null && value !== false
-              }).length}
-            </Badge>
-          )}
+      <div className="mb-4 lg:hidden">
+        <Button type="button" variant="outline" className="w-full justify-between" onClick={() => setShowMobileFilters(true)} aria-haspopup="dialog">
+          <span className="inline-flex items-center"><Filter className="mr-2 h-4 w-4" /> Filters</span>
+          {activeCount > 0 && <Badge variant="gold" size="sm">{activeCount} applied</Badge>}
         </Button>
       </div>
 
-      {/* Desktop Filters Sidebar */}
-      <aside className="hidden lg:block w-64 flex-shrink-0">
-        <Card variant="outlined" className="sticky top-24">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Filters</CardTitle>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={onClearAll} className="text-text-secondary hover:text-destructive">
-                  <X className="w-3.5 h-3.5 mr-1" />
-                  Clear all
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-0">
-            {/* Search */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">Search</label>
-              <Input
-                placeholder="Search products..."
-                value={filters.query}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">Category</label>
-              <div className="space-y-2">
-                <Button
-                  variant={filters.category === '' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => handleCategoryChange('')}
-                >
-                  All categories
-                </Button>
-                {categories.map((category) => (
-                  <Button
-                    key={category}
-                    variant={filters.category === category ? 'default' : 'outline'}
-                    className="w-full justify-start"
-                    onClick={() => handleCategoryChange(category)}
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Price Range */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">Price Range (₦)</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.minPrice ?? ''}
-                  onChange={(e) => handlePriceChange('minPrice', e.target.value)}
-                  className="w-full"
-                  min={0}
-                  step={100}
-                />
-                <span className="text-text-tertiary">–</span>
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.maxPrice ?? ''}
-                  onChange={(e) => handlePriceChange('maxPrice', e.target.value)}
-                  className="w-full"
-                  min={0}
-                  step={100}
-                />
-              </div>
-            </div>
-
-            {/* Sort By */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">Sort By</label>
-              <select
-                value={filters.sortBy}
-                onChange={(e) => handleSortChange(e.target.value as ProductFilters['sortBy'])}
-                className="w-full flex h-11 items-center px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-ink-raised/30 appearance-none bg-no-repeat bg-right pr-10"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-                  backgroundPosition: 'right 0.75rem center',
-                }}
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* In Stock */}
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.inStock}
-                  onChange={(e) => handleInStockChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-border/50 bg-ink-raised/50 text-coral focus:ring-coral focus:ring-2"
-                />
-                <span className="text-sm font-medium text-text-secondary">In stock only</span>
-              </label>
-            </div>
-          </CardContent>
-        </Card>
+      <aside aria-label={`${isProducts ? 'Product' : 'Service'} filters`} className="hidden w-64 shrink-0 lg:block">
+        <div className="sticky top-24 rounded-xl border border-border bg-surface p-5">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="font-semibold text-text-primary">Filter {isProducts ? 'products' : 'services'}</h2>
+            {hasActiveFilters && <button type="button" onClick={onClearAll} className="text-xs font-medium text-primary hover:underline">Clear all</button>}
+          </div>
+          {controls('desktop')}
+        </div>
       </aside>
 
-      {/* Mobile Filters Modal */}
       {showMobileFilters && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-ink/80 backdrop-blur-sm" onClick={() => setShowMobileFilters(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-background border-l border-border/50 animate-slide-in">
-            <div className="flex items-center justify-between p-4 border-b border-border/50">
-              <h2 className="text-lg font-semibold font-display">Filters</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowMobileFilters(false)}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="p-4 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-              {/* Search */}
-              <div>
-                <label className="text-sm font-medium text-text-secondary mb-2 block">Search</label>
-                <Input
-                  placeholder="Search products..."
-                  value={filters.query}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full"
-                  autoFocus
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="text-sm font-medium text-text-secondary mb-2 block">Category</label>
-                <div className="space-y-2">
-                  <Button
-                    variant={filters.category === '' ? 'default' : 'outline'}
-                    className="w-full justify-start"
-                    onClick={() => { handleCategoryChange(''); setShowMobileFilters(false); }}
-                  >
-                    All categories
-                  </Button>
-                  {categories.map((category) => (
-                    <Button
-                      key={category}
-                      variant={filters.category === category ? 'default' : 'outline'}
-                      className="w-full justify-start"
-                      onClick={() => { handleCategoryChange(category); setShowMobileFilters(false); }}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div>
-                <label className="text-sm font-medium text-text-secondary mb-2 block">Price Range (₦)</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.minPrice ?? ''}
-                    onChange={(e) => handlePriceChange('minPrice', e.target.value)}
-                    className="w-full"
-                    min={0}
-                    step={100}
-                  />
-                  <span className="text-text-tertiary">–</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.maxPrice ?? ''}
-                    onChange={(e) => handlePriceChange('maxPrice', e.target.value)}
-                    className="w-full"
-                    min={0}
-                    step={100}
-                  />
-                </div>
-              </div>
-
-              {/* Sort By */}
-              <div>
-                <label className="text-sm font-medium text-text-secondary mb-2 block">Sort By</label>
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) => handleSortChange(e.target.value as ProductFilters['sortBy'])}
-                  className="w-full flex h-11 items-center px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-ink-raised/30 appearance-none bg-no-repeat bg-right pr-10"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-                    backgroundPosition: 'right 0.75rem center',
-                  }}
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* In Stock */}
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.inStock}
-                    onChange={(e) => handleInStockChange(e.target.checked)}
-                    className="w-4 h-4 rounded border-border/50 bg-ink-raised/50 text-coral focus:ring-coral focus:ring-2"
-                  />
-                  <span className="text-sm font-medium text-text-secondary">In stock only</span>
-                </label>
-              </div>
-
-              {hasActiveFilters && (
-                <Button variant="destructive" className="w-full" onClick={() => { onClearAll(); setShowMobileFilters(false); }}>
-                  Clear all filters
-                </Button>
-              )}
-            </div>
-          </div>
+          <button type="button" aria-label="Close filters" className="absolute inset-0 bg-foreground/40" onClick={() => setShowMobileFilters(false)} />
+          <section role="dialog" aria-modal="true" aria-labelledby="mobile-filter-title" className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col overflow-hidden border-l border-border bg-background shadow-xl">
+            <header className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h2 id="mobile-filter-title" className="font-semibold text-text-primary">Filters</h2>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setShowMobileFilters(false)} aria-label="Close filters"><X className="h-5 w-5" /></Button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-5">{controls('mobile')}</div>
+            <footer className="border-t border-border bg-surface p-4">
+              <Button type="button" className="w-full" onClick={() => setShowMobileFilters(false)}>Show results</Button>
+            </footer>
+          </section>
         </div>
       )}
     </>

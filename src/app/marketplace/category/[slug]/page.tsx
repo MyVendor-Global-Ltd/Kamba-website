@@ -3,15 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
 import { Product } from '@/types/commerce'
+import { formatKobo } from '@/lib/formatting'
 import { StoreProfile, ServiceProfile } from '@/types/vendor'
 import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { ChevronLeft, ChevronRight, Loader2, Package, Store, Briefcase, Filter, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Package, Store, Briefcase, X } from 'lucide-react'
 
 interface CategoryData {
   category: {
@@ -46,34 +47,103 @@ export default function CategoryPage() {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'products' | 'stores' | 'services'>('products')
   const [filters, setFilters] = useState({
-    sort: 'relevance',
+    sort: 'newest',
     minPrice: '',
     maxPrice: '',
     inStockOnly: false,
   })
 
+  const updateFilters = (patch: Partial<typeof filters>) => {
+    setFilters((previous) => ({ ...previous, ...patch }))
+    router.push(`/marketplace/category/${slug}?page=1`)
+  }
+
   const fetchCategory = async () => {
+    if (filters.minPrice && filters.maxPrice && Number(filters.minPrice) > Number(filters.maxPrice)) {
+      setError('Minimum price cannot exceed maximum price.')
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
 
     try {
-      const params = new URLSearchParams({
-        page: searchParams.get('page') || '1',
-        limit: '12',
-        sort: filters.sort,
-        ...(filters.minPrice && { min_price: filters.minPrice }),
-        ...(filters.maxPrice && { max_price: filters.maxPrice }),
-        ...(filters.inStockOnly && { in_stock: 'true' }),
-      })
+      const page = Math.max(1, Number(searchParams.get('page') || 1))
+      const limit = 12
+      const categoryResponse = await apiJson<{ categories: Array<{ category: string; product_count: number }> }>('/marketplace/categories')
+      const categoryEntry = (categoryResponse.categories || []).find((item) =>
+        item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') === slug.toLowerCase()
+      )
+      if (!categoryEntry) throw new Error('This category is not available.')
 
-      const result = await apiJson<CategoryData>(`/categories/${slug}?${params.toString()}`)
-      setData(result)
+      const categoryName = categoryEntry.category
+      const [productResponse, storeResponse, serviceResponse] = await Promise.all([
+        apiJson<{ products: Product[]; total_count?: number }>('/commerce/products', {
+          params: {
+            category: categoryName,
+            limit,
+            offset: (page - 1) * limit,
+            sort: filters.sort === 'relevance' ? 'newest' : filters.sort,
+            min_price: filters.minPrice ? Math.round(Number(filters.minPrice) * 100) : undefined,
+            max_price: filters.maxPrice ? Math.round(Number(filters.maxPrice) * 100) : undefined,
+            stock_status: filters.inStockOnly ? 'in_stock' : 'all',
+          },
+        }),
+        apiJson<{ stores: Array<StoreProfile & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores', {
+          params: { category: categoryName, page: 1, limit: 100 },
+        }),
+        apiJson<{ services: Array<ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/services', {
+          params: { category: categoryName, page: 1, limit: 100 },
+        }),
+      ])
+
+      const stores = (storeResponse.stores || []).map((store) => {
+        const tier = store.vendor_profiles?.verification_tier
+        const verificationStatus: StoreProfile['verification_status'] = store.verification_status || (store.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
+        return {
+          ...store,
+          name: store.name || store.store_name || 'Local store',
+          city: store.city || store.location_text,
+          vendor_id: store.vendor_id || '',
+          is_active: store.is_active ?? true,
+          created_at: store.created_at || '',
+          updated_at: store.updated_at || '',
+          verification_status: verificationStatus,
+        }
+      })
+      const services = (serviceResponse.services || []).map((service) => {
+        const tier = service.vendor_profiles?.verification_tier
+        const verificationStatus: ServiceProfile['verification_status'] = service.verification_status || (service.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
+        return {
+          ...service,
+          name: service.name || service.service_title || 'Service',
+          city: service.city || service.location_text || service.service_area_text,
+          vendor_id: service.vendor_id || '',
+          is_active: service.is_active ?? true,
+          created_at: service.created_at || '',
+          updated_at: service.updated_at || '',
+          verification_status: verificationStatus,
+        }
+      })
+      const total = Number(productResponse.total_count ?? productResponse.products?.length ?? 0)
+
+      setData({
+        category: { id: categoryName, name: categoryName, slug },
+        products: (productResponse.products || []).map((product) => ({
+          ...product,
+          image_url: product.image_url || product.images?.[0],
+        })),
+        stores,
+        services,
+        subcategories: [],
+        pagination: { page, pageSize: limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load category')
       toast({
         type: 'error',
-        title: 'Error',
-        description: 'Failed to load category. Please try again.',
+        title: 'Category unavailable',
+        description: err instanceof Error ? err.message : 'Could not load this category. Please try again.',
       })
     } finally {
       setLoading(false)
@@ -81,20 +151,15 @@ export default function CategoryPage() {
   }
 
   useEffect(() => {
-    fetchCategory()
+    void Promise.resolve().then(fetchCategory)
   }, [slug, searchParams.get('page'), filters.sort, filters.minPrice, filters.maxPrice, filters.inStockOnly])
 
-  const handleFilterChange = (newFilters: typeof filters) => {
-    setFilters(newFilters)
-    router.push(`/marketplace/category/${slug}?page=1`)
-  }
-
   const clearFilters = () => {
-    setFilters({ sort: 'relevance', minPrice: '', maxPrice: '', inStockOnly: false })
+    setFilters({ sort: 'newest', minPrice: '', maxPrice: '', inStockOnly: false })
     router.push(`/marketplace/category/${slug}?page=1`)
   }
 
-  const hasActiveFilters = filters.sort !== 'relevance' || filters.minPrice || filters.maxPrice || filters.inStockOnly
+  const hasActiveFilters = filters.sort !== 'newest' || filters.minPrice || filters.maxPrice || filters.inStockOnly
 
   if (loading && !data) {
     return (
@@ -129,6 +194,7 @@ export default function CategoryPage() {
   }
 
   const { category, products, stores, services, subcategories, pagination } = data
+  const activeTotal = activeTab === 'products' ? pagination.total : activeTab === 'stores' ? stores.length : services.length
 
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
@@ -210,7 +276,7 @@ export default function CategoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-up" style={{ animationDelay: '150ms' }}>
         <div className="flex items-center gap-3">
           <span className="text-sm text-text-secondary">
-            {pagination.total} {activeTab}{pagination.total !== 1 ? 's' : ''} found
+            {activeTotal} {activeTab}{activeTotal !== 1 ? 's' : ''} found
           </span>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -220,20 +286,24 @@ export default function CategoryPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'price_asc' }))} className={filters.sort === 'price_asc' ? 'bg-coral border-coral text-white' : ''}>
-            Price: Low to High
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'price_desc' }))} className={filters.sort === 'price_desc' ? 'bg-coral border-coral text-white' : ''}>
-            Price: High to Low
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'newest' }))} className={filters.sort === 'newest' ? 'bg-coral border-coral text-white' : ''}>
-            Newest
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setFilters(prev => ({ ...prev, sort: 'popular' }))} className={filters.sort === 'popular' ? 'bg-coral border-coral text-white' : ''}>
-            Popular
-          </Button>
-        </div>
+        {activeTab === 'products' && <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            Min ₦
+            <input aria-label="Minimum price in naira" type="number" min="0" inputMode="numeric" value={filters.minPrice} onChange={(event) => updateFilters({ minPrice: event.target.value })} className="h-9 w-24 rounded-lg border border-border bg-surface px-2 text-sm text-text-primary" />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            Max ₦
+            <input aria-label="Maximum price in naira" type="number" min="0" inputMode="numeric" value={filters.maxPrice} onChange={(event) => updateFilters({ maxPrice: event.target.value })} className="h-9 w-24 rounded-lg border border-border bg-surface px-2 text-sm text-text-primary" />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            <input type="checkbox" checked={filters.inStockOnly} onChange={(event) => updateFilters({ inStockOnly: event.target.checked })} className="h-4 w-4 accent-[var(--primary)]" />
+            In stock
+          </label>
+          <Button variant="outline" size="sm" onClick={() => updateFilters({ sort: 'price_asc' })} className={filters.sort === 'price_asc' ? 'bg-coral border-coral text-white' : ''}>Price: Low to High</Button>
+          <Button variant="outline" size="sm" onClick={() => updateFilters({ sort: 'price_desc' })} className={filters.sort === 'price_desc' ? 'bg-coral border-coral text-white' : ''}>Price: High to Low</Button>
+          <Button variant="outline" size="sm" onClick={() => updateFilters({ sort: 'newest' })} className={filters.sort === 'newest' ? 'bg-coral border-coral text-white' : ''}>Newest</Button>
+          <Button variant="outline" size="sm" onClick={() => updateFilters({ sort: 'popular' })} className={filters.sort === 'popular' ? 'bg-coral border-coral text-white' : ''}>Popular</Button>
+        </div>}
       </div>
 
       {/* Results Grid */}
@@ -353,11 +423,11 @@ function ProductCategoryCard({ product }: { product: Product }) {
           )}
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-text-primary">
-              ₦{product.price.toLocaleString()}
+              {formatKobo(product.price)}
             </span>
             {product.compare_at_price && product.compare_at_price > product.price && (
               <span className="text-sm text-text-tertiary line-through">
-                ₦{product.compare_at_price.toLocaleString()}
+                {formatKobo(product.compare_at_price)}
               </span>
             )}
           </div>

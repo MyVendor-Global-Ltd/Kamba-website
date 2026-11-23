@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { apiJson } from '@/lib/api'
+import { isMockMode } from '@/lib/mock-api'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Product } from '@/types/commerce'
 import { formatKobo } from '@/lib/formatting'
 import { ProductCardSkeleton } from '@/components/ui/skeleton'
 import { ProductFilters } from '@/components/marketplace/product-filters'
@@ -27,15 +27,13 @@ export default function ProductsPage() {
     refresh,
   } = useProductSearch({ pageSize: 12 })
 
-  const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
 
   // Fetch categories on mount
   useEffect(() => {
-    fetch('/api/categories')
-      .then((res) => res.json())
-      .then((data) => setCategories(data.categories || []))
-      .catch(() => setCategories(['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Sports', 'Books']))
+    apiJson<{ categories: Array<string | { category?: string }> }>('/marketplace/categories')
+      .then((data) => setCategories(data.categories.map((item) => typeof item === 'string' ? item : item.category || '').filter(Boolean)))
+      .catch(() => setCategories(['Electronics', 'Fashion', 'Home & Living', 'Books & Stationery']))
   }, [])
 
   // Load more on scroll
@@ -95,10 +93,16 @@ export default function ProductsPage() {
             placeholder="Search products, brands, categories..."
             value={filters.query}
             onChange={(e) => setFilters({ query: e.target.value })}
-            className="w-full flex h-12 pl-12 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-ink-raised/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral focus:border-coral focus:bg-ink-raised"
+            className="w-full flex h-12 pl-12 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary"
           />
         </div>
       </header>
+
+      {!isMockMode && filters.location.trim() && (
+        <p role="status" className="rounded-lg border border-gold-dim bg-gold-soft px-4 py-3 text-sm text-text-primary">
+          City-name filtering is available in prototype mode. The live product API supports nearby search using coordinates; browser location integration is a separate step.
+        </p>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up">
@@ -106,14 +110,17 @@ export default function ProductsPage() {
         </div>
       )}
 
-      <div className="flex gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         {/* Filters Sidebar */}
         <ProductFilters
           filters={filters}
           onFiltersChange={setFilters}
           categories={categories}
+          mode='products'
+          showSearch={false}
           onClearAll={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          supportsNearest
         />
 
         {/* Products Grid */}

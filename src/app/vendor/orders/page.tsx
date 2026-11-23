@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { apiJson } from '@/lib/api'
 import { useToast } from '@/components/ui/toast'
 import { Search, Filter, ChevronDown, ChevronUp, Truck, Package, CheckCircle, Clock, X, MoreHorizontal, Eye, Edit } from 'lucide-react'
@@ -17,6 +18,27 @@ interface OrderItem {
   quantity: number
   price: number
   image_url?: string
+}
+
+interface VendorOrderDetailItem {
+  product_id: string
+  name?: string
+  product_name?: string
+  image_url?: string
+  unit_amount?: number
+  price?: number
+  quantity: number
+}
+interface VendorOrderDetail {
+  order_items?: VendorOrderDetailItem[]
+  items?: VendorOrderDetailItem[]
+  delivery_address?: { address_line?: string; city?: string; state?: string; recipient_name?: string } | null
+  payment_status?: string
+  delivery_status?: string
+  payment_method?: string
+}
+interface VendorOrderDetailResponse extends VendorOrderDetail {
+  order?: VendorOrderDetail
 }
 
 interface Order {
@@ -38,31 +60,27 @@ interface Order {
   }
   payment_method: string
   items: OrderItem[]
-  customer: {
-    name: string
-    email: string
-    phone?: string
-  }
+  customer: { name: string }
+  item_count?: number
+  delivery_type?: 'pickup' | 'delivery'
 }
 
 const statusFlow = [
-  { key: 'pending', label: 'Pending', next: 'confirmed' },
+  { key: 'paid_held', label: 'Paid — awaiting confirmation', next: 'confirmed' },
   { key: 'confirmed', label: 'Confirmed', next: 'processing' },
   { key: 'processing', label: 'Processing', next: 'shipped' },
-  { key: 'shipped', label: 'Shipped', next: 'delivered' },
+  { key: 'shipped', label: 'Shipped', next: null },
   { key: 'delivered', label: 'Delivered', next: null },
   { key: 'cancelled', label: 'Cancelled', next: null },
-  { key: 'return_requested', label: 'Return Requested', next: null },
 ]
 
-const statusColors: Record<string, string> = {
-  pending: 'outline',
+const statusColors: Record<string, NonNullable<React.ComponentProps<typeof Badge>['variant']>> = {
+  paid_held: 'warning',
   confirmed: 'secondary',
   processing: 'secondary',
   shipped: 'secondary',
   delivered: 'success',
   cancelled: 'destructive',
-  return_requested: 'warning',
 }
 
 export default function VendorOrdersPage() {
@@ -75,24 +93,55 @@ export default function VendorOrdersPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'total'>('newest')
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState<string | null>(null)
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadOrders()
-  }, [])
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await apiJson<{ orders: Order[] }>('/vendors/orders')
-      setOrders(data.orders || [])
+      const data = await apiJson<{ orders: Array<{
+        id: string
+        status: string
+        total?: number
+        total_amount?: number
+        subtotal: number
+        platform_fee: number
+        shipping_amount: number
+        delivery_type: 'pickup' | 'delivery'
+        created_at: string
+        store_name?: string
+        item_count: number
+      }> }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } })
+      setOrders((data.orders || []).map((order) => ({
+        id: order.id,
+        order_number: order.id,
+        status: order.status,
+        payment_status: order.status === 'paid_held' ? 'held' : 'status managed by Kamba',
+        delivery_status: 'not available',
+        delivery_type: order.delivery_type,
+        subtotal: order.subtotal,
+        platform_fee: order.platform_fee,
+        delivery_fee: order.shipping_amount,
+        total: Number(order.total ?? order.total_amount ?? 0),
+        created_at: order.created_at,
+        updated_at: order.created_at,
+        shipping_address: { address: order.delivery_type === 'pickup' ? 'Vendor pickup' : 'Open order details for the delivery address', city: '', state: '' },
+        payment_method: 'Managed by Kamba',
+        customer: { name: 'Buyer details protected' },
+        item_count: order.item_count,
+        items: [],
+      })))
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void Promise.resolve().then(loadOrders)
+  }, [loadOrders])
 
   const filteredOrders = orders
     .filter(order => {
@@ -104,7 +153,6 @@ export default function VendorOrdersPage() {
         return (
           order.order_number.toLowerCase().includes(query) ||
           order.customer.name.toLowerCase().includes(query) ||
-          order.customer.email.toLowerCase().includes(query) ||
           order.items.some(item => item.product_name.toLowerCase().includes(query))
         )
       }
@@ -124,7 +172,7 @@ export default function VendorOrdersPage() {
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingOrder(orderId)
     try {
-      await apiJson(`/vendors/orders/${orderId}/status`, {
+      await apiJson(`/commerce/vendor/orders/${orderId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus }),
       })
@@ -134,13 +182,13 @@ export default function VendorOrdersPage() {
       addToast({
         type: 'success',
         title: 'Order updated',
-        message: `Order status changed to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+        message: `Order status changed to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}.`,
       })
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Failed to update',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     } finally {
       setUpdatingOrder(null)
@@ -154,23 +202,31 @@ export default function VendorOrdersPage() {
 
   const handleBulkAction = async (action: string) => {
     if (selectedOrders.length === 0) return
+    const targetStatus: Record<string, string> = { confirm: 'confirmed', process: 'processing', ship: 'shipped' }
+    const target = targetStatus[action]
+    if (!target) return
+    const eligible = orders.filter(order => order.delivery_type !== 'pickup' && selectedOrders.includes(order.id) && getNextStatus(order.status) === target)
+    if (eligible.length === 0) {
+      addToast({ type: 'error', title: 'No eligible orders', message: 'Selected orders must be at the immediately preceding status before this action.' })
+      return
+    }
     try {
-      await apiJson('/vendors/orders/bulk', {
-        method: 'POST',
-        body: JSON.stringify({ order_ids: selectedOrders, action }),
-      })
+      await Promise.all(eligible.map(order => apiJson(`/commerce/vendor/orders/${order.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: target }),
+      })))
       addToast({
         type: 'success',
         title: 'Bulk action completed',
-        message: `${selectedOrders.length} orders updated.`,
+        message: `${eligible.length} eligible orders moved to ${target}.`,
       })
       setSelectedOrders([])
-      loadOrders()
+      void loadOrders()
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Failed to complete bulk action',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     }
   }
@@ -188,6 +244,47 @@ export default function VendorOrdersPage() {
       setSelectedOrders([])
     } else {
       setSelectedOrders(filteredOrders.map(o => o.id))
+    }
+  }
+
+  const toggleOrderDetails = async (orderId: string) => {
+    if (expandedOrder === orderId) {
+      setExpandedOrder(null)
+      return
+    }
+    setExpandedOrder(orderId)
+    const existing = orders.find((order) => order.id === orderId)
+    if (existing && existing.items.length > 0) return
+
+    setLoadingOrderDetails(orderId)
+    try {
+      const data = await apiJson<VendorOrderDetailResponse>(`/commerce/orders/${encodeURIComponent(orderId)}`)
+      const raw = data.order || data
+      const items = (raw.order_items || raw.items || []).map((item) => ({
+        id: item.product_id,
+        product_id: item.product_id,
+        product_name: item.name || item.product_name || 'Product',
+        quantity: item.quantity,
+        price: Number(item.unit_amount ?? item.price ?? 0),
+        image_url: item.image_url,
+      }))
+      setOrders((previous) => previous.map((order) => order.id === orderId ? {
+        ...order,
+        items,
+        shipping_address: raw.delivery_address ? {
+          address: raw.delivery_address.address_line || '',
+          city: raw.delivery_address.city || '',
+          state: raw.delivery_address.state || '',
+        } : order.shipping_address,
+        customer: { name: raw.delivery_address?.recipient_name || order.customer.name },
+        payment_status: raw.payment_status || order.payment_status,
+        delivery_status: raw.delivery_status || order.delivery_status,
+        payment_method: raw.payment_method || order.payment_method,
+      } : order))
+    } catch (err) {
+      addToast({ type: 'error', title: 'Could not load order details', message: err instanceof Error ? err.message : 'Please try again.' })
+    } finally {
+      setLoadingOrderDetails(null)
     }
   }
 
@@ -244,7 +341,7 @@ export default function VendorOrdersPage() {
             className="px-4 py-2 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
           >
             <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
+            <option value="paid_held">Paid — awaiting confirmation</option><option value="pending">Pending payment</option>
             <option value="confirmed">Confirmed</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
@@ -296,7 +393,7 @@ export default function VendorOrdersPage() {
         {filteredOrders.map((order) => {
           const isExpanded = expandedOrder === order.id
           const nextStatus = getNextStatus(order.status)
-          const canAdvance = nextStatus && !['delivered', 'cancelled', 'return_requested'].includes(order.status.toLowerCase())
+          const canAdvance = order.delivery_type !== 'pickup' && nextStatus && !['delivered', 'cancelled', 'return_requested'].includes(order.status.toLowerCase())
           const variant = statusColors[order.status.toLowerCase()] || 'outline'
 
           return (
@@ -308,24 +405,25 @@ export default function VendorOrdersPage() {
                       type="checkbox"
                       checked={selectedOrders.includes(order.id)}
                       onChange={() => toggleSelectOrder(order.id)}
+                      disabled={order.delivery_type === 'pickup'}
+                      aria-label={order.delivery_type === 'pickup' ? 'Pickup orders are managed in the pickup desk' : `Select order ${order.order_number}`}
                       className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
-                        <Badge variant={variant as any} size="sm">
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                        <Badge variant={variant} size="sm">
+                          {formatOrderStatus(order.status)}
                         </Badge>
-                        <Badge variant={statusColors[order.payment_status.toLowerCase()] as any || 'outline'} size="sm">
-                          {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                        <Badge variant="outline" size="sm">
+                          {order.payment_status}
                         </Badge>
                       </div>
                       <p className="text-sm text-text-tertiary mt-1">
-                        {formatDateTime(order.created_at)} • {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                        {formatDateTime(order.created_at)} • {order.item_count ?? order.items.length} item{(order.item_count ?? order.items.length) !== 1 ? 's' : ''}
                       </p>
                       <p className="text-sm text-text-secondary mt-1">
-                        {order.customer.name} • {order.customer.email}
-                        {order.customer.phone && ` • ${order.customer.phone}`}
+                        {order.customer.name}
                       </p>
                     </div>
                   </div>
@@ -335,10 +433,10 @@ export default function VendorOrdersPage() {
                       <p className="text-sm text-text-tertiary">Subtotal: {formatKobo(order.subtotal)}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => void toggleOrderDetails(order.id)}>
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {}}>
+                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)} aria-label="View order details" disabled={loadingOrderDetails === order.id}>
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
@@ -353,7 +451,7 @@ export default function VendorOrdersPage() {
                       <div className="md:col-span-2">
                         <h4 className="font-medium text-text-primary mb-3">Items</h4>
                         <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {order.items.map((item) => (
+                          {order.items.length > 0 ? order.items.map((item) => (
                             <div key={item.id} className="flex gap-3 p-3 bg-ink-raised/30 rounded-lg">
                               <div className="w-12 h-12 bg-ink-raised/50 rounded-lg flex-shrink-0 overflow-hidden">
                                 {item.image_url ? (
@@ -370,13 +468,13 @@ export default function VendorOrdersPage() {
                               </div>
                               <span className="font-medium text-text-primary whitespace-nowrap">{formatKobo(item.price * item.quantity)}</span>
                             </div>
-                          ))}
+                          )) : <p className="rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">Item details are available in the order record. The vendor list API currently returns item counts only.</p>}
                         </div>
                       </div>
 
                       {/* Shipping Address */}
                       <div>
-                        <h4 className="font-medium text-text-primary mb-3">Shipping Address</h4>
+                        <h4 className="font-medium text-text-primary mb-3">{order.delivery_type === 'pickup' ? 'Collection method' : 'Delivery address'}</h4>
                         <address className="text-text-secondary not-italic space-y-1 bg-ink-raised/30 p-3 rounded-lg">
                           <p className="font-medium text-text-primary">{order.shipping_address?.address}</p>
                           <p>{order.shipping_address?.city}, {order.shipping_address?.state}</p>
@@ -389,7 +487,7 @@ export default function VendorOrdersPage() {
                         <div className="space-y-2 bg-ink-raised/30 p-3 rounded-lg">
                           <div className="flex justify-between text-sm">
                             <span className="text-text-secondary">Method</span>
-                            <span className="text-text-primary capitalize">{order.payment_method.replace('_', ' ')}</span>
+                            <span className="text-text-primary capitalize">{order.payment_method}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-text-secondary">Platform Fee</span>
@@ -397,7 +495,7 @@ export default function VendorOrdersPage() {
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-text-secondary">Delivery Fee</span>
-                            <span className="text-text-primary">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : 'Free'}</span>
+                            <span className="text-text-primary">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : order.delivery_type === 'pickup' ? 'Pickup' : 'Not available'}</span>
                           </div>
                         </div>
                       </div>
@@ -406,8 +504,10 @@ export default function VendorOrdersPage() {
                     {/* Status Actions */}
                     <div className="mt-4 pt-4 border-t border-ink-raised/30">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="text-sm font-medium text-text-secondary">Update Status:</span>
-                        {canAdvance && (
+                        <span className="text-sm font-medium text-text-secondary">{order.delivery_type === 'pickup' ? 'Pickup workflow:' : 'Update Status:'}</span>
+                        {order.delivery_type === 'pickup' ? (
+                          <Link href="/vendor/pickup" className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">Open pickup desk</Link>
+                        ) : canAdvance && (
                           <Button
                             size="sm"
                             onClick={() => handleStatusUpdate(order.id, nextStatus!)}

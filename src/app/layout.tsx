@@ -10,14 +10,14 @@ import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-display-loaded',
   display: 'swap',
   weight: ['400', '500', '600', '700'],
 })
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-ui',
+  variable: '--font-ui-loaded',
   display: 'swap',
   weight: ['400', '500', '600', '700'],
 })
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 function HeaderSkeleton() {
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border/50">
+    <header className="sticky top-0 z-50 border-b border-border bg-surface">
       <div className="container mx-auto">
         <div className="flex h-16 items-center justify-between gap-4 animate-pulse">
           <div className="h-8 w-32 bg-ink-raised/50 rounded" />

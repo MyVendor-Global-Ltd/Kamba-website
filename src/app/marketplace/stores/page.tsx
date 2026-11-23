@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button'
 import { formatDistance } from '@/lib/haversine'
 import { apiJson } from '@/lib/api'
-import { Store } from '@/types/vendor'
+import type { Store } from '@/types/vendor'
 import { StoreCardSkeleton } from '@/components/ui/skeleton'
 
 export default function StoresPage() {
@@ -16,9 +16,13 @@ export default function StoresPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiJson<{ stores: Store[] }>('/vendors/stores')
+    apiJson<{ stores: Array<Store & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores')
       .then((data) => {
-        setStores(data.stores || [])
+        setStores((data.stores || []).map((store) => {
+          const tier = store.vendor_profiles?.verification_tier
+          const verificationStatus: Store['verification_status'] = store.verification_status || (store.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
+          return { ...store, name: store.name || store.store_name || 'Local store', city: store.city || store.location_text, vendor_id: store.vendor_id || '', is_active: store.is_active ?? true, created_at: store.created_at || '', updated_at: store.updated_at || '', verification_status: verificationStatus }
+        }))
         setLoading(false)
       })
       .catch((err) => {
@@ -79,13 +83,13 @@ export default function StoresPage() {
               {store.description && (
                 <p className="text-sm text-text-tertiary line-clamp-3 mb-4">{store.description}</p>
               )}
-              {store.city && store.state && (
+              {(store.city || store.state) && (
                 <div className="flex items-center gap-2 text-xs text-text-tertiary">
                   <svg className="w-3.5 h-3.5 text-coral/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span>{store.city}, {store.state}</span>
+                  <span>{[store.city, store.state].filter(Boolean).join(', ')}</span>
                 </div>
               )}
             </CardContent>

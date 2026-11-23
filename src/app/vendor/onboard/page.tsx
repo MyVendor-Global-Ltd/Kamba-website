@@ -1,11 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { isMockMode, submitMockVendorApplication } from '@/lib/mock-api'
+import { LiveVendorOnboarding } from '@/components/vendor/live-vendor-onboarding'
 
-export default function VendorOnboardPage() {
+function MockVendorOnboardPage() {
+  const router = useRouter()
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<'products' | 'services' | 'both'>('products')
   const [phone, setPhone] = useState('')
@@ -21,26 +25,13 @@ export default function VendorOnboardPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.kamba.ng'}/vendors/onboard`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_name: businessName,
-          business_type: businessType,
-          phone,
-          email,
-          address,
-          city,
-          state,
-        }),
-      })
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}))
-        throw new Error(error.message || 'Onboarding failed')
+      if (!isMockMode) {
+        throw new Error('The production onboarding process is multi-step and includes eligibility/status checks and liveness evidence before store or service creation. This simplified form does not collect that evidence, so it is available as a local prototype only; it will not change a real account or vendor role.')
       }
-    } catch (err: any) {
-      setError(err.message || 'Onboarding failed')
+      submitMockVendorApplication({ business_name: businessName, business_type: businessType, phone, email, address, city, state })
+      router.push('/vendor/dashboard')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Onboarding failed')
     } finally {
       setLoading(false)
     }
@@ -72,7 +63,7 @@ export default function VendorOnboardPage() {
             <label className="text-sm font-medium">Business type</label>
             <select
               value={businessType}
-              onChange={(e) => setBusinessType(e.target.value as any)}
+              onChange={(e) => setBusinessType(e.target.value as 'products' | 'services' | 'both')}
               className="flex h-10 w-full rounded-medium border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="products">Products only</option>
@@ -132,4 +123,10 @@ export default function VendorOnboardPage() {
       </CardContent>
     </Card>
   )
+}
+
+
+export default function VendorOnboardPage() {
+  if (!isMockMode) return <LiveVendorOnboarding />
+  return <MockVendorOnboardPage />
 }

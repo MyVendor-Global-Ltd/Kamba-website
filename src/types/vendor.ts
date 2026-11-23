@@ -44,6 +44,11 @@ export interface ServiceProfile {
   updated_at: string
   distance_km?: number
   logo_url?: string
+  price_range?: string
+  location_text?: string
+  service_area_text?: string
+  business_profiles?: { business_name?: string; business_slug?: string; location_text?: string; service_area_text?: string }
+  vendor_profiles?: { verification_tier?: string; is_verified?: boolean }
 }
 
 export type Service = ServiceProfile

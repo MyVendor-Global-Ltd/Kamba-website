@@ -7,6 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { formatKobo } from '@/lib/formatting'
+import { isMockMode } from '@/lib/mock-api'
+import { LiveVendorDashboard } from '@/components/vendor/live-dashboard'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -103,7 +105,7 @@ interface RecentOrder {
   items_count: number
 }
 
-const MOCK_STATS: VendorStats = {
+const DEMO_STATS: VendorStats = {
   revenue: {
     total: 1250000000, // ₦12.5M
     thisMonth: 320000000, // ₦3.2M
@@ -138,7 +140,7 @@ const MOCK_STATS: VendorStats = {
   },
 }
 
-const MOCK_REVENUE_DATA: RevenueDataPoint[] = [
+const DEMO_REVENUE_DATA: RevenueDataPoint[] = [
   { date: '2024-01-01', revenue: 8500000, orders: 12 },
   { date: '2024-01-02', revenue: 12000000, orders: 18 },
   { date: '2024-01-03', revenue: 9200000, orders: 14 },
@@ -156,7 +158,7 @@ const MOCK_REVENUE_DATA: RevenueDataPoint[] = [
   { date: '2024-01-15', revenue: 18900000, orders: 26 },
 ]
 
-const MOCK_TOP_PRODUCTS: TopProduct[] = [
+const DEMO_TOP_PRODUCTS: TopProduct[] = [
   { id: 'prod_1', name: 'Wireless Noise-Cancelling Headphones', image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop', sales: 234, revenue: 585000000, stock: 45 },
   { id: 'prod_2', name: 'Premium Leather Wallet', image_url: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&h=400&fit=crop', sales: 189, revenue: 160650000, stock: 12 },
   { id: 'prod_3', name: 'Organic Green Tea - 50 Pack', image_url: 'https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?w=400&h=400&fit=crop', sales: 156, revenue: 179400000, stock: 8 },
@@ -164,7 +166,7 @@ const MOCK_TOP_PRODUCTS: TopProduct[] = [
   { id: 'prod_5', name: 'Bluetooth Mechanical Keyboard', image_url: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=400&fit=crop', sales: 98, revenue: 294000000, stock: 23 },
 ]
 
-const MOCK_RECENT_ORDERS: RecentOrder[] = [
+const DEMO_RECENT_ORDERS: RecentOrder[] = [
   { id: 'ord_1', order_number: 'KMB-2024-001234', customer_name: 'Adebayo Johnson', total_kobo: 4875000, status: 'out_for_delivery', created_at: '2024-01-16T14:22:00Z', items_count: 3 },
   { id: 'ord_2', order_number: 'KMB-2024-001233', customer_name: 'Fatima Hassan', total_kobo: 2150000, status: 'processing', created_at: '2024-01-16T11:45:00Z', items_count: 2 },
   { id: 'ord_3', order_number: 'KMB-2024-001232', customer_name: 'Chinedu Okafor', total_kobo: 890000, status: 'confirmed', created_at: '2024-01-16T09:30:00Z', items_count: 1 },
@@ -172,23 +174,42 @@ const MOCK_RECENT_ORDERS: RecentOrder[] = [
   { id: 'ord_5', order_number: 'KMB-2024-001230', customer_name: 'Tunde Adebayo', total_kobo: 3400000, status: 'delivered', created_at: '2024-01-15T14:10:00Z', items_count: 2 },
 ]
 
+const EMPTY_STATS: VendorStats = {
+  revenue: { total: 0, thisMonth: 0, lastMonth: 0, change: 0 },
+  orders: { total: 0, thisMonth: 0, pending: 0, confirmed: 0, processing: 0, shipped: 0, out_for_delivery: 0, completed: 0, cancelled: 0 },
+  products: { total: 0, active: 0, lowStock: 0, outOfStock: 0 },
+  customers: { total: 0, newThisMonth: 0, returning: 0 },
+  rating: { average: 0, totalReviews: 0 },
+}
+const DASHBOARD_STATS = isMockMode ? DEMO_STATS : EMPTY_STATS
+const DASHBOARD_REVENUE_DATA = isMockMode ? DEMO_REVENUE_DATA : []
+const DASHBOARD_TOP_PRODUCTS = isMockMode ? DEMO_TOP_PRODUCTS : []
+const DASHBOARD_RECENT_ORDERS = isMockMode ? DEMO_RECENT_ORDERS : []
+
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  confirmed: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  processing: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  shipped: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-  out_for_delivery: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  delivered: 'bg-green-500/10 text-green-500 border-green-500/20',
-  cancelled: 'bg-red-500/10 text-red-500 border-red-500/20',
+  pending: 'bg-gold-soft text-warning border-gold/20',
+  confirmed: 'bg-primary-soft text-primary-strong border-primary/20',
+  processing: 'bg-secondary text-primary border-primary/20',
+  shipped: 'bg-secondary text-primary border-primary/20',
+  out_for_delivery: 'bg-warning-soft text-warning border-warning/20',
+  delivered: 'bg-success-soft text-success border-success/20',
+  ready_for_pickup: 'bg-gold-soft text-warning border-gold/20',
+  collected: 'bg-success-soft text-success border-success/20',
+  cancelled: 'bg-destructive-soft text-destructive border-destructive/20',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
+  pending: 'Awaiting confirmation',
   confirmed: 'Confirmed',
-  processing: 'Processing',
-  shipped: 'Shipped',
-  out_for_delivery: 'Out for Delivery',
+  processing: 'Preparing order',
+  shipped: 'Out for delivery',
+  out_for_delivery: 'Out for delivery',
   delivered: 'Delivered',
+  ready_for_pickup: 'Ready for pickup',
+  collected: 'Collected',
+  awaiting_dispute_window: 'Awaiting dispute-window completion',
+  payout_processing: 'Payout processing',
+  payout_completed: 'Payout completed',
   cancelled: 'Cancelled',
 }
 
@@ -201,7 +222,7 @@ const formatDate = (isoString: string) => {
   })
 }
 
-export default function VendorDashboardPage() {
+function MockVendorDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'products' | 'orders'>('overview')
   const handleTabChange = (tab: 'overview' | 'analytics' | 'products' | 'orders') => {
     setActiveTab(tab)
@@ -225,23 +246,25 @@ export default function VendorDashboardPage() {
   }
 
   const getChangeIcon = (change: number) => {
-    if (change > 0) return <TrendingUp className="w-4 h-4 text-green-500" />
-    if (change < 0) return <TrendingDown className="w-4 h-4 text-red-500" />
+    if (change > 0) return <TrendingUp className="w-4 h-4 text-primary" />
+    if (change < 0) return <TrendingDown className="w-4 h-4 text-destructive" />
     return <Minus className="w-4 h-4 text-muted-foreground" />
   }
 
   return (
-    <div className="min-h-screen bg-ink">
+    <div className="min-h-screen bg-background">
+      {!isMockMode && <div className="mx-auto max-w-7xl px-4 pt-5"><div className="rounded-lg border border-gold/30 bg-gold-soft px-4 py-3 text-sm text-text-primary">Live vendor analytics are not connected to this website yet. Demo figures are hidden outside development prototype mode.</div></div>}
+      {isMockMode && <div className="mx-auto max-w-7xl px-4 pt-5"><span className="inline-flex rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold text-text-primary">Development demo data</span></div>}
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-ink/95 backdrop-blur-sm border-b border-white/10">
+      <header className="sticky top-0 z-50 bg-surface/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Link href="/vendor" className="flex items-center gap-2">
+              <Link href="/vendor/dashboard" className="flex items-center gap-2">
                 <Store className="w-8 h-8 text-coral" />
                 <span className="font-display font-bold text-xl text-primary">Kamba Vendor</span>
               </Link>
-              <nav className="hidden md:flex items-center gap-1 bg-white/5 rounded-lg p-1">
+              <nav className="hidden md:flex items-center gap-1 bg-surface/5 rounded-lg p-1">
                 {[
                   { id: 'overview', label: 'Overview', icon: Activity },
                   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -254,7 +277,7 @@ export default function VendorDashboardPage() {
                     className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                       activeTab === id
                         ? 'bg-coral text-ink shadow-lg'
-                        : 'text-muted-foreground hover:text-primary hover:bg-white/5'
+                        : 'text-muted-foreground hover:text-primary hover:bg-surface/5'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -264,7 +287,7 @@ export default function VendorDashboardPage() {
               </nav>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
+              <div className="hidden sm:flex items-center gap-2 bg-surface/5 rounded-lg px-3 py-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <select
                   value={dateRange}
@@ -277,7 +300,7 @@ export default function VendorDashboardPage() {
                   <option value="1y">Last year</option>
                 </select>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={loading} className="gap-1">
+              <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={loading || !isMockMode} className="gap-1">
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -301,35 +324,35 @@ export default function VendorDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Revenue"
-            value={formatKobo(MOCK_STATS.revenue.thisMonth)}
-            subtitle={`+${MOCK_STATS.revenue.change}% vs last month`}
+            value={formatKobo(DASHBOARD_STATS.revenue.thisMonth)}
+            subtitle={`+${DASHBOARD_STATS.revenue.change}% vs last month`}
             icon={<DollarSign className="w-5 h-5" />}
             iconBg="bg-coral/10"
             iconColor="text-coral"
-            trend={{ value: MOCK_STATS.revenue.change, positive: true }}
+            trend={{ value: DASHBOARD_STATS.revenue.change, positive: true }}
           />
           <StatCard
             title="Orders This Month"
-            value={MOCK_STATS.orders.thisMonth.toLocaleString()}
-            subtitle={`${MOCK_STATS.orders.pending} pending • ${MOCK_STATS.orders.completed} completed`}
+            value={DASHBOARD_STATS.orders.thisMonth.toLocaleString()}
+            subtitle={`${DASHBOARD_STATS.orders.pending} pending • ${DASHBOARD_STATS.orders.completed} completed`}
             icon={<ShoppingBag className="w-5 h-5" />}
-            iconBg="bg-blue-500/10"
-            iconColor="text-blue-500"
+            iconBg="bg-primary-soft"
+            iconColor="text-primary"
             trend={{ value: 12.5, positive: true }}
           />
           <StatCard
             title="Active Products"
-            value={MOCK_STATS.products.active.toLocaleString()}
-            subtitle={`${MOCK_STATS.products.lowStock} low stock • ${MOCK_STATS.products.outOfStock} out of stock`}
+            value={DASHBOARD_STATS.products.active.toLocaleString()}
+            subtitle={`${DASHBOARD_STATS.products.lowStock} low stock • ${DASHBOARD_STATS.products.outOfStock} out of stock`}
             icon={<Package className="w-5 h-5" />}
-            iconBg="bg-purple-500/10"
-            iconColor="text-purple-500"
+            iconBg="bg-secondary"
+            iconColor="text-primary"
             trend={{ value: -2.1, positive: false }}
           />
           <StatCard
             title="Customer Rating"
-            value={MOCK_STATS.rating.average.toFixed(1)}
-            subtitle={`${MOCK_STATS.rating.totalReviews.toLocaleString()} reviews • ${MOCK_STATS.customers.newThisMonth} new customers`}
+            value={DASHBOARD_STATS.rating.average.toFixed(1)}
+            subtitle={`${DASHBOARD_STATS.rating.totalReviews.toLocaleString()} reviews • ${DASHBOARD_STATS.customers.newThisMonth} new customers`}
             icon={<Star className="w-5 h-5" />}
             iconBg="bg-gold/10"
             iconColor="text-gold"
@@ -355,7 +378,7 @@ export default function VendorDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <RevenueChart data={MOCK_REVENUE_DATA} />
+                <RevenueChart data={DASHBOARD_REVENUE_DATA} />
               </CardContent>
             </Card>
 
@@ -372,7 +395,7 @@ export default function VendorDashboardPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <TopProductsTable products={MOCK_TOP_PRODUCTS} />
+                  <TopProductsTable products={DASHBOARD_TOP_PRODUCTS} />
                 </CardContent>
               </Card>
 
@@ -387,7 +410,7 @@ export default function VendorDashboardPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <RecentOrdersTable orders={MOCK_RECENT_ORDERS} />
+                  <RecentOrdersTable orders={DASHBOARD_RECENT_ORDERS} />
                 </CardContent>
               </Card>
             </div>
@@ -414,16 +437,16 @@ export default function VendorDashboardPage() {
                     title="Manage Orders"
                     description="Process and fulfill orders"
                     icon={<ShoppingBag className="w-5 h-5" />}
-                    iconBg="bg-blue-500/10"
-                    iconColor="text-blue-500"
+                    iconBg="bg-primary-soft"
+                    iconColor="text-primary"
                     href="/vendor/orders"
                   />
                   <QuickActionCard
                     title="View Analytics"
                     description="Detailed sales reports"
                     icon={<LineChart className="w-5 h-5" />}
-                    iconBg="bg-purple-500/10"
-                    iconColor="text-purple-500"
+                    iconBg="bg-secondary"
+                    iconColor="text-primary"
                     href="/vendor/analytics"
                   />
                   <QuickActionCard
@@ -431,7 +454,7 @@ export default function VendorDashboardPage() {
                     description="Update store profile & settings"
                     icon={<Settings className="w-5 h-5" />}
                     iconBg="bg-gray-500/10"
-                    iconColor="text-gray-500"
+                    iconColor="text-text-tertiary"
                     href="/vendor/settings"
                   />
                 </div>
@@ -456,7 +479,7 @@ export default function VendorDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <RevenueChart data={MOCK_REVENUE_DATA} height={350} showOrders />
+                <RevenueChart data={DASHBOARD_REVENUE_DATA} height={350} showOrders />
               </CardContent>
             </Card>
 
@@ -471,10 +494,10 @@ export default function VendorDashboardPage() {
                 <CardContent>
                   <OrderStatusChart 
                     data={[
-                      { status: 'Delivered', count: MOCK_STATS.orders.completed, color: '#10B981' },
-                      { status: 'Processing', count: MOCK_STATS.orders.pending + MOCK_STATS.orders.confirmed, color: '#8B5CF6' },
-                      { status: 'Shipped', count: MOCK_STATS.orders.shipped || 0, color: '#6366F1' },
-                      { status: 'Cancelled', count: MOCK_STATS.orders.cancelled, color: '#EF4444' },
+                      { status: 'Delivered', count: DASHBOARD_STATS.orders.completed, color: '#10B981' },
+                      { status: 'Processing', count: DASHBOARD_STATS.orders.pending + DASHBOARD_STATS.orders.confirmed, color: '#8B5CF6' },
+                      { status: 'Shipped', count: DASHBOARD_STATS.orders.shipped || 0, color: '#6366F1' },
+                      { status: 'Cancelled', count: DASHBOARD_STATS.orders.cancelled, color: '#EF4444' },
                     ]} 
                   />
                 </CardContent>
@@ -553,11 +576,11 @@ function StatCard({
         {trend && (
           <div className="mt-4 flex items-center gap-1">
             {trend.positive ? (
-              <TrendingUp className="w-4 h-4 text-green-500" />
+              <TrendingUp className="w-4 h-4 text-primary" />
             ) : (
-              <TrendingDown className="w-4 h-4 text-red-500" />
+              <TrendingDown className="w-4 h-4 text-destructive" />
             )}
-            <span className={`text-sm font-medium ${trend.positive ? 'text-green-500' : 'text-red-500'}`}>
+            <span className={`text-sm font-medium ${trend.positive ? 'text-primary' : 'text-destructive'}`}>
               {trend.positive ? '+' : ''}{trend.value}%
             </span>
             <span className="text-sm text-muted-foreground">vs last period</span>
@@ -583,8 +606,8 @@ function RevenueChart({ data, height = 250, showOrders = false }: { data: Revenu
             <stop offset="100%" stopColor="#FF6B47" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="ordersGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+            <stop offset="0%" stopColor="#24543B" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#24543B" stopOpacity="0" />
           </linearGradient>
         </defs>
         {/* Horizontal grid lines */}
@@ -610,7 +633,7 @@ function RevenueChart({ data, height = 250, showOrders = false }: { data: Revenu
             {/* Orders line */}
             <path
               d={`M ${data.map((d, i) => `${(i / (data.length - 1)) * 100} ${100 - (d.orders / maxOrders) * 90}`).join(' L ')}`}
-              stroke="#3B82F6"
+              stroke="#24543B"
               strokeWidth="2"
               fill="none"
               strokeLinecap="round"
@@ -651,7 +674,7 @@ function RevenueChart({ data, height = 250, showOrders = false }: { data: Revenu
         </div>
         {showOrders && (
           <div className="flex items-center gap-2">
-            <div className="w-6 h-1 bg-blue-500" style={{ borderTop: '2px dashed #3B82F6' }} />
+            <div className="w-6 h-1 bg-primary" style={{ borderTop: '2px dashed #24543B' }} />
             <span className="text-sm text-primary">Orders</span>
           </div>
         )}
@@ -664,9 +687,9 @@ function TopProductsTable({ products }: { products: TopProduct[] }) {
   return (
     <div className="space-y-3">
       {products.map((product, index) => (
-        <div key={product.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg transition-colors">
+        <div key={product.id} className="flex items-center gap-3 p-3 hover:bg-surface/5 rounded-lg transition-colors">
           <span className="text-sm font-medium text-muted-foreground w-6 text-center">{index + 1}</span>
-          <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden flex-shrink-0">
+          <div className="w-12 h-12 rounded-lg bg-surface/5 overflow-hidden flex-shrink-0">
             {product.image_url ? (
               <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
             ) : (
@@ -691,7 +714,7 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
   return (
     <div className="space-y-3">
       {orders.map((order) => (
-        <div key={order.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg transition-colors">
+        <div key={order.id} className="flex items-center gap-3 p-3 hover:bg-surface/5 rounded-lg transition-colors">
           <div className="flex-1 min-w-0">
             <p className="font-medium text-primary">{order.order_number}</p>
             <p className="text-sm text-muted-foreground">{order.customer_name} • {order.items_count} items</p>
@@ -718,7 +741,7 @@ function QuickActionCard({ title, description, icon, iconBg, iconColor, href }: 
   href: string
 }) {
   return (
-    <Link href={href} className="p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors group">
+    <Link href={href} className="p-4 bg-surface/5 rounded-xl hover:bg-surface/10 transition-colors group">
       <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${iconBg} ${iconColor} group-hover:scale-110 transition-transform`}>
         {icon}
       </div>
@@ -762,7 +785,7 @@ function OrderStatusChart({ data }: { data: { status: string; count: number; col
       </svg>
       <div className="absolute grid grid-cols-2 gap-2 text-center">
         {data.map((d) => (
-          <div key={d.status} className="bg-ink/80 backdrop-blur p-3 rounded-lg">
+          <div key={d.status} className="bg-background/80 backdrop-blur p-3 rounded-lg">
             <div className="w-3 h-3 rounded-full mx-auto mb-1" style={{ backgroundColor: d.color }} />
             <p className="text-sm font-medium text-primary">{d.status}</p>
             <p className="text-2xl font-bold text-primary">{d.count}</p>
@@ -795,8 +818,8 @@ function CustomerGrowthChart() {
             <stop offset="100%" stopColor="#FF6B47" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="returningGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+            <stop offset="0%" stopColor="#24543B" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#24543B" stopOpacity="0" />
           </linearGradient>
         </defs>
         {/* Grid */}
@@ -824,7 +847,7 @@ function CustomerGrowthChart() {
         {/* Returning line */}
         <path
           d={`M ${data.map((d, i) => `${(i / (data.length - 1)) * 100} ${100 - (d.returning / maxVal) * 90}`).join(' L ')}`}
-          stroke="#3B82F6"
+          stroke="#24543B"
           strokeWidth="2"
           fill="none"
           strokeLinecap="round"
@@ -844,7 +867,7 @@ function CustomerGrowthChart() {
           <span className="text-sm text-primary">New</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-1 bg-blue-500" style={{ borderTop: '2px dashed #3B82F6' }} />
+          <div className="w-6 h-1 bg-primary" style={{ borderTop: '2px dashed #24543B' }} />
           <span className="text-sm text-primary">Returning</span>
         </div>
       </div>
@@ -855,7 +878,7 @@ function CustomerGrowthChart() {
 function PaymentMethodsChart() {
   const data = [
     { method: 'Card', count: 542, percentage: 48.5, color: '#FF6B47' },
-    { method: 'Bank Transfer', count: 312, percentage: 27.9, color: '#3B82F6' },
+    { method: 'Bank Transfer', count: 312, percentage: 27.9, color: '#24543B' },
     { method: 'USSD', count: 189, percentage: 16.9, color: '#10B981' },
     { method: 'Wallet', count: 75, percentage: 6.7, color: '#FFD23F' },
   ]
@@ -865,7 +888,7 @@ function PaymentMethodsChart() {
       {data.map((item) => (
         <div key={item.method} className="flex items-center gap-4">
           <div className="w-32 text-sm text-muted-foreground">{item.method}</div>
-          <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
+          <div className="flex-1 h-3 bg-surface/5 rounded-full overflow-hidden">
             <div 
               className="h-full rounded-full transition-all duration-500"
               style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
@@ -884,7 +907,7 @@ function VendorProductsTab() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'low_stock' | 'out_of_stock'>('all')
   const [page, setPage] = useState(1)
 
-  const filteredProducts = MOCK_TOP_PRODUCTS.filter(p => {
+  const filteredProducts = DASHBOARD_TOP_PRODUCTS.filter(p => {
     if (statusFilter === 'active') return p.stock > 10
     if (statusFilter === 'low_stock') return p.stock > 0 && p.stock <= 10
     if (statusFilter === 'out_of_stock') return p.stock === 0
@@ -908,7 +931,7 @@ function VendorProductsTab() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="bg-white/5 border-white/10 text-primary px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral/50"
+            className="bg-surface/5 border-border text-primary px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral/50"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -930,7 +953,7 @@ function VendorProductsTab() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-border">
                   <th className="text-left p-4 font-medium text-muted-foreground">Product</th>
                   <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Status</th>
                   <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Stock</th>
@@ -941,10 +964,10 @@ function VendorProductsTab() {
               </thead>
               <tbody>
                 {filteredProducts.map((product) => (
-                  <tr key={product.id} className="border-b border-white/5 hover:bg-white/5">
+                  <tr key={product.id} className="border-b border-border hover:bg-surface/5">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden flex-shrink-0">
+                        <div className="w-12 h-12 rounded-lg bg-surface/5 overflow-hidden flex-shrink-0">
                           {product.image_url ? (
                             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
@@ -966,7 +989,7 @@ function VendorProductsTab() {
                       </Badge>
                     </td>
                     <td className="p-4 hidden lg:table-cell">
-                      <span className={`font-mono ${product.stock <= 10 ? 'text-red-500' : product.stock <= 20 ? 'text-yellow-500' : 'text-primary'}`}>
+                      <span className={`font-mono ${product.stock <= 10 ? 'text-destructive' : product.stock <= 20 ? 'text-warning' : 'text-primary'}`}>
                         {product.stock}
                       </span>
                     </td>
@@ -984,7 +1007,7 @@ function VendorProductsTab() {
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive-soft">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -996,9 +1019,9 @@ function VendorProductsTab() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between p-4 border-t border-white/10">
+          <div className="flex items-center justify-between p-4 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredProducts.length} of {MOCK_TOP_PRODUCTS.length} products
+              Showing {filteredProducts.length} of {DASHBOARD_TOP_PRODUCTS.length} products
             </p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled={page === 1}>
@@ -1019,7 +1042,7 @@ function VendorOrdersTab() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredOrders = MOCK_RECENT_ORDERS.filter(o => {
+  const filteredOrders = DASHBOARD_RECENT_ORDERS.filter(o => {
     if (statusFilter !== 'all' && o.status !== statusFilter) return false
     if (searchQuery && !o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) && 
         !o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())) return false
@@ -1043,7 +1066,7 @@ function VendorOrdersTab() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="bg-white/5 border-white/10 text-primary px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral/50"
+            className="bg-surface/5 border-border text-primary px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral/50"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -1067,7 +1090,7 @@ function VendorOrdersTab() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-border">
                   <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Customer</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Items</th>
@@ -1079,7 +1102,7 @@ function VendorOrdersTab() {
               </thead>
               <tbody>
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-white/5 hover:bg-white/5">
+                  <tr key={order.id} className="border-b border-border hover:bg-surface/5">
                     <td className="p-4">
                       <p className="font-mono font-medium text-primary">{order.order_number}</p>
                     </td>
@@ -1127,9 +1150,9 @@ function VendorOrdersTab() {
           )}
 
           {/* Pagination */}
-          <div className="flex items-center justify-between p-4 border-t border-white/10">
+          <div className="flex items-center justify-between p-4 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredOrders.length} of {MOCK_RECENT_ORDERS.length} orders
+              Showing {filteredOrders.length} of {DASHBOARD_RECENT_ORDERS.length} orders
             </p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled>
@@ -1144,4 +1167,9 @@ function VendorOrdersTab() {
       </Card>
     </div>
   )
+}
+
+export default function VendorDashboardPage() {
+  if (!isMockMode) return <LiveVendorDashboard />
+  return <MockVendorDashboardPage />
 }

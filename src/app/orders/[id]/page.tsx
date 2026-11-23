@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
-import { ChevronLeft, ChevronRight, Truck, Package, CheckCircle, Clock, MapPin, RotateCcw, X, RefreshCw, RefreshCcw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Truck, Package, CheckCircle, Clock, MapPin, RotateCcw, X, RefreshCw } from 'lucide-react'
+import { useCartContext } from '@/context/CartContext'
 
 interface OrderItem {
   id: string
@@ -26,6 +27,7 @@ interface Order {
   status: string
   payment_status: string
   delivery_status: string
+  delivery_type?: 'delivery' | 'pickup'
   subtotal: number
   platform_fee: number
   delivery_fee: number
@@ -36,6 +38,7 @@ interface Order {
     address: string
     city: string
     state: string
+    recipient_name?: string
   }
   payment_method: string
   items: OrderItem[]
@@ -53,7 +56,8 @@ interface Order {
 }
 
 const statusSteps = [
-  { key: 'pending', label: 'Order Placed', icon: Package },
+  { key: 'pending', label: 'Awaiting payment', icon: Package },
+  { key: 'paid_held', label: 'Payment secured', icon: CheckCircle },
   { key: 'confirmed', label: 'Confirmed', icon: CheckCircle },
   { key: 'processing', label: 'Processing', icon: Clock },
   { key: 'shipped', label: 'Shipped', icon: Truck },
@@ -64,29 +68,76 @@ export default function OrderDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { addToast } = useToast()
+  const { refresh: refreshCart } = useCartContext()
   const id = params.id as string
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'tracking'>('details')
 
-  useEffect(() => {
-    apiJson<{ order: Order }>(`/api/orders/${id}`)
-      .then((data) => {
-        setOrder(data.order)
-        setLoading(false)
+  const loadOrder = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const data = await apiJson<Order & {
+        order?: Order & {
+          order_items?: Array<{ product_id: string; name: string; image_url?: string; unit_amount: number; quantity: number }>
+          delivery_address?: { address_line?: string; city?: string; state?: string; recipient_name?: string } | null
+          shipping_amount?: number
+          order_number?: string
+        }
+        order_items?: Array<{ product_id: string; name: string; image_url?: string; unit_amount: number; quantity: number }>
+        delivery_address?: { address_line?: string; city?: string; state?: string; recipient_name?: string } | null
+        shipping_amount?: number
+      }>(`/commerce/orders/${encodeURIComponent(id)}`)
+      const raw = data.order || data
+      const rawItems = (raw.order_items || raw.items || []) as Array<{ product_id: string; name?: string; product_name?: string; image_url?: string; unit_amount?: number; price?: number; quantity: number }>
+      setOrder({
+        ...raw,
+        id: raw.id || id,
+        order_number: raw.order_number || raw.id || id,
+        payment_status: raw.payment_status || 'unknown',
+        delivery_status: raw.delivery_status || 'not available',
+        delivery_type: raw.delivery_type || 'delivery',
+        subtotal: Number(raw.subtotal || 0),
+        platform_fee: Number(raw.platform_fee || 0),
+        delivery_fee: Number(raw.shipping_amount ?? raw.delivery_fee ?? 0),
+        total: Number(raw.total || 0),
+        created_at: raw.created_at || '',
+        updated_at: raw.updated_at || '',
+        shipping_address: raw.delivery_address ? {
+          address: raw.delivery_address.address_line || '',
+          city: raw.delivery_address.city || '',
+          state: raw.delivery_address.state || '',
+          recipient_name: raw.delivery_address.recipient_name,
+        } : raw.shipping_address || { address: '', city: '', state: '' },
+        payment_method: raw.payment_method || 'Managed by Kamba',
+        items: rawItems.map((item) => ({
+          id: item.product_id,
+          product_id: item.product_id,
+          product_name: item.name || item.product_name || 'Product',
+          quantity: item.quantity,
+          price: Number(item.unit_amount ?? item.price ?? 0),
+          image_url: item.image_url,
+        })),
       })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load order')
-        setLoading(false)
-      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load order')
+      setOrder(null)
+    } finally {
+      setLoading(false)
+    }
   }, [id])
+
+  useEffect(() => {
+    void Promise.resolve().then(loadOrder)
+  }, [loadOrder])
 
   const handleReorder = async () => {
     if (!order) return
     try {
       for (const item of order.items) {
-        await apiJson('/api/cart', {
+        await apiJson('/commerce/cart/items', {
           method: 'POST',
           body: JSON.stringify({
             product_id: item.product_id,
@@ -97,6 +148,7 @@ export default function OrderDetailPage() {
           }),
         })
       }
+      await refreshCart()
       addToast({
         type: 'success',
         title: 'Items added to cart',
@@ -107,42 +159,24 @@ export default function OrderDetailPage() {
       addToast({
         type: 'error',
         title: 'Failed to reorder',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     }
   }
 
-  const handleRequestReturn = async () => {
-    if (!order) return
-    if (!confirm('Are you sure you want to request a return for this order?')) return
-    try {
-      await apiJson(`/api/orders/${order.id}/return`, { method: 'POST' })
-      addToast({
-        type: 'success',
-        title: 'Return requested',
-        message: 'Your return request has been submitted. We\'ll contact you shortly.',
-      })
-      setOrder({ ...order, status: 'return_requested' })
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to request return',
-        message: 'Please try again.',
-      })
-    }
-  }
+
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
         return 'success'
+      case 'paid_held':
+        return 'warning'
       case 'shipped':
       case 'processing':
         return 'secondary'
       case 'cancelled':
         return 'destructive'
-      case 'return_requested':
-        return 'warning'
       default:
         return 'outline'
     }
@@ -151,7 +185,10 @@ export default function OrderDetailPage() {
   const getPaymentStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'paid':
+      case 'succeeded':
         return 'success'
+      case 'held':
+        return 'warning'
       case 'pending':
         return 'warning'
       case 'failed':
@@ -221,7 +258,7 @@ export default function OrderDetailPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Order not found</h2>
-          <p className="text-text-tertiary">The order you're looking for doesn't exist.</p>
+          <p className="text-text-tertiary">{error || 'The order you&apos;re looking for doesn&apos;t exist.'}</p>
           <Link href="/orders" className="mt-4 inline-block">
             <Button variant="outline">Back to orders</Button>
           </Link>
@@ -234,6 +271,15 @@ export default function OrderDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+      {order.delivery_type === 'pickup' && (
+        <Card variant="outlined">
+          <CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Vendor pickup</CardTitle><Badge variant="outline">Collection workflow</Badge></div></CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-text-secondary">Your order is set for vendor pickup. The approved collection point and one-time pickup code become available only after the vendor confirms and prepares the order.</p>
+            <Link href={`/orders/${order.id}/pickup`} className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">View pickup details</Link>
+          </CardContent>
+        </Card>
+      )}
       <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Order #{order.order_number}</h1>
@@ -241,7 +287,7 @@ export default function OrderDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={getStatusVariant(order.status)} size="md">
-            {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+            {formatOrderStatus(order.status)}
           </Badge>
           <Badge variant={getPaymentStatusVariant(order.payment_status)} size="md">
             {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
@@ -252,7 +298,7 @@ export default function OrderDetailPage() {
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up flex items-center justify-between">
           <span>{error}</span>
-          <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
+          <Button variant="ghost" size="sm" onClick={() => void loadOrder()}>
                       <RefreshCw className="w-4 h-4 mr-1" />
             Retry
           </Button>
@@ -272,14 +318,14 @@ export default function OrderDetailPage() {
             <div className="flex items-start gap-4">
               {statusSteps.map((step, index) => {
                 const isCompleted = index <= currentStepIndex
-                const isCurrent = index === currentStepIndex && order.status.toLowerCase() !== 'cancelled' && order.status.toLowerCase() !== 'return_requested'
+                const isCurrent = index === currentStepIndex && order.status.toLowerCase() !== 'cancelled'
                 const Icon = step.icon
                 
                 return (
                   <div key={step.key} className="flex flex-col items-center flex-1 relative">
                     <div className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      isCompleted ? 'bg-coral text-ink' : 'bg-ink-raised/50 border-2 border-border'
-                    } ${isCurrent ? 'ring-4 ring-coral/20 animate-pulse' : ''}`}>
+                      isCompleted ? 'bg-primary text-primary-foreground' : 'bg-ink-raised/50 border-2 border-border'
+                    } ${isCurrent ? 'ring-4 ring-primary/20 animate-pulse' : ''}`}>
                       {isCompleted ? (
                         <CheckCircle className="w-8 h-8" />
                       ) : (
@@ -290,7 +336,7 @@ export default function OrderDetailPage() {
                       {step.label}
                     </p>
                     {isCurrent && (
-                      <p className="text-center text-xs text-coral font-medium">Current</p>
+                      <p className="text-center text-xs text-primary font-medium">Current</p>
                     )}
                   </div>
                 )
@@ -299,18 +345,16 @@ export default function OrderDetailPage() {
           </div>
           
           {/* Cancelled/Return status message */}
-          {(order.status.toLowerCase() === 'cancelled' || order.status.toLowerCase() === 'return_requested') && (
+          {(order.status.toLowerCase() === 'cancelled') && (
             <div className="mt-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
               <div className="flex items-center gap-3">
                 <X className="w-5 h-5 text-destructive" />
                 <div>
                   <p className="font-medium text-destructive">
-                    {order.status.toLowerCase() === 'cancelled' ? 'This order has been cancelled' : 'Return requested for this order'}
+                    {'This order has been cancelled'}
                   </p>
                   <p className="text-sm text-text-secondary">
-                    {order.status.toLowerCase() === 'cancelled' 
-                      ? 'If you have questions, please contact support.' 
-                      : 'We\'ll contact you shortly with return instructions.'}
+                    If you have questions about this order, please contact Kamba support.
                   </p>
                 </div>
               </div>
@@ -326,7 +370,7 @@ export default function OrderDetailPage() {
             onClick={() => setActiveTab('details')}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'details' 
-                ? 'border-coral text-coral' 
+                ? 'border-primary text-coral' 
                 : 'border-transparent text-text-tertiary hover:text-text-secondary'
             }`}
           >
@@ -385,10 +429,14 @@ export default function OrderDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <address className="text-text-secondary not-italic space-y-1">
-                    <p className="font-medium text-text-primary">{order.shipping_address?.address}</p>
-                    <p>{order.shipping_address?.city}, {order.shipping_address?.state}</p>
-                  </address>
+                  {order.delivery_type === 'pickup' ? (
+                    <p className="text-sm leading-6 text-text-secondary">The approved vendor collection point is shown on the pickup page only after the order reaches the ready-for-pickup stage.</p>
+                  ) : (
+                    <address className="text-text-secondary not-italic space-y-1">
+                      <p className="font-medium text-text-primary">{order.shipping_address?.address}</p>
+                      <p>{[order.shipping_address?.city, order.shipping_address?.state].filter(Boolean).join(', ')}</p>
+                    </address>
+                  )}
                                 </CardContent>
                               </Card>
             </div>
@@ -406,12 +454,12 @@ export default function OrderDetailPage() {
                       <span className="text-text-primary font-medium">{formatKobo(order.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-text-secondary">Platform fee (5%)</span>
+                      <span className="text-text-secondary">Kamba platform fee</span>
                       <span className="text-text-primary font-medium">{formatKobo(order.platform_fee)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-text-secondary">Delivery fee</span>
-                      <span className="text-text-primary font-medium">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : 'Free'}</span>
+                      <span className="text-text-primary font-medium">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : order.delivery_type === 'pickup' ? 'No delivery fee' : 'Not available'}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold font-display text-text-primary border-t border-ink-raised/30 pt-3">
                       <span>Total</span>
@@ -443,7 +491,7 @@ export default function OrderDetailPage() {
               <Card variant="elevated">
                 <CardContent className="space-y-3">
                   <Link href={`/marketplace/products/${order.items[0]?.product_id}`}>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" disabled={!order.items[0]?.product_id} onClick={() => router.push(`/marketplace/products/${order.items[0]?.product_id}`)}>
                       <ChevronLeft className="w-4 h-4 mr-2" />
                       View Product
                     </Button>
@@ -454,12 +502,7 @@ export default function OrderDetailPage() {
                       Reorder Items
                     </Button>
                   )}
-                  {order.status.toLowerCase() === 'delivered' && order.delivery_status.toLowerCase() === 'delivered' && (
-                    <Button variant="outline" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" onClick={handleRequestReturn}>
-                      <Truck className="w-4 h-4 mr-2" />
-                      Request Return
-                    </Button>
-                  )}
+
                 </CardContent>
                               </Card>
             </div>
@@ -533,7 +576,7 @@ export default function OrderDetailPage() {
                     Tracking details will appear here once your order ships.
                   </p>
                   <p className="text-sm text-text-tertiary">
-                    Current status: <span className="font-medium text-text-primary capitalize">{order.status}</span>
+                    Current status: <span className="font-medium text-text-primary capitalize">{formatOrderStatus(order.status)}</span>
                   </p>
                 </CardContent>
                               </Card>

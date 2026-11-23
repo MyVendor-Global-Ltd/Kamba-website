@@ -9,8 +9,16 @@ export interface Product {
   images?: string[]
   store_id: string
   store_name?: string
+  store_slug?: string
+  original_price?: number
   compare_at_price?: number
+  average_rating?: number
+  review_count?: number
+  view_count?: number
   is_active: boolean
+  is_available?: boolean
+  tags?: string[]
+  deleted_at?: string | null
   in_stock?: boolean
   created_at: string
   updated_at: string

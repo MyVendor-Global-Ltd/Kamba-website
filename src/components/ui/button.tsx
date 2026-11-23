@@ -30,13 +30,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = 'Button'
 
 const variants = {
-  default: 'bg-coral text-ink hover:bg-coral/90 shadow-lg shadow-coral/25 active:scale-[0.98]',
-  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/25 active:scale-[0.98]',
-  outline: 'border-2 border-input bg-transparent hover:bg-accent hover:text-accent-foreground active:scale-[0.98]',
-  secondary: 'bg-navy text-text-primary hover:bg-navy/80 shadow-lg shadow-navy/25 active:scale-[0.98]',
+  default: 'bg-primary text-primary-foreground hover:bg-primary-hover active:scale-[0.98]',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-[0.98]',
+  outline: 'border border-border bg-surface hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-[0.98]',
   ghost: 'hover:bg-accent hover:text-accent-foreground active:scale-[0.98]',
-  link: 'text-coral underline-offset-4 hover:underline',
-  gold: 'bg-gold text-ink hover:bg-gold/90 shadow-lg shadow-gold/25 active:scale-[0.98] font-bold',
+  link: 'text-primary underline-offset-4 hover:underline',
+  gold: 'bg-gold text-text-primary hover:bg-gold/90 active:scale-[0.98] font-bold',
 }
 
 const sizes = {
