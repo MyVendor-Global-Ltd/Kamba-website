@@ -119,6 +119,7 @@ export default function ProductsPage() {
           mode='products'
           onClearAll={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          supportsNearest
         />
 
         {/* Products Grid */}
