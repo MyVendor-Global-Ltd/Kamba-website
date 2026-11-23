@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
-import { Store, Product } from '@/types'
+import type { Store, Product } from '@/types'
 import { formatKobo } from '@/lib/formatting'
 import { ProductCardSkeleton } from '@/components/ui/skeleton'
 
@@ -21,12 +21,15 @@ export default function StoreDetailPage() {
 
   useEffect(() => {
     Promise.all([
-      apiJson<{ store: Store }>(`/vendors/stores/${slug}`),
-      apiJson<{ products: Product[] }>(`/commerce/stores/${slug}/products`),
+      apiJson<{ store: Store & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } } }>(`/vendors/stores/${slug}`),
+      apiJson<{ products: Product[] }>('/commerce/products', { params: { store: slug, limit: 100, stock_status: 'all' } }),
     ])
       .then(([storeRes, productsRes]) => {
-        setStore(storeRes.store)
-        setProducts(productsRes.products || [])
+        const rawStore = storeRes.store
+        const tier = rawStore.vendor_profiles?.verification_tier
+        const verificationStatus: Store['verification_status'] = rawStore.verification_status || (rawStore.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
+        setStore({ ...rawStore, name: rawStore.name || rawStore.store_name || 'Local store', city: rawStore.city || rawStore.location_text, vendor_id: rawStore.vendor_id || '', is_active: rawStore.is_active ?? true, created_at: rawStore.created_at || '', updated_at: rawStore.updated_at || '', verification_status: verificationStatus })
+        setProducts((productsRes.products || []).map((product) => ({ ...product, image_url: product.image_url || product.images?.[0], compare_at_price: product.compare_at_price ?? product.original_price })))
         setLoading(false)
       })
       .catch((err) => {
