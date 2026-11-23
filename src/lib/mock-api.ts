@@ -256,7 +256,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     }
   }
   if (pathname === '/delivery/universities' && method === 'GET') return response({ universities: [] }) as T
-  const universityZonesMatch = pathname.match(/^\\/delivery\\/universities\\/([^/]+)\\/zones$/)
+  const universityZonesMatch = pathname.match(/^\/delivery\/universities\/([^/]+)\/zones$/)
   if (universityZonesMatch && method === 'GET') return response({ zones: [] }) as T
   if (pathname === '/delivery/quote' && method === 'POST') throw new Error('No delivery university or route pricing is configured in the development prototype. Choose pickup.')
   if (pathname === '/commerce/marketplace-checkouts' && method === 'POST') {
@@ -304,13 +304,14 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
     return response({ checkout, orders: childOrders, idempotent: false, prototype: true }) as T
   }
-  const marketplaceCheckoutMatch = pathname.match(/^\\/commerce\\/marketplace-checkouts\\/([^/]+)$/)
+  const marketplaceCheckoutMatch = pathname.match(/^\/commerce\/marketplace-checkouts\/([^/]+)$/)
   if (marketplaceCheckoutMatch && method === 'GET') {
     const data = marketplaceCheckouts[marketplaceCheckoutMatch[1]]
     if (!data) throw new Error('Checkout not found in the prototype session.')
     return response(data) as T
   }
-  if (marketplaceCheckoutMatch && method === 'POST' && pathname.endsWith('/payment')) {
+  const marketplacePaymentMatch = pathname.match(/^\/commerce\/marketplace-checkouts\/([^/]+)\/payment$/)
+  if (marketplacePaymentMatch && method === 'POST') {
     throw new Error('Payment collection is disabled in prototype mode. No money has been collected.')
   }
   if ((pathname === '/api/orders' || pathname === '/commerce/checkout') && method === 'POST') {
