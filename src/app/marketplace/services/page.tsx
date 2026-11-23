@@ -10,7 +10,7 @@ import { ServiceProfile } from '@/types/vendor'
 import { ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { ProductFilters } from '@/components/marketplace/product-filters'
 import { useServiceSearch } from '@/hooks/useServiceSearch'
-import { Search, Filter, Briefcase, MapPin } from 'lucide-react'
+import { Briefcase, MapPin } from 'lucide-react'
 
 export default function ServicesPage() {
   const {
@@ -156,10 +156,10 @@ export default function ServicesPage() {
                   {service.description && (
                     <p className="text-sm text-text-tertiary line-clamp-3 mb-4">{service.description}</p>
                   )}
-                  {service.city && service.state && (
+                  {(service.city || service.state) && (
                     <div className="flex items-center gap-2 text-xs text-text-tertiary">
                       <MapPin className="w-3.5 h-3.5 text-coral/50" />
-                      <span>{service.city}, {service.state}</span>
+                      <span>{[service.city, service.state].filter(Boolean).join(', ')}</span>
                     </div>
                   )}
                 </CardContent>
