@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { apiJson } from '@/lib/api'
 import { isMockMode } from '@/lib/mock-api'
 import type { MarketplaceFilterState } from '@/components/marketplace/product-filters'
-import { Service } from '@/types/vendor'
+import type { Service } from '@/types/vendor'
 
 export interface ServiceFilters extends MarketplaceFilterState {}
 
@@ -77,18 +77,24 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
       }>('/vendors/services', { params, signal: controller.signal })
       if (requestId !== requestIdRef.current) return
 
-      const mappedServices = result.services.map((service) => ({
-        ...service,
-        name: service.name || service.service_title || 'Service',
-        city: service.city || service.location_text || service.service_area_text,
-        vendor_id: service.vendor_id || '',
-        is_active: service.is_active ?? true,
-        verification_status: service.verification_status || (
+      const mappedServices: Service[] = result.services.map((service) => {
+        const tier = service.vendor_profiles?.verification_tier
+        const verificationStatus: Service['verification_status'] = service.verification_status || (
           service.vendor_profiles?.is_verified
-            ? (service.vendor_profiles.verification_tier === 'business' ? 'business' : service.vendor_profiles.verification_tier === 'nin' ? 'nin' : 'basic')
+            ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic')
             : 'pending'
-        ),
-      }))
+        )
+        return {
+          ...service,
+          name: service.name || service.service_title || 'Service',
+          city: service.city || service.location_text || service.service_area_text,
+          vendor_id: service.vendor_id || '',
+          is_active: service.is_active ?? true,
+          created_at: service.created_at || '',
+          updated_at: service.updated_at || '',
+          verification_status: verificationStatus,
+        }
+      })
       if (append) {
         setServices((previous) => {
           const existing = new Set(previous.map((service) => service.id))
