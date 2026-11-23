@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { isMockMode } from '@/lib/mock-api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -24,9 +24,16 @@ export default function ServicesPage() {
     loadMore,
     hasMore,
     refresh,
-  } = useServiceSearch({ pageSize: 12 })
+  } = useServiceSearch({ pageSize: 100 })
 
-  const [categories, setCategories] = useState<string[]>(['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography'])
+  const categories = ['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography']
+  const visibleServices = useMemo(() => services.filter((service) => {
+    const query = filters.query.trim().toLowerCase()
+    const location = filters.location.trim().toLowerCase()
+    const serviceText = `${service.name} ${service.description || ''} ${service.category || ''}`.toLowerCase()
+    const serviceLocation = `${service.city || ''} ${service.state || ''}`.toLowerCase()
+    return (!query || serviceText.includes(query)) && (!location || serviceLocation.includes(location))
+  }), [services, filters.query, filters.location])
 
   // Load more on scroll
   useEffect(() => {
@@ -92,7 +99,7 @@ export default function ServicesPage() {
 
       {!isMockMode && (filters.query.trim() || filters.location.trim()) && (
         <p role="status" className="rounded-lg border border-gold-dim bg-gold-soft px-4 py-3 text-sm text-text-primary">
-          Category filtering is connected to the live API. Text and city-name service search are currently prototype-only; the backend service-list endpoint needs those filters before they can work in production.
+          Keyword and city filters search the first 100 live service listings returned by the API. Category and nearby-coordinate filters are applied by the backend. Full server-side text search still requires a backend search contract.
         </p>
       )}
 
@@ -109,6 +116,7 @@ export default function ServicesPage() {
           onFiltersChange={setFilters}
           categories={categories}
           mode='services'
+          showSearch={false}
           onClearAll={clearFilters}
           hasActiveFilters={hasActiveFilters}
         />
@@ -117,7 +125,7 @@ export default function ServicesPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-text-secondary">
-              {pagination.total} service{pagination.total !== 1 ? 's' : ''} found
+              {filters.query.trim() || filters.location.trim() ? `${visibleServices.length} matching in ${services.length} loaded` : `${pagination.total} service${pagination.total !== 1 ? 's' : ''} found`}
             </p>
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -128,7 +136,7 @@ export default function ServicesPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-            {services.map((service) => (
+            {visibleServices.map((service) => (
               <Card key={service.id} variant="elevated" className="h-full group">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
@@ -170,7 +178,7 @@ export default function ServicesPage() {
               </Card>
             ))}
 
-            {services.length === 0 && (
+            {visibleServices.length === 0 && (
               <div className="col-span-full text-center py-16">
                 <div className="w-16 h-16 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-4 text-text-tertiary">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
