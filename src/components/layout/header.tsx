@@ -43,7 +43,7 @@ export function Header() {
             <span className="hidden sm:inline-block w-px h-6 bg-border mx-2" />
             <span className="hidden sm:inline text-sm font-medium text-text-secondary">Marketplace</span>
             {isMockMode && <span className="hidden md:inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary">Prototype</span>}
-          </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1" role="navigation" aria-label="Main navigation">
