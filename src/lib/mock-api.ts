@@ -64,7 +64,10 @@ function hydrateWishlist() {
   try { (JSON.parse(window.localStorage.getItem('kamba_demo_wishlist') || '[]') as string[]).forEach((id) => wishlist.add(id)) } catch { /* Ignore invalid prototype data. */ }
 }
 function persistWishlist() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_wishlist', JSON.stringify([...wishlist])) }
-const serviceRequests: Record<string, any> = {}
+type MockEntity = Record<string, unknown> & { id: string; status: string }
+type MockUser = Record<string, unknown> & { id: string; email: string; role: string }
+
+const serviceRequests: Record<string, MockEntity> = {}
 let serviceRequestsHydrated = false
 function hydrateServiceRequests() {
   if (serviceRequestsHydrated || typeof window === 'undefined') return
@@ -72,8 +75,8 @@ function hydrateServiceRequests() {
   try { Object.assign(serviceRequests, JSON.parse(window.localStorage.getItem('kamba_demo_service_requests') || '{}')) } catch { /* Ignore invalid prototype data. */ }
 }
 function persistServiceRequests() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_service_requests', JSON.stringify(serviceRequests)) }
-const orders: Record<string, any> = {}
-const marketplaceCheckouts: Record<string, any> = {}
+const orders: Record<string, MockEntity> = {}
+const marketplaceCheckouts: Record<string, MockEntity> = {}
 let checkoutsHydrated = false
 function hydrateCheckouts() {
   if (checkoutsHydrated || typeof window === 'undefined') return
@@ -96,9 +99,15 @@ function totals(items: MockCartItem[]): MockCart {
   return { items, subtotal, platform_fee, delivery_fee, total: subtotal + platform_fee + delivery_fee, itemCount: items.reduce((sum, item) => sum + item.quantity, 0) }
 }
 function response<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
-function bodyOf(options: RequestInit): any {
+function bodyOf(options: RequestInit): Record<string, unknown> {
   if (typeof options.body !== 'string') return {}
-  try { return JSON.parse(options.body) } catch { return {} }
+  try {
+    const parsed: unknown = JSON.parse(options.body)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {}
+  } catch { return {} }
+}
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
 }
 
 export async function mockApiJson<T>(path: string, options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}): Promise<T> {
@@ -116,14 +125,14 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   if (pathname === '/auth/dashboard' && method === 'GET') {
     let user = null
     if (typeof window !== 'undefined') {
-      try { user = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') } catch { user = null }
+      try { user = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') as MockUser | null } catch { user = null }
     }
     if (!user) throw new Error('Sign in to view your development account.')
     return response({ user, cartCount: cart.itemCount, prototype: true }) as T
   }
   if (pathname === '/auth/profile' && method === 'PATCH') {
     if (typeof window === 'undefined') throw new Error('Profile editing requires a browser session.')
-    let user: any = null
+    let user: MockUser | null = null
     try { user = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') } catch { user = null }
     if (!user) throw new Error('Sign in to edit your development profile.')
     user = { ...user, display_name: body.displayName, username: body.username, phone: body.phone, email: body.email, updated_at: new Date().toISOString() }
@@ -138,7 +147,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   }
   if (pathname === '/service-bookings/requests' && method === 'POST') {
     const id = `demo-service-request-${Object.keys(serviceRequests).length + 1}`
-    const request = { id, ...body, status: 'requested', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), prototype: true }
+    const request: MockEntity = { id, ...body, status: 'requested', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), prototype: true }
     serviceRequests[id] = request
     persistServiceRequests()
     return response({ request, idempotent: false }) as T
@@ -218,7 +227,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     const sort = query.get('sort') || 'newest'
     if (sort === 'price_asc') rows.sort((a, b) => a.price - b.price)
     else if (sort === 'price_desc') rows.sort((a, b) => b.price - a.price)
-    else if (sort === 'popular') rows.sort((a, b) => (Number((b as any).view_count) || 0) - (Number((a as any).view_count) || 0))
+    else if (sort === 'popular') rows.sort((a, b) => (Number((b as Product & { view_count?: number }).view_count) || 0) - (Number((a as Product & { view_count?: number }).view_count) || 0))
     else rows.sort((a, b) => b.created_at.localeCompare(a.created_at))
     const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 24)))
     const offset = Math.max(0, Number(query.get('offset') || 0))
@@ -296,8 +305,8 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     })
     childOrders.forEach((order) => { orders[order.id] = order })
     const amount = childOrders.reduce((sum, order) => sum + order.total, 0)
-    const checkout = { id: checkoutId, amount, currency: 'NGN', status: 'pending', delivery_type: body.delivery_type || 'pickup', created_at: new Date().toISOString(), prototype: true }
-    marketplaceCheckouts[checkoutId] = { checkout, orders: childOrders.map((order) => ({ order_id: order.id, store_id: order.store_id, store_name: order.store_name, order_status: order.status, payment_status: order.payment_status, subtotal: order.subtotal, platform_fee: order.platform_fee, shipping_amount: order.shipping_amount, total: order.total })) }
+    const checkout = { id: checkoutId, amount, currency: 'NGN', status: 'pending', delivery_type: typeof body.delivery_type === 'string' ? body.delivery_type : 'pickup', created_at: new Date().toISOString(), prototype: true }
+    marketplaceCheckouts[checkoutId] = { id: checkoutId, status: 'pending', checkout, orders: childOrders.map((order) => ({ order_id: order.id, store_id: order.store_id, store_name: order.store_name, order_status: order.status, payment_status: order.payment_status, subtotal: order.subtotal, platform_fee: order.platform_fee, shipping_amount: order.shipping_amount, total: order.total })) }
     persistOrders()
     persistCheckouts()
     cart = emptyCart()
@@ -333,7 +342,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   if (vendorOrderMatch && method === 'PATCH') {
     const order = orders[vendorOrderMatch[1] || vendorOrderMatch[2]]
     if (!order) throw new Error('Order not found in the prototype session.')
-    order.status = body.status; order.updated_at = new Date().toISOString(); persistOrders()
+    order.status = typeof body.status === 'string' ? body.status : order.status; order.updated_at = new Date().toISOString(); persistOrders()
     return response({ order }) as T
   }
   throw new Error(`Prototype service has no fixture for ${method} ${pathname}. This action is not available in mock mode yet.`)
