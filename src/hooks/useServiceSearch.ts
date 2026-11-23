@@ -106,7 +106,7 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
       } else {
         setServices(mappedServices)
       }
-      setPagination({ page: result.page, limit: result.limit, total: result.count, totalPages: result.has_more ? result.page + 1 : result.page })
+      setPagination({ page: result.page, limit: result.limit, total: result.count, totalPages: Math.max(1, Math.ceil(result.count / result.limit)) })
       setHasMore(result.has_more)
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
