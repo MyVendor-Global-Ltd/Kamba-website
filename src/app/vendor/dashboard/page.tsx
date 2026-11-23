@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { formatKobo } from '@/lib/formatting'
 import { isMockMode } from '@/lib/mock-api'
+import { LiveVendorDashboard } from '@/components/vendor/live-dashboard'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -221,7 +222,7 @@ const formatDate = (isoString: string) => {
   })
 }
 
-export default function VendorDashboardPage() {
+function MockVendorDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'products' | 'orders'>('overview')
   const handleTabChange = (tab: 'overview' | 'analytics' | 'products' | 'orders') => {
     setActiveTab(tab)
@@ -1166,4 +1167,9 @@ function VendorOrdersTab() {
       </Card>
     </div>
   )
+}
+
+export default function VendorDashboardPage() {
+  if (!isMockMode) return <LiveVendorDashboard />
+  return <MockVendorDashboardPage />
 }
