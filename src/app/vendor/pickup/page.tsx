@@ -66,7 +66,7 @@ export default function VendorPickupPage() {
     try {
       if (!orderId.trim()) throw new Error('Enter an order ID from your vendor orders first.')
       setError(''); setFeedback('')
-      const next = confirmPickupOrderDemo(orderId)
+      const next = confirmPickupOrderDemo(orderId.trim())
       setPickup(next)
       setFeedback('Order confirmed. You can now prepare it.')
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not confirm this order.') }
@@ -85,7 +85,7 @@ export default function VendorPickupPage() {
     try {
       if (!orderId.trim()) throw new Error('Enter an order ID from your vendor orders first.')
       setError(''); setFeedback('')
-      const next = confirmPickupDemo(orderId, code)
+      const next = confirmPickupDemo(orderId.trim(), code)
       setPickup(next)
       setFeedback('Collection recorded in the development prototype. The 24-hour dispute window has started.')
       setCode('')
