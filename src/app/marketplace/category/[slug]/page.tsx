@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
@@ -11,7 +11,7 @@ import { Product } from '@/types/commerce'
 import { StoreProfile, ServiceProfile } from '@/types/vendor'
 import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { ChevronLeft, ChevronRight, Loader2, Package, Store, Briefcase, Filter, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Package, Store, Briefcase, X } from 'lucide-react'
 
 interface CategoryData {
   category: {
@@ -81,7 +81,7 @@ export default function CategoryPage() {
   }
 
   useEffect(() => {
-    fetchCategory()
+    void Promise.resolve().then(fetchCategory)
   }, [slug, searchParams.get('page'), filters.sort, filters.minPrice, filters.maxPrice, filters.inStockOnly])
 
   const handleFilterChange = (newFilters: typeof filters) => {
