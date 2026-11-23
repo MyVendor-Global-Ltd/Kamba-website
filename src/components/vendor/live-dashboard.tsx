@@ -12,7 +12,7 @@ import { AlertCircle, Package, RefreshCw, ShoppingBag } from 'lucide-react'
 interface DashboardOrder {
   id: string
   status: string
-  total_amount: number
+  total_amount?: number
   total?: number
   created_at: string
   item_count: number
