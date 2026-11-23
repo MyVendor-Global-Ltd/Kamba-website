@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiJson } from '@/lib/api'
+import { formatDateTime } from '@/lib/formatting'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -250,7 +251,7 @@ export function LiveVendorOnboarding() {
         <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Vendor profile submitted</CardTitle></CardHeader><CardContent className="space-y-4">
           <Badge variant="warning">Verification pending</Badge>
           <p className="text-sm leading-6 text-text-secondary">Your vendor profile has been created. Kamba will review the submitted information. A completed onboarding step does not mean your business has been verified.</p>
-          {status?.verification_deadline_at && <p className="text-sm text-text-secondary">Location-photo deadline: {new Date(status.verification_deadline_at).toLocaleDateString('en-NG')}</p>}
+          {status?.verification_deadline_at && <p className="text-sm text-text-secondary">Location-photo deadline: {formatDateTime(status.verification_deadline_at)}</p>}
           {(status?.vendor_type || vendorType) !== 'services' && !status?.location_photos_uploaded && (
             <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
               <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
