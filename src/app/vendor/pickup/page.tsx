@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
 import { isMockMode } from '@/lib/mock-api'
-import { confirmPickupDemo, confirmPickupOrderDemo, getPickupDemo, listPickupDemos, setPickupStage, type PickupDemo } from '@/lib/pickup-prototype'
+import { confirmPickupDemo, confirmPickupOrderDemo, getPickupDemo, setPickupStage, type PickupDemo } from '@/lib/pickup-prototype'
 
 interface PickupOrder {
   id: string
@@ -28,9 +28,6 @@ export default function VendorPickupPage() {
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState('')
   const [error, setError] = useState('')
-  const [scannerActive, setScannerActive] = useState(false)
-  const [scannerError, setScannerError] = useState('')
-  const videoRef = useRef<HTMLVideoElement>(null)
 
   const loadOrders = useCallback(async () => {
     setLoading(true)
@@ -39,22 +36,17 @@ export default function VendorPickupPage() {
       const data = await apiJson<{ orders: PickupOrder[] }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } })
       const pickupOrders = (data.orders || []).filter((order) => order.delivery_type === 'pickup')
       setOrders(pickupOrders)
-      setOrderId((current) => pickupOrders.some((order) => order.id === current) ? current : pickupOrders[0]?.id || '')
+      const nextOrderId = pickupOrders.some((order) => order.id === orderId) ? orderId : pickupOrders[0]?.id || ''
+      setOrderId(nextOrderId)
+      setPickup(nextOrderId ? getPickupDemo(nextOrderId) : null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load pickup orders.')
     } finally {
       setLoading(false)
     }
-  }, [])
-
-  useEffect(() => { if (isMockMode) void loadOrders() }, [loadOrders])
-
-  useEffect(() => {
-    if (!orderId || !isMockMode) { setPickup(null); return }
-    setPickup(getPickupDemo(orderId))
-    setCode('')
-    setFeedback('')
   }, [orderId])
+
+  useEffect(() => { if (isMockMode) void Promise.resolve().then(loadOrders) }, [loadOrders])
 
   const selectedOrder = useMemo(() => orders.find((order) => order.id === orderId), [orders, orderId])
 
@@ -100,7 +92,7 @@ export default function VendorPickupPage() {
     <Card><CardHeader><CardTitle>Pickup orders</CardTitle></CardHeader><CardContent className="space-y-4">
       {loading ? <p className="text-sm text-text-secondary">Loading pickup orders…</p> : orders.length === 0 ? <div className="space-y-2 py-3"><PackageCheck className="h-7 w-7 text-text-tertiary" /><p className="font-medium text-text-primary">No pickup orders yet</p><p className="text-sm text-text-secondary">Create a prototype order using pickup at checkout. It will appear here automatically.</p></div> : <>
         <label className="block text-sm font-medium text-text-secondary" htmlFor="pickup-order">Select order</label>
-        <select id="pickup-order" value={orderId} onChange={(event) => setOrderId(event.target.value)} className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
+        <select id="pickup-order" value={orderId} onChange={(event) => { const nextId = event.target.value; setOrderId(nextId); setPickup(nextId ? getPickupDemo(nextId) : null); setCode(''); setFeedback(''); setError('') }} className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
           {orders.map((order) => <option key={order.id} value={order.id}>{order.order_number || order.id} · {order.store_name || 'Store'} · {order.status}</option>)}
         </select>
         {selectedOrder && <p className="text-xs text-text-tertiary">Order {selectedOrder.order_number || selectedOrder.id} · {selectedOrder.store_name || 'Kamba vendor'}</p>}
