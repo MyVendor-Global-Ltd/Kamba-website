@@ -137,6 +137,10 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   const pathname = url.pathname
   const query = url.searchParams
   const body = bodyOf(options)
+  let currentUser: MockUser | null = null
+  if (typeof window !== 'undefined') {
+    try { currentUser = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') as MockUser | null } catch { currentUser = null }
+  }
 
   if (pathname === '/auth/dashboard' && method === 'GET') {
     let user = null
@@ -169,37 +173,60 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     return response({ service_profile: service || null }) as T
   }
   if (pathname === '/service-bookings/requests' && method === 'POST') {
-    const id = `demo-service-request-${Object.keys(serviceRequests).length + 1}`
-    const request: MockEntity = { id, ...body, status: 'requested', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), prototype: true }
+    if (!currentUser || currentUser.role !== 'buyer') throw new Error('Sign in as a buyer to create a service request.')
+    const serviceId = typeof body.service_profile_id === 'string' ? body.service_profile_id : ''
+    const service = mockServices.find((item) => item.id === serviceId)
+    if (!service) throw new Error('Service is unavailable.')
+    const description = typeof body.description === 'string' ? body.description.trim() : ''
+    if (description.length < 10 || description.length > 5000) throw new Error('Description must contain 10 to 5000 characters.')
+    if (!['booking', 'quotation'].includes(String(body.request_type))) throw new Error('Request type must be booking or quotation.')
+    const id = `demo-service-request-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const request: MockEntity = {
+      id, ...body, description, buyer_id: currentUser.id,
+      buyer_username: typeof currentUser.email === 'string' ? currentUser.email.split('@')[0] : 'buyer',
+      service_title: service.name, status: 'requested',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      quotes: [], prototype: true,
+    }
     serviceRequests[id] = request
     persistServiceRequests()
     return response({ request, idempotent: false }) as T
   }
-  if (pathname === '/service-bookings/requests' && method === 'GET') return response({ requests: Object.values(serviceRequests) }) as T
+  if (pathname === '/service-bookings/requests' && method === 'GET') {
+    if (!currentUser) throw new Error('Sign in to view service requests.')
+    const rows = Object.values(serviceRequests).filter((request) =>
+      currentUser?.role === 'vendor' || request.buyer_id === currentUser?.id
+    ).map((request) => ({
+      ...request,
+      service_title: request.service_title || mockServices.find((service) => service.id === request.service_profile_id)?.name || 'Service request',
+    }))
+    return response({ requests: rows }) as T
+  }
   const serviceRequestMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)$/)
   if (serviceRequestMatch && method === 'GET') {
     const request = serviceRequests[serviceRequestMatch[1]]
-    if (!request) throw new Error('Service request not found in the prototype session.')
+    if (!currentUser || !request || (currentUser.role !== 'vendor' && request.buyer_id !== currentUser.id)) throw new Error('Service request not found.')
     return response({ request }) as T
   }
   const serviceQuoteMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)\/quotes$/)
   if (serviceQuoteMatch && method === 'POST') {
+    if (!currentUser || currentUser.role !== 'vendor') throw new Error('Only the service vendor can submit a quotation.')
     const request = serviceRequests[serviceQuoteMatch[1]]
-    if (!request) throw new Error('Service request not found in the prototype session.')
+    if (!request) throw new Error('Service request not found.')
     if (!['requested', 'quoted'].includes(request.status)) throw new Error('This request is no longer accepting quotations.')
     const amount = Number(body.amount)
-    if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('Quote amount must be a positive integer in kobo.')
+    const scope = typeof body.scope === 'string' ? body.scope.trim() : ''
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 2147483647) throw new Error('Quote amount must be a positive integer in kobo.')
+    if (scope.length < 5 || scope.length > 3000) throw new Error('Quote scope must contain 5 to 3000 characters.')
     const quotes = Array.isArray(request.quotes) ? request.quotes as Record<string, unknown>[] : []
+    quotes.forEach((item) => { if (item.status === 'pending') item.status = 'superseded' })
     const quote = {
-      id: `demo-quote-${Date.now()}`,
-      request_id: request.id,
-      amount,
+      id: `demo-quote-${Date.now()}`, request_id: request.id, amount,
       currency: typeof body.currency === 'string' ? body.currency : 'NGN',
-      scope: typeof body.scope === 'string' ? body.scope : '',
+      scope,
       estimated_duration_minutes: typeof body.estimated_duration_minutes === 'number' ? body.estimated_duration_minutes : null,
       valid_until: typeof body.valid_until === 'string' ? body.valid_until : null,
-      status: 'pending',
-      created_at: new Date().toISOString(),
+      status: 'pending', created_at: new Date().toISOString(),
     }
     quotes.push(quote)
     request.quotes = quotes
@@ -211,53 +238,63 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   }
   const serviceQuoteResponseMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)\/quotes\/([^/]+)\/respond$/)
   if (serviceQuoteResponseMatch && method === 'POST') {
+    if (!currentUser || currentUser.role !== 'buyer') throw new Error('Only the requesting buyer can respond to a quotation.')
     const request = serviceRequests[serviceQuoteResponseMatch[1]]
-    if (!request) throw new Error('Service request not found in the prototype session.')
+    if (!request || request.buyer_id !== currentUser.id) throw new Error('Service request not found.')
     const decision = body.decision
     if (decision !== 'accept' && decision !== 'decline') throw new Error('Quote decision must be accept or decline.')
     const quotes = Array.isArray(request.quotes) ? request.quotes as Record<string, unknown>[] : []
     const quote = quotes.find((item) => item.id === serviceQuoteResponseMatch[2])
-    if (!quote) throw new Error('Quote not found for this service request.')
-    if (quote.status !== 'pending') throw new Error('This quote has already been answered.')
-    quote.status = decision === 'accept' ? 'accepted' : 'declined'
-    quote.responded_at = new Date().toISOString()
+    if (!quote || quote.status !== 'pending' || request.status !== 'quoted') throw new Error('This quote is no longer available.')
     if (decision === 'accept') {
+      quotes.forEach((item) => { if (item.id !== quote.id && item.status === 'pending') item.status = 'superseded' })
+      quote.status = 'accepted'
       request.accepted_quote_id = quote.id
       request.status = 'accepted'
-    } else if (!quotes.some((item) => item.status === 'pending')) {
+    } else {
+      quote.status = 'declined'
       request.status = 'requested'
     }
+    quote.responded_at = new Date().toISOString()
     request.updated_at = new Date().toISOString()
     serviceRequests[String(request.id)] = request
     persistServiceRequests()
-    return response({ request, quote }) as T
+    return response({ request_id: request.id, quote_id: quote.id, decision, status: decision === 'accept' ? 'accepted' : 'declined' }) as T
   }
   const serviceRequestStatusMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)\/status$/)
   if (serviceRequestStatusMatch && method === 'PATCH') {
+    if (!currentUser) throw new Error('Sign in to update a service request.')
     const request = serviceRequests[serviceRequestStatusMatch[1]]
-    if (!request) throw new Error('Service request not found in the prototype session.')
-    const allowed = ['accepted', 'scheduled', 'in_progress', 'completed', 'declined', 'cancelled']
+    if (!request || (currentUser.role !== 'vendor' && request.buyer_id !== currentUser.id)) throw new Error('Service request not found.')
     const nextStatus = typeof body.status === 'string' ? body.status : ''
-    if (!allowed.includes(nextStatus)) throw new Error('Unsupported service request status.')
-    const transitions: Record<string, string[]> = {
-      requested: ['accepted', 'declined', 'cancelled'],
-      quoted: ['accepted', 'declined', 'cancelled'],
-      accepted: ['scheduled', 'cancelled'],
+    const vendorTransitions: Record<string, string[]> = {
+      requested: ['accepted', 'declined'],
+      quoted: ['declined'],
+      accepted: ['scheduled', 'declined'],
       scheduled: ['in_progress', 'cancelled'],
-      in_progress: ['completed', 'cancelled'],
+      in_progress: ['completed'],
     }
-    const currentStatus = String(request.status || 'requested')
-    if (!transitions[currentStatus]?.includes(nextStatus)) throw new Error(`Cannot change a service request from ${currentStatus} to ${nextStatus}.`)
+    const buyerTransitions: Record<string, string[]> = {
+      requested: ['cancelled'], quoted: ['cancelled'], accepted: ['cancelled'], scheduled: ['cancelled'],
+    }
+    const transitions = currentUser.role === 'vendor' ? vendorTransitions : buyerTransitions
+    if (!transitions[String(request.status)]?.includes(nextStatus)) throw new Error('This status transition is not allowed.')
+    if (nextStatus === 'scheduled') {
+      if (typeof body.scheduled_start_at !== 'string' || !Number.isFinite(Date.parse(body.scheduled_start_at))) throw new Error('A valid scheduled start time is required.')
+      request.scheduled_start_at = new Date(body.scheduled_start_at).toISOString()
+      if (typeof body.scheduled_end_at === 'string') {
+        if (!Number.isFinite(Date.parse(body.scheduled_end_at)) || Date.parse(body.scheduled_end_at) <= Date.parse(request.scheduled_start_at as string)) throw new Error('Scheduled end must be after scheduled start.')
+        request.scheduled_end_at = new Date(body.scheduled_end_at).toISOString()
+      }
+    }
     request.status = nextStatus
-    if (typeof body.scheduled_start_at === 'string') request.scheduled_start_at = body.scheduled_start_at
-    if (typeof body.scheduled_end_at === 'string') request.scheduled_end_at = body.scheduled_end_at
     request.updated_at = new Date().toISOString()
     const history = Array.isArray(request.status_history) ? request.status_history as Record<string, unknown>[] : []
     history.push({ status: nextStatus, note: typeof body.note === 'string' ? body.note : null, created_at: request.updated_at })
     request.status_history = history
     serviceRequests[String(request.id)] = request
     persistServiceRequests()
-    return response({ request }) as T
+    return response({ request_id: request.id, status: nextStatus, scheduled_start_at: request.scheduled_start_at || null, scheduled_end_at: request.scheduled_end_at || null }) as T
   }
   if (pathname === '/marketplace/wishlist' && method === 'GET') return response({ items: [...wishlist].map((product_id) => ({ product_id })) }) as T
   const wishlistMatch = pathname.match(/^\/marketplace\/wishlist\/([^/]+)$/)
