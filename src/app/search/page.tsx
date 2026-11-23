@@ -14,7 +14,7 @@ import { isMockMode } from '@/lib/mock-api'
 import { formatKobo } from '@/lib/formatting'
 import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Search, X, Filter, Package, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Search, X, Package, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
 interface SearchResult {
   products: Product[]
@@ -132,6 +132,10 @@ export default function SearchPage() {
     setPagination((previous) => ({ ...previous, page: 1 }))
   }, [activeTab])
 
+  useEffect(() => {
+    setQuery(searchParams.get('q') || '')
+  }, [searchParams])
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
@@ -145,6 +149,9 @@ export default function SearchPage() {
     router.push('/search')
     setResults({ products: [], stores: [], services: [], total: 0 })
   }
+
+  const activeResultCount = activeTab === 'products' ? results.products.length : activeTab === 'stores' ? results.stores.length : activeTab === 'services' ? results.services.length : results.total
+  const activeTotalPages = Math.ceil(activeResultCount / pagination.pageSize)
 
   const tabs = [
     { id: 'all', label: 'All', icon: Search, count: results.total },
@@ -336,15 +343,15 @@ export default function SearchPage() {
       </div>
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && !loading && (
+      {activeTab !== 'all' && activeTotalPages > 1 && !loading && (
         <div className="flex items-center justify-center gap-2 animate-fade-in">
           <Button variant="outline" size="sm" onClick={() => setPagination((previous) => ({ ...previous, page: Math.max(1, previous.page - 1) }))} disabled={pagination.page === 1}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="px-4 text-text-secondary">
-            Page {pagination.page} of {Math.ceil((activeTab === 'products' ? results.products.length : activeTab === 'stores' ? results.stores.length : results.services.length) / pagination.pageSize)}
+            Page {pagination.page} of {activeTotalPages}
           </span>
-          <Button variant="outline" size="sm" onClick={() => setPagination((previous) => ({ ...previous, page: previous.page + 1 }))} disabled={pagination.page >= Math.ceil((activeTab === 'products' ? results.products.length : activeTab === 'stores' ? results.stores.length : results.services.length) / pagination.pageSize)}>
+          <Button variant="outline" size="sm" onClick={() => setPagination((previous) => ({ ...previous, page: previous.page + 1 }))} disabled={pagination.page >= activeTotalPages}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
