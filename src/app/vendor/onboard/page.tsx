@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { isMockMode, submitMockVendorApplication } from '@/lib/mock-api'
 
-export default function VendorOnboardPage() {
+function MockVendorOnboardPage() {
   const router = useRouter()
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<'products' | 'services' | 'both'>('products')
@@ -122,4 +122,10 @@ export default function VendorOnboardPage() {
       </CardContent>
     </Card>
   )
+}
+
+
+export default function VendorOnboardPage() {
+  if (!isMockMode) return <LiveVendorOnboarding />
+  return <MockVendorOnboardPage />
 }
