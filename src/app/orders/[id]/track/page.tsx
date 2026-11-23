@@ -309,7 +309,7 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
           <h1 className="text-2xl font-semibold text-primary mb-2">Order Not Found</h1>
-          <p className="text-muted-foreground mb-6">The order you're looking for doesn't exist.</p>
+          <p className="text-muted-foreground mb-6">The order you&apos;re looking for doesn&apos;t exist.</p>
           <Link href="/orders">
             <Button>Back to Orders</Button>
           </Link>
@@ -331,15 +331,7 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
     })
   }
 
-  const formatRelativeTime = (isoString: string) => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    return formatTime(isoString)
-  }
+  const formatRelativeTime = (isoString: string) => formatTime(isoString)
 
   return (
     <div className="min-h-screen bg-ink">
@@ -846,12 +838,3 @@ function LiveTrackingMap({ order, driverLocation, lastUpdate }: { order: Order; 
   )
 }
 
-function formatRelativeTime(isoString: string) {
-  const diff = Date.now() - new Date(isoString).getTime()
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ago`
-}
