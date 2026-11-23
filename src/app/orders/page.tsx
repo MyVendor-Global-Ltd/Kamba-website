@@ -74,7 +74,6 @@ export default function OrdersPage() {
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const limit = 10
 
   const fetchOrders = useCallback(async () => {
