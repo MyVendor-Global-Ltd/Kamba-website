@@ -10,7 +10,7 @@ export interface MarketplaceFilterState {
   category: string
   minPrice: number | null
   maxPrice: number | null
-  sortBy: 'newest' | 'price_asc' | 'price_desc' | 'nearest'
+  sortBy: 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'nearest'
   location: string
   latitude: number | null
   longitude: number | null
@@ -221,6 +221,7 @@ export function ProductFilters({
               <option value="newest">Newest first</option>
               <option value="price_asc">Price: low to high</option>
               <option value="price_desc">Price: high to low</option>
+              <option value="popular">Popular</option>
               {supportsNearest && filters.latitude !== null && filters.longitude !== null && <option value="nearest">Nearest first</option>}
             </select>
           </div>
