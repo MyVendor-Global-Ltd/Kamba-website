@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { apiJson } from '@/lib/api'
+import { isMockMode } from '@/lib/mock-api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -97,6 +97,12 @@ export default function ServicesPage() {
           />
         </div>
       </header>
+
+      {!isMockMode && (filters.query.trim() || filters.location.trim()) && (
+        <p role="status" className="rounded-lg border border-gold-dim bg-gold-soft px-4 py-3 text-sm text-text-primary">
+          Category filtering is connected to the live API. Text and city-name service search are currently prototype-only; the backend service-list endpoint needs those filters before they can work in production.
+        </p>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up">
