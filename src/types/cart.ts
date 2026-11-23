@@ -1,4 +1,4 @@
-import { Product } from "./commerce"
+import type { Product } from "./commerce"
 
 export interface CartItem {
   id: string
