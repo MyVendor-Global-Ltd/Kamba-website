@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
-import { Product } from '@/types/commerce'
+import type { Product } from '@/types/commerce'
 import { formatKobo } from '@/lib/formatting'
 import { useCart } from '@/hooks/useCart'
 import { useToast } from '@/components/ui/toast'
@@ -23,13 +23,15 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [addingToCart, setAddingToCart] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
   const { addItem } = useCart()
   const { addToast } = useToast()
 
   useEffect(() => {
-    apiJson<{ product: Product }>(`/commerce/products/${id}`)
+    apiJson<Product & { product?: Product; original_price?: number; store_slug?: string; average_rating?: number; review_count?: number }>(`/commerce/products/${id}`)
       .then((data) => {
-        setProduct(data.product)
+        const item = data.product || data
+        setProduct({ ...item, image_url: item.image_url || item.images?.[0], compare_at_price: item.compare_at_price ?? item.original_price, store_slug: item.store_slug })
         setLoading(false)
       })
       .catch((err) => {
@@ -37,6 +39,27 @@ export default function ProductDetailPage() {
         setLoading(false)
       })
   }, [id])
+
+  const handleToggleWishlist = async () => {
+    if (!product) return
+    try {
+      await apiJson(isSaved ? `/marketplace/wishlist/${product.id}` : `/marketplace/wishlist/${product.id}`, { method: isSaved ? 'DELETE' : 'POST' })
+      setIsSaved(!isSaved)
+      addToast({ type: 'success', title: isSaved ? 'Removed from saved items' : 'Saved for later', message: isSaved ? 'This product was removed from your wishlist.' : 'This product is now in your wishlist.' })
+    } catch (err) {
+      addToast({ type: 'error', title: 'Could not update wishlist', message: err instanceof Error ? err.message : 'Sign in to save products.' })
+    }
+  }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) await navigator.share({ title: product?.name || 'Kamba product', url })
+      else { await navigator.clipboard.writeText(url); addToast({ type: 'success', title: 'Link copied', message: 'Product link copied to clipboard.' }) }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') addToast({ type: 'error', title: 'Could not share product', message: 'Copy the page link from your browser instead.' })
+    }
+  }
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -105,7 +128,7 @@ export default function ProductDetailPage() {
     )
   }
 
-  const images = product.image_url ? [product.image_url] : []
+  const images = product.images?.length ? product.images : product.image_url ? [product.image_url] : []
   const hasDiscount = product.compare_at_price && product.compare_at_price > product.price
   const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100) : 0
 
@@ -150,12 +173,15 @@ export default function ProductDetailPage() {
 
               {/* Wishlist Button */}
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 right-4 bg-ink/50 backdrop-blur-sm hover:bg-ink/70 text-text-primary hover:text-coral"
-                aria-label="Add to wishlist"
+                className="absolute top-4 right-4 bg-surface/90 text-primary hover:bg-surface"
+                aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
+                aria-pressed={isSaved}
+                onClick={handleToggleWishlist}
               >
-                <Heart className="w-5 h-5" />
+                <Heart className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
               </Button>
 
               {/* Image Navigation */}
@@ -209,7 +235,7 @@ export default function ProductDetailPage() {
           {/* Store & Category Badges */}
           <div className="flex flex-wrap items-center gap-3">
             {product.store_name && (
-              <Link href={`/marketplace/stores/${product.store_id}`}>
+              <Link href={`/marketplace/stores/${product.store_slug || product.store_id}`}>
                 <Badge variant="secondary" size="sm" className="cursor-pointer hover:bg-coral-dim hover:text-coral transition-colors">
                   {product.store_name}
                 </Badge>
@@ -220,10 +246,10 @@ export default function ProductDetailPage() {
                 {product.category}
               </Badge>
             )}
-            {product.is_active && (
-              <Badge variant="success" size="sm">
-                In Stock
-              </Badge>
+            {product.is_active && (product.in_stock ?? product.stock_quantity > 0) ? (
+              <Badge variant="success" size="sm">In stock</Badge>
+            ) : (
+              <Badge variant="outline" size="sm">Out of stock</Badge>
             )}
           </div>
 
@@ -231,14 +257,15 @@ export default function ProductDetailPage() {
           <div>
             <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">{product.name}</h1>
             <div className="flex items-center gap-4 mt-3">
-              <div className="flex items-center gap-1">
-                <Star className="w-5 h-5 fill-gold text-gold" />
-                <span className="text-sm font-medium text-text-secondary">4.8</span>
-                <span className="text-sm text-text-tertiary">(124 reviews)</span>
-              </div>
-              <Button variant="ghost" size="sm" className="text-text-tertiary hover:text-text-secondary">
-                <Share2 className="w-4 h-4 mr-1" />
-                Share
+              {(product.review_count || 0) > 0 ? (
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-gold text-gold" />
+                  <span className="text-sm font-medium text-text-secondary">{Number(product.average_rating || 0).toFixed(1)}</span>
+                  <span className="text-sm text-text-tertiary">({product.review_count} verified reviews)</span>
+                </div>
+              ) : <span className="text-sm text-text-tertiary">No reviews yet</span>}
+              <Button type="button" variant="ghost" size="sm" className="text-text-tertiary hover:text-primary" onClick={handleShare}>
+                <Share2 className="mr-1 h-4 w-4" /> Share
               </Button>
             </div>
           </div>
@@ -268,49 +295,7 @@ export default function ProductDetailPage() {
             </Card>
           )}
 
-          {/* Features/Benefits */}
-          <Card variant="outlined">
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-lg">
-                  <div className="w-10 h-10 rounded-lg bg-coral-dim flex items-center justify-center">
-                    <Truck className="w-5 h-5 text-coral" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">Fast Delivery</p>
-                    <p className="text-sm text-text-tertiary">Lagos: 2-4 hours</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-lg">
-                  <div className="w-10 h-10 rounded-lg bg-coral-dim flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-coral" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">Secure Payment</p>
-                    <p className="text-sm text-text-tertiary">Pay on delivery or online</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-lg">
-                  <div className="w-10 h-10 rounded-lg bg-coral-dim flex items-center justify-center">
-                    <RotateCcw className="w-5 h-5 text-coral" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">Easy Returns</p>
-                    <p className="text-sm text-text-tertiary">7-day return policy</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-lg">
-                  <div className="w-10 h-10 rounded-lg bg-coral-dim flex items-center justify-center">
-                    <Star className="w-5 h-5 text-gold" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">Quality Guaranteed</p>
-                    <p className="text-sm text-text-tertiary">Verified sellers only</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <p className="text-sm leading-6 text-text-secondary">Delivery options, pickup availability and any applicable fees are confirmed at checkout before you pay.</p>
 
           {/* Quantity Selector & Add to Cart */}
           <div className="space-y-4 pt-4 border-t border-ink-raised/30">
@@ -363,16 +348,16 @@ export default function ProductDetailPage() {
                 size="lg"
                 className="flex-1"
                 onClick={handleAddToCart}
-                disabled={addingToCart || product.stock_quantity === 0}
+                disabled={addingToCart || product.stock_quantity <= 0 || !product.is_active}
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
                 {addingToCart ? 'Adding...' : 'Add to cart'}
               </Button>
-              <Button variant="outline" size="lg" className="flex-1">
-                <Heart className="w-5 h-5 mr-2" />
-                Save
+              <Button type="button" variant="outline" size="lg" className="flex-1" onClick={handleToggleWishlist} aria-pressed={isSaved}>
+                <Heart className={`mr-2 h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
+                {isSaved ? 'Saved' : 'Save'}
               </Button>
             </div>
           </div>
@@ -391,9 +376,7 @@ export default function ProductDetailPage() {
                     <p className="font-medium text-text-primary">{product.store_name}</p>
                     <p className="text-sm text-text-tertiary">Verified seller • 4.8★ rating</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="ml-auto">
-                    View store
-                  </Button>
+                  <Link href={`/marketplace/stores/${product.store_slug || product.store_id}`} className="ml-auto"><Button variant="ghost" size="sm">View store</Button></Link>
                 </div>
               </CardContent>
             </Card>
