@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
 import { ServiceProfile } from '@/types/vendor'
-import { formatKobo } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { Calendar, Clock, Star, MapPin, Phone, Mail, Shield, CheckCircle, XCircle, ChevronLeft, ChevronRight, MessageSquare, User, Briefcase } from 'lucide-react'
 
@@ -27,9 +26,13 @@ export default function ServiceDetailPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    apiJson<{ service: ServiceProfile }>(`/vendors/services/${slug}`)
+    apiJson<{ service_profile?: ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }; service?: ServiceProfile }>(`/vendors/services/${slug}`)
       .then((data) => {
-        setService(data.service)
+        const raw = data.service_profile || data.service
+        if (!raw) throw new Error('This service is not available.')
+        const tier = raw.vendor_profiles?.verification_tier
+        const verificationStatus: ServiceProfile['verification_status'] = raw.verification_status || (raw.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
+        setService({ ...raw, name: raw.name || raw.service_title || 'Service', city: raw.city || raw.location_text || raw.service_area_text, vendor_id: raw.vendor_id || '', is_active: raw.is_active ?? true, created_at: raw.created_at || '', updated_at: raw.updated_at || '', verification_status: verificationStatus })
         setLoading(false)
       })
       .catch((err) => {
@@ -43,12 +46,29 @@ export default function ServiceDetailPage() {
     if (!service) return
 
     try {
-      // In a real app, this would call the booking API
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      if (!selectedDate || !selectedTime || !bookingDetails.address.trim()) {
+        toast({ type: 'error', title: 'Missing booking details', description: 'Choose a preferred date and time, and enter the service location.' })
+        return
+      }
+      const [hours, minutes] = selectedTime.split(':').map(Number)
+      const requestedStart = new Date(selectedDate)
+      requestedStart.setHours(hours, minutes, 0, 0)
+      const description = [bookingDetails.notes.trim(), `Preferred service location: ${bookingDetails.address.trim()}`].filter(Boolean).join('\n')
+      const result = await apiJson<{ request: { id: string; status: string } }>('/service-bookings/requests', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          service_profile_id: service.id,
+          request_type: 'booking',
+          description: description.length >= 10 ? description : `Booking request for ${service.name}. ${description}`,
+          requested_start_at: requestedStart.toISOString(),
+          service_location: { address: bookingDetails.address.trim() },
+        }),
+      })
       toast({
         type: 'success',
-        title: 'Booking Request Sent',
-        description: 'The service provider will contact you shortly to confirm.',
+        title: 'Booking request submitted',
+        description: 'Your preferred time has been sent to the provider. It is not confirmed until the provider accepts it.',
       })
       setBookingStep('select')
       setSelectedDate(null)
@@ -189,12 +209,12 @@ export default function ServiceDetailPage() {
                           </div>
                         </div>
                       )}
-                      {service.city && service.state && (
+                      {(service.city || service.state) && (
                         <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
                           <MapPin className="w-5 h-5 text-coral" />
                           <div>
                             <p className="text-xs text-text-tertiary">Location</p>
-                            <p className="font-medium text-text-primary">{service.city}, {service.state}</p>
+                            <p className="font-medium text-text-primary">{[service.city, service.state].filter(Boolean).join(', ')}</p>
                           </div>
                         </div>
                       )}
@@ -381,53 +401,10 @@ export default function ServiceDetailPage() {
               </Card>
             )}
 
-            {/* Reviews Tab */}
             {activeTab === 'reviews' && (
-              <Card variant="elevated">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold text-text-primary">Customer Reviews</h3>
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-gold fill-current" />
-                      <span className="text-xl font-bold text-text-primary">4.8</span>
-                      <span className="text-text-tertiary">(24 reviews)</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {[
-                      { name: 'Adebayo K.', date: '2 days ago', rating: 5, text: 'Excellent service! Very professional and arrived on time. Highly recommended.' },
-                      { name: 'Fatima A.', date: '1 week ago', rating: 5, text: 'Great experience. The provider was knowledgeable and completed the job perfectly.' },
-                      { name: 'Chinedu O.', date: '2 weeks ago', rating: 4, text: 'Good service overall. Minor delay but quality of work was excellent.' },
-                    ].map((review, i) => (
-                      <div key={i} className="p-4 bg-ink-raised/30 rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-coral/20 flex items-center justify-center">
-                              <User className="w-5 h-5 text-coral" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-text-primary">{review.name}</p>
-                              <p className="text-xs text-text-tertiary">{review.date}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, j) => (
-                              <Star key={j} className={`w-4 h-4 ${j < review.rating ? 'text-gold fill-current' : 'text-text-tertiary'}`} />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-text-secondary">{review.text}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="text-center pt-6">
-                    <Button variant="outline" className="w-full sm:w-auto">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Write a Review
-                    </Button>
-                  </div>
+              <Card variant="outlined">
+                <CardContent className="p-6 text-sm text-text-secondary">
+                  Service reviews are not available yet. Kamba will only display reviews after verified review data is connected.
                 </CardContent>
               </Card>
             )}
@@ -460,11 +437,11 @@ export default function ServiceDetailPage() {
                   <Calendar className="w-5 h-5" />
                   <span>Book Service</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start gap-3">
+                <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => toast({ type: 'info', title: 'Messaging is not available yet', description: 'Send a booking or quote request to start the service conversation.' })}>
                   <MessageSquare className="w-5 h-5" />
                   <span>Message Provider</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start gap-3">
+                <Button variant="ghost" className="w-full justify-start gap-3" onClick={async () => { try { if (navigator.share) await navigator.share({ title: service.name, url: window.location.href }); else { await navigator.clipboard.writeText(window.location.href); toast({ type: 'success', title: 'Link copied', description: 'Service link copied to clipboard.' }) } } catch { toast({ type: 'error', title: 'Could not share service', description: 'Copy the page link from your browser instead.' }) } }}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
@@ -496,7 +473,7 @@ export default function ServiceDetailPage() {
                   {service.city && service.state && (
                     <div className="flex items-center gap-2 text-sm text-text-secondary">
                       <MapPin className="w-4 h-4 text-coral" />
-                      <span>{service.city}, {service.state}</span>
+                      <span>{[service.city, service.state].filter(Boolean).join(', ')}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-sm text-text-secondary">
