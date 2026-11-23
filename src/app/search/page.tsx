@@ -8,8 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
-import { Product } from '@/types/commerce'
-import { StoreProfile, ServiceProfile } from '@/types/vendor'
+import type { Product } from '@/types/commerce'
+import type { StoreProfile, ServiceProfile } from '@/types/vendor'
+import { isMockMode } from '@/lib/mock-api'
+import { formatKobo } from '@/lib/formatting'
 import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { Search, X, Filter, Package, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
@@ -31,11 +33,14 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResult>({ products: [], stores: [], services: [], total: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 12, totalPages: 1 })
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 12 })
 
-  const performSearch = useCallback(async (searchQuery: string, page = 1) => {
-    if (!searchQuery.trim()) {
+  const performSearch = useCallback(async (searchQuery: string) => {
+    const term = searchQuery.trim()
+    if (!term) {
       setResults({ products: [], stores: [], services: [], total: 0 })
+      setError('')
+      setLoading(false)
       return
     }
 
@@ -43,39 +48,95 @@ export default function SearchPage() {
     setError('')
 
     try {
-      const params = new URLSearchParams({
-        q: searchQuery,
-        page: page.toString(),
-        limit: '12',
-      })
+      let nextResults: SearchResult
+      if (isMockMode) {
+        nextResults = await apiJson<SearchResult>(`/search?q=${encodeURIComponent(term)}`)
+      } else {
+        const [productResponse, storeResponse, serviceResponse] = await Promise.all([
+          apiJson<{ products: Array<Product & { original_price?: number }>; total_count: number }>('/commerce/products', {
+            params: { search: term, limit: 100, offset: 0, stock_status: 'all' },
+          }),
+          apiJson<{ stores: Array<StoreProfile & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores', {
+            params: { page: 1, limit: 100 },
+          }),
+          apiJson<{ services: Array<ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/services', {
+            params: { page: 1, limit: 100 },
+          }),
+        ])
 
-      const data = await apiJson<SearchResult>(`/search?${params.toString()}`)
-      setResults(data)
-      setPagination(prev => ({ ...prev, page, totalPages: Math.ceil(data.total / 12) }))
+        const products = productResponse.products.map((product) => ({
+          ...product,
+          image_url: product.image_url || product.images?.[0],
+          compare_at_price: product.compare_at_price ?? product.original_price,
+        }))
+        const stores = storeResponse.stores
+          .map((store) => {
+            const tier = store.vendor_profiles?.verification_tier
+            const verification_status: StoreProfile['verification_status'] = store.verification_status || (
+              store.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending'
+            )
+            return {
+              ...store,
+              name: store.name || store.store_name || 'Local store',
+              city: store.city || store.location_text,
+              vendor_id: store.vendor_id || '',
+              is_active: store.is_active ?? true,
+              created_at: store.created_at || '',
+              updated_at: store.updated_at || '',
+              verification_status,
+            }
+          })
+          .filter((store) => `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
+        const services = serviceResponse.services
+          .map((service) => {
+            const tier = service.vendor_profiles?.verification_tier
+            const verification_status: ServiceProfile['verification_status'] = service.verification_status || (
+              service.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending'
+            )
+            return {
+              ...service,
+              name: service.name || service.service_title || 'Service',
+              city: service.city || service.location_text || service.service_area_text,
+              vendor_id: service.vendor_id || '',
+              is_active: service.is_active ?? true,
+              created_at: service.created_at || '',
+              updated_at: service.updated_at || '',
+              verification_status,
+            }
+          })
+          .filter((service) => `${service.name} ${service.description || ''} ${service.city || ''} ${service.category || ''}`.toLowerCase().includes(term.toLowerCase()))
+
+        nextResults = { products, stores, services, total: products.length + stores.length + services.length }
+      }
+      setResults(nextResults)
+      setPagination((previous) => ({ ...previous, page: 1 }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed')
       toast({
         type: 'error',
         title: 'Search Error',
-        description: 'Failed to perform search. Please try again.',
+        description: 'Could not complete the search. Please try again.',
       })
     } finally {
       setLoading(false)
     }
   }, [toast])
 
-  // Initial search from URL params
+  // Keep URL-driven searches responsive without issuing a request for every keystroke.
   useEffect(() => {
-    if (query) {
-      performSearch(query)
-    }
+    const timeout = window.setTimeout(() => { void performSearch(query) }, 300)
+    return () => window.clearTimeout(timeout)
   }, [query, performSearch])
+
+  useEffect(() => {
+    setPagination((previous) => ({ ...previous, page: 1 }))
+  }, [activeTab])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-      performSearch(query.trim())
+
     }
   }
 
@@ -122,7 +183,7 @@ export default function SearchPage() {
             <p className="text-text-tertiary text-sm mb-4">Popular searches:</p>
             <div className="flex flex-wrap justify-center gap-2">
               {['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Food', 'Services'].map((cat) => (
-                <Button key={cat} variant="ghost" size="sm" onClick={() => { setQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); performSearch(cat); }}>
+                <Button key={cat} variant="ghost" size="sm" onClick={() => { setQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
                   {cat}
                 </Button>
               ))}
@@ -266,24 +327,24 @@ export default function SearchPage() {
             )}
           </>
         ) : activeTab === 'products' ? (
-          <ProductResults products={results.products} loading={loading} />
+          <ProductResults products={results.products.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         ) : activeTab === 'stores' ? (
-          <StoreResults stores={results.stores} loading={loading} />
+          <StoreResults stores={results.stores.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         ) : (
-          <ServiceResults services={results.services} loading={loading} />
+          <ServiceResults services={results.services.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         )}
       </div>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && !loading && (
         <div className="flex items-center justify-center gap-2 animate-fade-in">
-          <Button variant="outline" size="sm" onClick={() => performSearch(query, pagination.page - 1)} disabled={pagination.page === 1}>
+          <Button variant="outline" size="sm" onClick={() => setPagination((previous) => ({ ...previous, page: Math.max(1, previous.page - 1) }))} disabled={pagination.page === 1}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="px-4 text-text-secondary">
-            Page {pagination.page} of {pagination.totalPages}
+            Page {pagination.page} of {Math.ceil((activeTab === 'products' ? results.products.length : activeTab === 'stores' ? results.stores.length : results.services.length) / pagination.pageSize)}
           </span>
-          <Button variant="outline" size="sm" onClick={() => performSearch(query, pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}>
+          <Button variant="outline" size="sm" onClick={() => setPagination((previous) => ({ ...previous, page: previous.page + 1 }))} disabled={pagination.page >= Math.ceil((activeTab === 'products' ? results.products.length : activeTab === 'stores' ? results.stores.length : results.services.length) / pagination.pageSize)}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -319,11 +380,11 @@ function ProductSearchCard({ product }: { product: Product }) {
           )}
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-text-primary">
-              ₦{product.price.toLocaleString()}
+              {formatKobo(product.price)}
             </span>
             {product.compare_at_price && product.compare_at_price > product.price && (
               <span className="text-sm text-text-tertiary line-through">
-                ₦{product.compare_at_price.toLocaleString()}
+                {formatKobo(product.compare_at_price)}
               </span>
             )}
           </div>
