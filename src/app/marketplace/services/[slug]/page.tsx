@@ -119,7 +119,7 @@ export default function ServiceDetailPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Service not found</h2>
-          <p className="text-text-tertiary">The service you're looking for doesn't exist or has been removed.</p>
+          <p className="text-text-tertiary">The service you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Button variant="outline" className="mt-4" onClick={() => router.back()}>
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back to services
