@@ -260,7 +260,7 @@ function MockVendorDashboardPage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Link href="/vendor" className="flex items-center gap-2">
+              <Link href="/vendor/dashboard" className="flex items-center gap-2">
                 <Store className="w-8 h-8 text-coral" />
                 <span className="font-display font-bold text-xl text-primary">Kamba Vendor</span>
               </Link>
