@@ -82,8 +82,8 @@
   --color-primary-soft: var(--primary-soft);
   --color-primary-strong: var(--primary-strong);
   --color-primary-hover: var(--primary-hover);
-  --color-info: #456650;
-  --color-info-soft: #E9F0EA;
+  --color-info: var(--primary);
+  --color-info-soft: var(--primary-soft);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
   --color-text-muted: var(--text-muted);
