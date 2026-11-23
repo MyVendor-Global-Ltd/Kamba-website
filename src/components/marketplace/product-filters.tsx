@@ -52,10 +52,10 @@ export function ProductFilters({
     isProducts && filters.inStock,
   ].filter(Boolean).length
 
-  const controls = (
+  const controls = (surface: 'desktop' | 'mobile') => (
     <div className="space-y-5">
       <div>
-        <label htmlFor={`marketplace-filter-query-${mode}`} className="mb-2 block text-sm font-medium text-text-secondary">
+        <label htmlFor={`marketplace-filter-query-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
           Search {isProducts ? 'products' : 'services'}
         </label>
         <input
@@ -69,7 +69,7 @@ export function ProductFilters({
       </div>
 
       <div>
-        <label htmlFor={`marketplace-filter-location-${mode}`} className="mb-2 block text-sm font-medium text-text-secondary">
+        <label htmlFor={`marketplace-filter-location-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
           Location
         </label>
         <input
@@ -156,7 +156,7 @@ export function ProductFilters({
           <div>
             <label htmlFor="product-sort" className="mb-2 block text-sm font-medium text-text-secondary">Sort products</label>
             <select
-              id="product-sort"
+              id={`product-sort-${surface}`}
               value={filters.sortBy}
               onChange={(event) => onFiltersChange({ sortBy: event.target.value as MarketplaceFilterState['sortBy'] })}
               className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
@@ -192,7 +192,7 @@ export function ProductFilters({
             <h2 className="font-semibold text-text-primary">Filter {isProducts ? 'products' : 'services'}</h2>
             {hasActiveFilters && <button type="button" onClick={onClearAll} className="text-xs font-medium text-primary hover:underline">Clear all</button>}
           </div>
-          {controls}
+          {controls('desktop')}
         </div>
       </aside>
 
@@ -204,7 +204,7 @@ export function ProductFilters({
               <h2 id="mobile-filter-title" className="font-semibold text-text-primary">Filters</h2>
               <Button type="button" variant="ghost" size="icon" onClick={() => setShowMobileFilters(false)} aria-label="Close filters"><X className="h-5 w-5" /></Button>
             </header>
-            <div className="flex-1 overflow-y-auto p-5">{controls}</div>
+            <div className="flex-1 overflow-y-auto p-5">{controls('mobile')}</div>
             <footer className="border-t border-border bg-surface p-4">
               <Button type="button" className="w-full" onClick={() => setShowMobileFilters(false)}>Show results</Button>
             </footer>
