@@ -237,7 +237,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
       is_available: body.is_available !== false,
       is_active: true,
       store_id: store.id,
-      store_name: store.store_name,
+      store_name: store.name,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       view_count: 0,
