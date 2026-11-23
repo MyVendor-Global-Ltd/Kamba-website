@@ -155,7 +155,14 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     window.localStorage.setItem('kamba_demo_user', JSON.stringify(user))
     return response({ success: true, user, prototype: true }) as T
   }
-  if (pathname === '/vendors/stores') return response({ stores: mockStores }) as T
+  if (pathname === '/vendors/stores' && method === 'GET') {
+    const category = (query.get('category') || '').toLowerCase()
+    const rows = mockStores.filter((store) => !category || store.category?.toLowerCase() === category)
+    const page = Math.max(1, Number(query.get('page') || 1))
+    const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 20)))
+    const offset = (page - 1) * limit
+    return response({ stores: rows.slice(offset, offset + limit), page, limit, count: rows.length, has_more: offset + limit < rows.length }) as T
+  }
   const publicServiceMatch = pathname.match(/^\/vendors\/services\/([^/]+)$/)
   if (publicServiceMatch && method === 'GET') {
     const service = mockServices.find((item) => item.slug === publicServiceMatch[1])
