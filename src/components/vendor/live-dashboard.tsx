@@ -13,6 +13,7 @@ interface DashboardOrder {
   id: string
   status: string
   total_amount: number
+  total?: number
   created_at: string
   item_count: number
   store_name?: string
@@ -41,7 +42,7 @@ export function LiveVendorDashboard() {
         apiJson<{ orders: DashboardOrder[] }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } }),
         apiJson<{ products: DashboardProduct[] }>('/commerce/vendor/products', { params: { limit: 100, offset: 0 } }),
       ])
-      setOrders(orderResponse.orders || [])
+      setOrders((orderResponse.orders || []).map((order) => ({ ...order, total_amount: Number(order.total ?? order.total_amount ?? 0) })))
       setProducts(productResponse.products || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load your vendor data.')
