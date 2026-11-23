@@ -72,6 +72,13 @@ export function LiveVendorOnboarding() {
       setEligibility(eligibilityData)
       setStatus(statusData)
       if (statusData.vendor_type) setVendorType(statusData.vendor_type)
+      else if (statusData.stage === 'complete') {
+        try {
+          const profile = await apiJson<{ vendor_type?: VendorType; vendor_profile?: { vendor_type?: VendorType } }>('/vendors/profile')
+          const type = profile.vendor_type || profile.vendor_profile?.vendor_type
+          if (type) setVendorType(type)
+        } catch { /* The status screen remains usable if profile summary is temporarily unavailable. */ }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load vendor onboarding status.')
     } finally {
@@ -202,7 +209,7 @@ export function LiveVendorOnboarding() {
               <input type="file" accept="image/*" capture="user" onChange={(event) => setSelfie(event.target.files?.[0] || null)} className="mt-2 block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" required />
             </label>
             <p className="text-xs leading-5 text-text-tertiary">Your selfie is uploaded to Kamba's configured storage for the vendor onboarding check. Submit only your own image. The backend records this step; final verification remains subject to Kamba's review.</p>
-            <Button type="submit" disabled={submitting || !eligibility?.eligible}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
+            <Button type="submit" disabled={submitting || (!eligibility?.eligible && stage !== 'liveness_done')}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
           </form>
         </CardContent></Card>
       )}
@@ -244,7 +251,7 @@ export function LiveVendorOnboarding() {
           <Badge variant="warning">Verification pending</Badge>
           <p className="text-sm leading-6 text-text-secondary">Your vendor profile has been created. Kamba will review the submitted information. A completed onboarding step does not mean your business has been verified.</p>
           {status?.verification_deadline_at && <p className="text-sm text-text-secondary">Location-photo deadline: {new Date(status.verification_deadline_at).toLocaleDateString('en-NG')}</p>}
-          {status?.vendor_type !== 'services' && !status?.location_photos_uploaded && (
+          {(status?.vendor_type || vendorType) !== 'services' && !status?.location_photos_uploaded && (
             <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
               <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
               <p className="text-sm text-text-secondary">Choose 2–6 photos of your actual business location. These are used for the store-location verification step.</p>
