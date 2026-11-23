@@ -64,7 +64,7 @@ export default function StoreDetailPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Store not found</h2>
-          <p className="text-text-tertiary">The store you're looking for doesn't exist or has been removed.</p>
+          <p className="text-text-tertiary">The store you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Link href="/marketplace/stores" className="mt-4 inline-block">
             <Button variant="outline">Browse all stores</Button>
           </Link>
