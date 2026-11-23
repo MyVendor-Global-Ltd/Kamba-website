@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { apiJson } from '@/lib/api'
 import { isMockMode } from '@/lib/mock-api'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -164,7 +164,7 @@ function CheckoutPaymentContent() {
                 <span className="font-medium text-text-primary">{order.store_name || 'Kamba vendor'}</span>
                 <span className="text-sm font-semibold text-text-primary">{formatKobo(order.total)}</span>
               </div>
-              <p className="text-xs text-text-secondary">Order {order.order_id} · {order.order_status} · payment {order.payment_status}</p>
+              <p className="text-xs text-text-secondary">Order {order.order_id} · {formatOrderStatus(order.order_status)} · {formatOrderStatus(order.payment_status)}</p>
             </div>
           ))}
           {checkout.created_at && <p className="text-xs text-text-tertiary">Created {formatDateTime(checkout.created_at)}</p>}
