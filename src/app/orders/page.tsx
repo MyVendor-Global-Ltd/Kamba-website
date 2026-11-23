@@ -10,7 +10,8 @@ import { apiJson } from '@/lib/api'
 import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Filter, RotateCcw, Truck, RefreshCw, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Filter, RotateCcw, RefreshCw, X } from 'lucide-react'
+import { useCartContext } from '@/context/CartContext'
 
 interface Order {
   id: string
@@ -67,6 +68,7 @@ type StatusFilter = 'all' | 'pending' | 'paid_held' | 'confirmed' | 'processing'
 export default function OrdersPage() {
   const router = useRouter()
   const { addToast } = useToast()
+  const { refresh: refreshCart } = useCartContext()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -122,20 +124,21 @@ export default function OrdersPage() {
         })
       }
       addToast({ type: 'success', title: 'Items added to cart', message: 'Available items from this order have been added to your cart.' })
+      await refreshCart()
       router.push('/cart')
     } catch (err) {
       addToast({ type: 'error', title: 'Failed to reorder', message: err instanceof Error ? err.message : 'Please try again.' })
     }
   }
 
-  const handleRequestReturn = (orderId: string) => {
-    addToast({ type: 'info', title: 'Returns are not connected yet', message: `Contact Kamba support about order ${orderId}. The current backend does not expose a return-request endpoint.` })
-  }
+
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
         return 'success'
+      case 'paid_held':
+        return 'warning'
       case 'shipped':
       case 'processing':
         return 'secondary'
@@ -164,9 +167,6 @@ export default function OrdersPage() {
     return ['delivered', 'cancelled'].includes(status.toLowerCase())
   }
 
-  const canReturn = (status: string, deliveryStatus: string) => {
-    return status.toLowerCase() === 'delivered' && deliveryStatus.toLowerCase() === 'delivered'
-  }
 
   if (loading) {
     return (
@@ -216,6 +216,7 @@ export default function OrdersPage() {
               <option value="all">All Orders</option>
               <option value="pending">Pending payment</option>
               <option value="paid_held">Paid — awaiting vendor</option>
+              <option value="paid_held">Paid — awaiting vendor</option>
               <option value="confirmed">Confirmed</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
@@ -251,7 +252,7 @@ export default function OrdersPage() {
                       {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
                     </Badge>
                   </div>
-                  <p className="text-sm text-text-tertiary">{formatDateTime(order.created_at)}</p>
+                  <p className="text-sm text-text-tertiary">{formatDateTime(order.created_at)} · {order.store_name || 'Kamba vendor'} · {order.delivery_type === 'pickup' ? 'Pickup' : 'Delivery'}</p>
                   <p className="text-sm text-text-secondary mt-1">{order.item_count ?? order.items.length} item{(order.item_count ?? order.items.length) !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:ml-4">
@@ -271,12 +272,7 @@ export default function OrdersPage() {
                         Reorder
                       </Button>
                     )}
-                    {canReturn(order.status, order.delivery_status || '') && (
-                      <Button variant="outline" size="sm" onClick={() => handleRequestReturn(order.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
-                        <Truck className="w-4 h-4 mr-1" />
-                        Return
-                      </Button>
-                    )}
+
                   </div>
                 </div>
               </div>
