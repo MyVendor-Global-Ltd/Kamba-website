@@ -163,7 +163,9 @@ export function ServiceRequestManager({ mode }: Props) {
               {mode === 'vendor' && request.buyer_username && <p className="text-sm text-text-secondary">Requested by @{request.buyer_username}</p>}
               {request.description && <p className="whitespace-pre-line text-sm leading-6 text-text-secondary">{request.description}</p>}
               {request.service_location?.address && <p className="text-sm text-text-secondary">Service location: {request.service_location.address}</p>}
+              {request.request_type && <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{request.request_type === 'booking' ? 'Booking request' : 'Quotation request'}</p>}
               {request.requested_start_at && <p className="flex items-center gap-2 text-sm text-text-secondary"><CalendarClock className="h-4 w-4" /> Preferred: {formatDateTime(request.requested_start_at)}</p>}
+              {request.scheduled_start_at && <p className="flex items-center gap-2 text-sm text-text-secondary"><CalendarClock className="h-4 w-4" /> Scheduled: {formatDateTime(request.scheduled_start_at)}{request.scheduled_end_at ? ` – ${formatDateTime(request.scheduled_end_at)}` : ''}</p>}
               {quotes.length > 0 && <section className="space-y-3">
                 <h3 className="text-sm font-semibold text-text-primary">Quotations</h3>
                 {quotes.map((quote) => <div key={quote.id} className="rounded-lg border border-border p-4">
@@ -207,7 +209,7 @@ export function ServiceRequestManager({ mode }: Props) {
               )}
               {mode === 'vendor' && request.status === 'scheduled' && <Button size="sm" onClick={() => updateStatus(request, 'in_progress')} disabled={busyId === request.id}>Mark work started</Button>}
               {mode === 'vendor' && request.status === 'in_progress' && <Button size="sm" onClick={() => updateStatus(request, 'completed')} disabled={busyId === request.id}>Mark work completed</Button>}
-              {mode === 'buyer' && acceptedQuote && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">Accepted quotation: {formatKobo(acceptedQuote.amount)}. Payment is not enabled in this prototype; no money has been collected.</p>}
+              {mode === 'buyer' && acceptedQuote && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">Accepted quotation: {formatKobo(acceptedQuote.amount)}. Accepting a quotation does not itself initiate a payment.</p>}
               {mode === 'buyer' && ['requested', 'quoted', 'accepted', 'scheduled'].includes(request.status) && (
                 <Button size="sm" variant="outline" onClick={() => updateStatus(request, 'cancelled')} disabled={busyId === request.id}>Cancel request</Button>
               )}
@@ -215,7 +217,7 @@ export function ServiceRequestManager({ mode }: Props) {
           </Card>
         )
       })}
-      {mode === 'buyer' && <p className="text-xs leading-5 text-text-tertiary">Service payments are not enabled in the website prototype. Accepting a quotation does not charge you or release money to a provider.</p>}
+      {mode === 'buyer' && <p className="text-xs leading-5 text-text-tertiary">Payment initiation, payment status, completion confirmation and disputes are separate from quotation acceptance. These payment controls are not yet available on this page.</p>}
     </main>
   )
 }
