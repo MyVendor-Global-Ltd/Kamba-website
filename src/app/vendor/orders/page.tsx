@@ -19,6 +19,27 @@ interface OrderItem {
   image_url?: string
 }
 
+interface VendorOrderDetailItem {
+  product_id: string
+  name?: string
+  product_name?: string
+  image_url?: string
+  unit_amount?: number
+  price?: number
+  quantity: number
+}
+interface VendorOrderDetail {
+  order_items?: VendorOrderDetailItem[]
+  items?: VendorOrderDetailItem[]
+  delivery_address?: { address_line?: string; city?: string; state?: string; recipient_name?: string } | null
+  payment_status?: string
+  delivery_status?: string
+  payment_method?: string
+}
+interface VendorOrderDetailResponse extends VendorOrderDetail {
+  order?: VendorOrderDetail
+}
+
 interface Order {
   id: string
   order_number: string
@@ -71,6 +92,7 @@ export default function VendorOrdersPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'total'>('newest')
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState<string | null>(null)
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
   const loadOrders = useCallback(async () => {
@@ -276,7 +298,7 @@ export default function VendorOrdersPage() {
             className="px-4 py-2 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
           >
             <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
+            <option value="paid_held">Paid — awaiting confirmation</option><option value="pending">Pending payment</option>
             <option value="confirmed">Confirmed</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
@@ -366,10 +388,10 @@ export default function VendorOrdersPage() {
                       <p className="text-sm text-text-tertiary">Subtotal: {formatKobo(order.subtotal)}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => void toggleOrderDetails(order.id)}>
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)} aria-label="View order details">
+                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)} aria-label="View order details" disabled={loadingOrderDetails === order.id}>
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
@@ -490,4 +512,45 @@ export default function VendorOrdersPage() {
       </div>
     </div>
   )
-}
+}  const toggleOrderDetails = async (orderId: string) => {
+    if (expandedOrder === orderId) {
+      setExpandedOrder(null)
+      return
+    }
+    setExpandedOrder(orderId)
+    const existing = orders.find((order) => order.id === orderId)
+    if (existing && existing.items.length > 0) return
+
+    setLoadingOrderDetails(orderId)
+    try {
+      const data = await apiJson<VendorOrderDetailResponse>(`/commerce/orders/${encodeURIComponent(orderId)}`)
+      const raw = data.order || data
+      const items = (raw.order_items || raw.items || []).map((item) => ({
+        id: item.product_id,
+        product_id: item.product_id,
+        product_name: item.name || item.product_name || 'Product',
+        quantity: item.quantity,
+        price: Number(item.unit_amount ?? item.price ?? 0),
+        image_url: item.image_url,
+      }))
+      setOrders((previous) => previous.map((order) => order.id === orderId ? {
+        ...order,
+        items,
+        shipping_address: raw.delivery_address ? {
+          address: raw.delivery_address.address_line || '',
+          city: raw.delivery_address.city || '',
+          state: raw.delivery_address.state || '',
+        } : order.shipping_address,
+        customer: { name: raw.delivery_address?.recipient_name || order.customer.name },
+        payment_status: raw.payment_status || order.payment_status,
+        delivery_status: raw.delivery_status || order.delivery_status,
+        payment_method: raw.payment_method || order.payment_method,
+      } : order))
+    } catch (err) {
+      addToast({ type: 'error', title: 'Could not load order details', message: err instanceof Error ? err.message : 'Please try again.' })
+    } finally {
+      setLoadingOrderDetails(null)
+    }
+  }
+
+
