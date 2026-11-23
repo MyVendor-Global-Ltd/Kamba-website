@@ -28,6 +28,9 @@ export default function VendorPickupPage() {
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState('')
   const [error, setError] = useState('')
+  const [scannerActive, setScannerActive] = useState(false)
+  const [scannerError, setScannerError] = useState('')
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   const loadOrders = useCallback(async () => {
     setLoading(true)
