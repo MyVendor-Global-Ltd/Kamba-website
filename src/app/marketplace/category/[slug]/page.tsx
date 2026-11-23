@@ -99,6 +99,7 @@ export default function CategoryPage() {
 
       const stores = (storeResponse.stores || []).map((store) => {
         const tier = store.vendor_profiles?.verification_tier
+        const verificationStatus: StoreProfile['verification_status'] = store.verification_status || (store.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
         return {
           ...store,
           name: store.name || store.store_name || 'Local store',
@@ -107,11 +108,12 @@ export default function CategoryPage() {
           is_active: store.is_active ?? true,
           created_at: store.created_at || '',
           updated_at: store.updated_at || '',
-          verification_status: store.verification_status || (store.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending'),
+          verification_status: verificationStatus,
         }
       })
       const services = (serviceResponse.services || []).map((service) => {
         const tier = service.vendor_profiles?.verification_tier
+        const verificationStatus: ServiceProfile['verification_status'] = service.verification_status || (service.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
         return {
           ...service,
           name: service.name || service.service_title || 'Service',
@@ -120,7 +122,7 @@ export default function CategoryPage() {
           is_active: service.is_active ?? true,
           created_at: service.created_at || '',
           updated_at: service.updated_at || '',
-          verification_status: service.verification_status || (service.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending'),
+          verification_status: verificationStatus,
         }
       })
       const total = Number(productResponse.total_count ?? productResponse.products?.length ?? 0)
