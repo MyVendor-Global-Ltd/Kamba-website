@@ -1,15 +1,12 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { apiPaginated } from '@/lib/api'
+import { apiJson } from '@/lib/api'
+import { isMockMode } from '@/lib/mock-api'
+import type { MarketplaceFilterState } from '@/components/marketplace/product-filters'
 import { Service } from '@/types/vendor'
 
-export interface ServiceFilters {
-  query: string
-  category: string
-  location: string
-  sortBy: 'newest'
-}
+export interface ServiceFilters extends MarketplaceFilterState {}
 
 export interface UseServiceSearchOptions {
   initialFilters?: Partial<ServiceFilters>
@@ -30,7 +27,7 @@ export interface UseServiceSearchReturn {
   refresh: () => Promise<void>
 }
 
-const DEFAULT_FILTERS: ServiceFilters = { query: '', category: '', location: '', sortBy: 'newest' }
+const DEFAULT_FILTERS: ServiceFilters = { query: '', category: '', location: '', minPrice: null, maxPrice: null, inStock: false, sortBy: 'newest' }
 
 export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServiceSearchReturn {
   const { initialFilters = {}, pageSize = 12 } = options
@@ -56,26 +53,52 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
     try {
       setError(null)
       setLoading(true)
-      const params = {
+      const params: Record<string, string | number | boolean | undefined> = {
         page,
         limit: pageSize,
-        q: currentFilters.query.trim() || undefined,
         category: currentFilters.category || undefined,
-        location: currentFilters.location.trim() || undefined,
+        ...(isMockMode ? {
+          search: currentFilters.query.trim() || undefined,
+          location: currentFilters.location.trim() || undefined,
+        } : {}),
       }
-      const result = await apiPaginated<Service>('/commerce/services', { params, signal: controller.signal })
+      const result = await apiJson<{
+        services: Array<Service & {
+          service_title?: string
+          location_text?: string
+          service_area_text?: string
+          price_range?: string
+          vendor_profiles?: { is_verified?: boolean; verification_tier?: string }
+        }>
+        page: number
+        limit: number
+        count: number
+        has_more: boolean
+      }>('/vendors/services', { params, signal: controller.signal })
       if (requestId !== requestIdRef.current) return
 
+      const mappedServices = result.services.map((service) => ({
+        ...service,
+        name: service.name || service.service_title || 'Service',
+        city: service.city || service.location_text || service.service_area_text,
+        vendor_id: service.vendor_id || '',
+        is_active: service.is_active ?? true,
+        verification_status: service.verification_status || (
+          service.vendor_profiles?.is_verified
+            ? (service.vendor_profiles.verification_tier === 'business' ? 'business' : service.vendor_profiles.verification_tier === 'nin' ? 'nin' : 'basic')
+            : 'pending'
+        ),
+      }))
       if (append) {
         setServices((previous) => {
           const existing = new Set(previous.map((service) => service.id))
-          return [...previous, ...result.data.filter((service) => !existing.has(service.id))]
+          return [...previous, ...mappedServices.filter((service) => !existing.has(service.id))]
         })
       } else {
-        setServices(result.data)
+        setServices(mappedServices)
       }
-      setPagination(result.meta)
-      setHasMore(result.meta.page < result.meta.totalPages)
+      setPagination({ page: result.page, limit: result.limit, total: result.count, totalPages: result.has_more ? result.page + 1 : result.page })
+      setHasMore(result.has_more)
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
       if (requestId === requestIdRef.current) {
