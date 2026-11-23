@@ -128,13 +128,6 @@ export default function SearchPage() {
     return () => window.clearTimeout(timeout)
   }, [query, performSearch])
 
-  useEffect(() => {
-    setPagination((previous) => ({ ...previous, page: 1 }))
-  }, [activeTab])
-
-  useEffect(() => {
-    setQuery(searchParams.get('q') || '')
-  }, [searchParams])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
