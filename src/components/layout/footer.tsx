@@ -53,7 +53,7 @@ export function Footer() {
           ))}
         </div>
         <div className="mt-10 flex flex-col gap-2 border-t border-border pt-5 text-xs text-text-tertiary sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Kamba. All rights reserved.</p>
+          <p>© Kamba. All rights reserved.</p>
           <p>Local discovery, made simpler.</p>
         </div>
       </div>
