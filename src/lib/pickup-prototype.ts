@@ -34,7 +34,11 @@ function save(record: PickupDemo) {
 }
 export function getPickupDemo(orderId: string): PickupDemo {
   const all = readAll()
-  return all[orderId] || { orderId, orderNumber: orderId.toUpperCase(), stage: 'awaiting_confirmation', payoutStatus: 'held' }
+  const record = all[orderId]
+  if (record?.stage === 'collected' && record.payoutStatus === 'awaiting_dispute_window' && record.disputeWindowEndsAt && Date.now() >= new Date(record.disputeWindowEndsAt).getTime()) {
+    return save({ ...record, payoutStatus: 'eligible_for_processing' })
+  }
+  return record || { orderId, orderNumber: orderId.toUpperCase(), stage: 'awaiting_confirmation', payoutStatus: 'held' }
 }
 export function listPickupDemos(): PickupDemo[] { return Object.values(readAll()) }
 export function confirmPickupOrderDemo(orderId: string) {
