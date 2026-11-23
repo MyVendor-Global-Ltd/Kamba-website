@@ -271,6 +271,8 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   if (pathname === '/commerce/marketplace-checkouts' && method === 'POST') {
     if (!cart.items.length) throw new Error('Add an item to your cart before checkout.')
     const checkoutId = `demo-checkout-${Object.keys(marketplaceCheckouts).length + 1}`
+    const deliveryType = typeof body.delivery_type === 'string' ? body.delivery_type : 'pickup'
+    const deliveryAddress = asRecord(body.delivery_address)
     const storeGroups = new Map<string, MockCartItem[]>()
     for (const item of cart.items) {
       const group = storeGroups.get(item.store_id) || []
@@ -287,7 +289,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
         status: 'pending',
         payment_status: 'pending',
         delivery_status: 'pending',
-        delivery_type: body.delivery_type || 'pickup',
+        delivery_type: deliveryType,
         subtotal,
         platform_fee,
         delivery_fee: 0,
@@ -297,7 +299,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
         store_name: items[0]?.store_name,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        shipping_address: body.delivery_address ? { address: body.delivery_address.address_line, city: body.delivery_address.city, state: body.delivery_address.state } : { address: 'Vendor pickup', city: '', state: '' },
+        shipping_address: deliveryAddress ? { address: String(deliveryAddress.address_line || ''), city: String(deliveryAddress.city || ''), state: String(deliveryAddress.state || '') } : { address: 'Vendor pickup', city: '', state: '' },
         payment_method: 'not-configured',
         customer: { name: 'Demo Buyer', email: 'buyer@kamba.demo' },
         items: items.map((item, itemIndex) => ({ id: `item-${index + 1}-${itemIndex + 1}`, product_id: item.product_id, product_name: item.name, quantity: item.quantity, price: item.price_kobo, image_url: item.image_url })),
@@ -305,7 +307,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     })
     childOrders.forEach((order) => { orders[order.id] = order })
     const amount = childOrders.reduce((sum, order) => sum + order.total, 0)
-    const checkout = { id: checkoutId, amount, currency: 'NGN', status: 'pending', delivery_type: typeof body.delivery_type === 'string' ? body.delivery_type : 'pickup', created_at: new Date().toISOString(), prototype: true }
+    const checkout = { id: checkoutId, amount, currency: 'NGN', status: 'pending', delivery_type: deliveryType, created_at: new Date().toISOString(), prototype: true }
     marketplaceCheckouts[checkoutId] = { id: checkoutId, status: 'pending', checkout, orders: childOrders.map((order) => ({ order_id: order.id, store_id: order.store_id, store_name: order.store_name, order_status: order.status, payment_status: order.payment_status, subtotal: order.subtotal, platform_fee: order.platform_fee, shipping_amount: order.shipping_amount, total: order.total })) }
     persistOrders()
     persistCheckouts()
@@ -326,7 +328,8 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   if ((pathname === '/api/orders' || pathname === '/commerce/checkout') && method === 'POST') {
     if (!cart.items.length) throw new Error('Add an item to your cart before checkout.')
     const id = `demo-order-${Object.keys(orders).length + 1}`
-    const order = { id, order_number: `KMB-DEMO-${String(Object.keys(orders).length + 1).padStart(4,'0')}`, status: 'pending', payment_status: 'pending', delivery_status: 'pending', delivery_type: body.delivery_type || 'delivery', subtotal: cart.subtotal, platform_fee: cart.platform_fee, delivery_fee: cart.delivery_fee, total: cart.total, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), shipping_address: body.delivery_address ? { address: body.delivery_address.address_line, city: body.delivery_address.city, state: body.delivery_address.state } : { address: 'Vendor pickup', city: '', state: '' }, payment_method: 'not-selected', customer: { name: 'Demo Buyer', email: 'buyer@kamba.demo' }, items: cart.items.map((i,index) => ({ id: `item-${index+1}`, product_id: i.product_id, product_name: i.name, quantity: i.quantity, price: i.price_kobo, image_url: i.image_url })) }
+    const deliveryAddress = asRecord(body.delivery_address)
+    const order = { id, order_number: `KMB-DEMO-${String(Object.keys(orders).length + 1).padStart(4,'0')}`, status: 'pending', payment_status: 'pending', delivery_status: 'pending', delivery_type: typeof body.delivery_type === 'string' ? body.delivery_type : 'delivery', subtotal: cart.subtotal, platform_fee: cart.platform_fee, delivery_fee: cart.delivery_fee, total: cart.total, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), shipping_address: deliveryAddress ? { address: String(deliveryAddress.address_line || ''), city: String(deliveryAddress.city || ''), state: String(deliveryAddress.state || '') } : { address: 'Vendor pickup', city: '', state: '' }, payment_method: 'not-selected', customer: { name: 'Demo Buyer', email: 'buyer@kamba.demo' }, items: cart.items.map((i,index) => ({ id: `item-${index+1}`, product_id: i.product_id, product_name: i.name, quantity: i.quantity, price: i.price_kobo, image_url: i.image_url })) }
     orders[id] = order; persistOrders(); cart = emptyCart(); if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
     return response({ order }) as T
   }
