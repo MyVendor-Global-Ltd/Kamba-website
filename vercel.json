@@ -6,12 +6,11 @@
       "has": [
         {
           "type": "host",
-          "value": "kamba-website.vercel.app"
+          "value": "kambastore.vercel.app"
         }
       ],
       "destination": "https://kamba.ng/:path*",
-      "permanent": true,
-      "preserveQueryParams": true
+      "permanent": true
     }
   ]
 }
