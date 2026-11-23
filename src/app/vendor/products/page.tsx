@@ -96,7 +96,7 @@ export default function VendorProductsPage() {
                     <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h2 className="truncate font-semibold text-text-primary">{product.name}</h2><p className="text-xs text-text-tertiary">{product.category || 'Uncategorised'}</p></div><Badge variant={variant}>{status}</Badge></div>
                     <div className="flex items-center justify-between"><span className="font-display text-lg font-bold text-primary">{formatKobo(product.price)}</span><span className="text-xs text-text-secondary">{product.stock_quantity} in stock</span></div>
                     {product.created_at && <p className="text-xs text-text-tertiary">Created {formatDateTime(product.created_at)}</p>}
-                    <div className="flex gap-2 border-t border-border pt-3"><Link href={`/vendor/products/${product.id}`} className="flex-1"><Button variant="outline" className="w-full">Edit</Button></Link><Button type="button" variant="ghost" color="danger" size="icon" aria-label={`Archive ${product.name}`} onClick={() => void archiveProduct(product)} disabled={deletingId === product.id}><Archive className="h-4 w-4" /></Button></div>
+                    <div className="flex gap-2 border-t border-border pt-3"><Link href={`/vendor/products/${product.id}`} className="flex-1"><Button variant="outline" className="w-full">Edit</Button></Link><Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive" aria-label={`Archive ${product.name}`} onClick={() => void archiveProduct(product)} disabled={deletingId === product.id}><Archive className="h-4 w-4" /></Button></div>
                   </CardContent>
                 </Card>
               )
