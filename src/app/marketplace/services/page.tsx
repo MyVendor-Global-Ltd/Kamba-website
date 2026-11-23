@@ -26,7 +26,10 @@ export default function ServicesPage() {
     refresh,
   } = useServiceSearch({ pageSize: 100 })
 
-  const categories = ['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography']
+  const categories = useMemo(() => Array.from(new Set([
+    'Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography',
+    ...services.map((service) => service.category).filter((category): category is string => Boolean(category?.trim())),
+  ])).sort((a, b) => a.localeCompare(b)), [services])
   const visibleServices = useMemo(() => services.filter((service) => {
     const query = filters.query.trim().toLowerCase()
     const location = filters.location.trim().toLowerCase()
