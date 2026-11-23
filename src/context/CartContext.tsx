@@ -176,7 +176,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!authState.isLoading && (authState.isAuthenticated || isMockMode)) void Promise.resolve().then(refresh)
+    if (!authState.isLoading && (isMockMode || (authState.isAuthenticated && authState.user?.role === 'buyer'))) void Promise.resolve().then(refresh)
   }, [authState.isAuthenticated, authState.isLoading, refresh])
 
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
