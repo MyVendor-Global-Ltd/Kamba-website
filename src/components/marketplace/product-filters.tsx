@@ -62,6 +62,7 @@ export function ProductFilters({
     isProducts && filters.minPrice !== null,
     isProducts && filters.maxPrice !== null,
     isProducts && filters.inStock,
+    isProducts && filters.sortBy !== 'newest',
   ].filter(Boolean).length
 
   const controls = (surface: 'desktop' | 'mobile') => (
@@ -141,7 +142,7 @@ export function ProductFilters({
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-text-secondary">Category</legend>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant={filters.category === '' ? 'default' : 'outline'} onClick={() => onFiltersChange({ category: '' })}>
+          <Button type="button" size="sm" variant={filters.category === '' ? 'default' : 'outline'} aria-pressed={filters.category === ''} onClick={() => onFiltersChange({ category: '' })}>
             All
           </Button>
           {categories.map((category) => (
