@@ -12,6 +12,9 @@ export interface MarketplaceFilterState {
   maxPrice: number | null
   sortBy: 'newest' | 'price_asc' | 'price_desc'
   location: string
+  latitude: number | null
+  longitude: number | null
+  radius: number
   inStock: boolean
 }
 
@@ -33,6 +36,8 @@ export function ProductFilters({
   mode = 'products',
 }: ProductFiltersProps) {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [isLocating, setIsLocating] = useState(false)
+  const [locationMessage, setLocationMessage] = useState('')
   const isProducts = mode === 'products'
 
   useEffect(() => {
@@ -46,7 +51,7 @@ export function ProductFilters({
 
   const activeCount = [
     filters.category !== '',
-    filters.location.trim() !== '',
+    filters.location.trim() !== '' || filters.latitude !== null || filters.longitude !== null,
     isProducts && filters.minPrice !== null,
     isProducts && filters.maxPrice !== null,
     isProducts && filters.inStock,
@@ -76,10 +81,54 @@ export function ProductFilters({
           id={`marketplace-filter-location-${mode}-${surface}`}
           type="search"
           value={filters.location}
-          onChange={(event) => onFiltersChange({ location: event.target.value })}
+          onChange={(event) => onFiltersChange({ location: event.target.value, latitude: null, longitude: null })}
           placeholder="City or state"
           className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary focus:ring-2 focus:ring-primary/15"
         />
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isLocating || !('geolocation' in navigator)}
+            onClick={() => {
+              if (!navigator.geolocation) {
+                setLocationMessage('Location access is not supported by this browser.')
+                return
+              }
+              setIsLocating(true)
+              setLocationMessage('')
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  onFiltersChange({ location: '', latitude: position.coords.latitude, longitude: position.coords.longitude })
+                  setIsLocating(false)
+                  setLocationMessage('Nearby results are now being shown.')
+                },
+                (error) => {
+                  setIsLocating(false)
+                  setLocationMessage(error.code === error.PERMISSION_DENIED ? 'Location permission was denied. You can enter a city or state instead.' : 'Could not determine your location. Try entering a city or state.')
+                },
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+              )
+            }}
+          >
+            {isLocating ? 'Finding location…' : filters.latitude !== null ? 'Update my location' : 'Use my location'}
+          </Button>
+          {filters.latitude !== null && (
+            <label className="flex items-center gap-2 text-xs text-text-secondary">
+              Within
+              <select
+                aria-label="Nearby search radius"
+                value={filters.radius}
+                onChange={(event) => onFiltersChange({ radius: Number(event.target.value) })}
+                className="h-9 rounded-md border border-border bg-surface px-2 text-xs text-text-primary"
+              >
+                {[5, 10, 15, 25, 50].map((radius) => <option key={radius} value={radius}>{radius} km</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+        {locationMessage && <p role="status" className="mt-2 text-xs text-text-tertiary">{locationMessage}</p>}
       </div>
 
       <fieldset>
