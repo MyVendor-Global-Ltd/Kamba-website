@@ -91,7 +91,7 @@ export default function OrderDetailPage() {
         shipping_amount?: number
       }>(`/commerce/orders/${encodeURIComponent(id)}`)
       const raw = data.order || data
-      const rawItems = raw.order_items || raw.items || []
+      const rawItems = (raw.order_items || raw.items || []) as Array<{ product_id: string; name?: string; product_name?: string; image_url?: string; unit_amount?: number; price?: number; quantity: number }>
       setOrder({
         ...raw,
         id: raw.id || id,
