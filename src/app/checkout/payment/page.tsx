@@ -40,6 +40,18 @@ interface PaymentInstructions {
   [key: string]: unknown
 }
 
+interface CheckoutApiResponse {
+  checkout?: Checkout
+  orders?: CheckoutOrder[]
+  id?: string
+  amount?: number
+  currency?: string
+  status?: string
+  payment_expires_at?: string | null
+  paid_at?: string | null
+  created_at?: string
+}
+
 export default function CheckoutPaymentPage() {
   const searchParams = useSearchParams()
   const checkoutId = searchParams.get('checkout_id')
@@ -59,9 +71,9 @@ export default function CheckoutPaymentPage() {
     }
     if (showSpinner) setRefreshing(true)
     try {
-      const data = await apiJson<any>(`/commerce/marketplace-checkouts/${encodeURIComponent(checkoutId)}`)
+      const data = await apiJson<CheckoutApiResponse>(`/commerce/marketplace-checkouts/${encodeURIComponent(checkoutId)}`)
       const raw = data.checkout || data
-      setCheckout({ ...raw, orders: data.orders || raw.orders || [] })
+      setCheckout({ ...raw, orders: data.orders || raw.orders || [] } as Checkout)
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load checkout status.')
@@ -71,7 +83,7 @@ export default function CheckoutPaymentPage() {
     }
   }, [checkoutId])
 
-  useEffect(() => { void loadCheckout(false) }, [loadCheckout])
+  useEffect(() => { void Promise.resolve().then(() => loadCheckout(false)) }, [loadCheckout])
 
   const startPayment = async () => {
     if (!checkoutId || isMockMode) return
