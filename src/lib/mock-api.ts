@@ -182,6 +182,83 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     if (!request) throw new Error('Service request not found in the prototype session.')
     return response({ request }) as T
   }
+  const serviceQuoteMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)\/quotes$/)
+  if (serviceQuoteMatch && method === 'POST') {
+    const request = serviceRequests[serviceQuoteMatch[1]]
+    if (!request) throw new Error('Service request not found in the prototype session.')
+    if (!['requested', 'quoted'].includes(request.status)) throw new Error('This request is no longer accepting quotations.')
+    const amount = Number(body.amount)
+    if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('Quote amount must be a positive integer in kobo.')
+    const quotes = Array.isArray(request.quotes) ? request.quotes as Record<string, unknown>[] : []
+    const quote = {
+      id: `demo-quote-${Date.now()}`,
+      request_id: request.id,
+      amount,
+      currency: typeof body.currency === 'string' ? body.currency : 'NGN',
+      scope: typeof body.scope === 'string' ? body.scope : '',
+      estimated_duration_minutes: typeof body.estimated_duration_minutes === 'number' ? body.estimated_duration_minutes : null,
+      valid_until: typeof body.valid_until === 'string' ? body.valid_until : null,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    }
+    quotes.push(quote)
+    request.quotes = quotes
+    request.status = 'quoted'
+    request.updated_at = new Date().toISOString()
+    serviceRequests[String(request.id)] = request
+    persistServiceRequests()
+    return response({ quote, request }) as T
+  }
+  const serviceQuoteResponseMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)\/quotes\/([^/]+)\/respond$/)
+  if (serviceQuoteResponseMatch && method === 'POST') {
+    const request = serviceRequests[serviceQuoteResponseMatch[1]]
+    if (!request) throw new Error('Service request not found in the prototype session.')
+    const decision = body.decision
+    if (decision !== 'accept' && decision !== 'decline') throw new Error('Quote decision must be accept or decline.')
+    const quotes = Array.isArray(request.quotes) ? request.quotes as Record<string, unknown>[] : []
+    const quote = quotes.find((item) => item.id === serviceQuoteResponseMatch[2])
+    if (!quote) throw new Error('Quote not found for this service request.')
+    if (quote.status !== 'pending') throw new Error('This quote has already been answered.')
+    quote.status = decision === 'accept' ? 'accepted' : 'declined'
+    quote.responded_at = new Date().toISOString()
+    if (decision === 'accept') {
+      request.accepted_quote_id = quote.id
+      request.status = 'accepted'
+    } else if (!quotes.some((item) => item.status === 'pending')) {
+      request.status = 'requested'
+    }
+    request.updated_at = new Date().toISOString()
+    serviceRequests[String(request.id)] = request
+    persistServiceRequests()
+    return response({ request, quote }) as T
+  }
+  const serviceRequestStatusMatch = pathname.match(/^\/service-bookings\/requests\/([^/]+)\/status$/)
+  if (serviceRequestStatusMatch && method === 'PATCH') {
+    const request = serviceRequests[serviceRequestStatusMatch[1]]
+    if (!request) throw new Error('Service request not found in the prototype session.')
+    const allowed = ['accepted', 'scheduled', 'in_progress', 'completed', 'declined', 'cancelled']
+    const nextStatus = typeof body.status === 'string' ? body.status : ''
+    if (!allowed.includes(nextStatus)) throw new Error('Unsupported service request status.')
+    const transitions: Record<string, string[]> = {
+      requested: ['accepted', 'declined', 'cancelled'],
+      quoted: ['accepted', 'declined', 'cancelled'],
+      accepted: ['scheduled', 'cancelled'],
+      scheduled: ['in_progress', 'cancelled'],
+      in_progress: ['completed', 'cancelled'],
+    }
+    const currentStatus = String(request.status || 'requested')
+    if (!transitions[currentStatus]?.includes(nextStatus)) throw new Error(`Cannot change a service request from ${currentStatus} to ${nextStatus}.`)
+    request.status = nextStatus
+    if (typeof body.scheduled_start_at === 'string') request.scheduled_start_at = body.scheduled_start_at
+    if (typeof body.scheduled_end_at === 'string') request.scheduled_end_at = body.scheduled_end_at
+    request.updated_at = new Date().toISOString()
+    const history = Array.isArray(request.status_history) ? request.status_history as Record<string, unknown>[] : []
+    history.push({ status: nextStatus, note: typeof body.note === 'string' ? body.note : null, created_at: request.updated_at })
+    request.status_history = history
+    serviceRequests[String(request.id)] = request
+    persistServiceRequests()
+    return response({ request }) as T
+  }
   if (pathname === '/marketplace/wishlist' && method === 'GET') return response({ items: [...wishlist].map((product_id) => ({ product_id })) }) as T
   const wishlistMatch = pathname.match(/^\/marketplace\/wishlist\/([^/]+)$/)
   if (wishlistMatch && method === 'POST') { wishlist.add(wishlistMatch[1]); persistWishlist(); return response({ saved: true, product_id: wishlistMatch[1] }) as T }
