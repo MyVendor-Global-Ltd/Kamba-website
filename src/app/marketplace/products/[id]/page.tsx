@@ -33,6 +33,9 @@ export default function ProductDetailPage() {
         const item = data.product || data
         setProduct({ ...item, image_url: item.image_url || item.images?.[0], compare_at_price: item.compare_at_price ?? item.original_price, store_slug: item.store_slug })
         setLoading(false)
+        apiJson<{ items: Array<{ product_id: string }> }>('/marketplace/wishlist')
+          .then((wishlist) => setIsSaved(wishlist.items.some((item) => item.product_id === item.id || item.product_id === id)))
+          .catch(() => undefined)
       })
       .catch((err) => {
         setError(err.message || "Failed to load product")
@@ -374,7 +377,7 @@ export default function ProductDetailPage() {
                   </div>
                   <div>
                     <p className="font-medium text-text-primary">{product.store_name}</p>
-                    <p className="text-sm text-text-tertiary">Verified seller • 4.8★ rating</p>
+                    <p className="text-sm text-text-tertiary">Local Kamba storefront</p>
                   </div>
                   <Link href={`/marketplace/stores/${product.store_slug || product.store_id}`} className="ml-auto"><Button variant="ghost" size="sm">View store</Button></Link>
                 </div>
