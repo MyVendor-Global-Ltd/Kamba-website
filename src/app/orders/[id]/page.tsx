@@ -222,7 +222,7 @@ export default function OrderDetailPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Order not found</h2>
-          <p className="text-text-tertiary">The order you're looking for doesn't exist.</p>
+          <p className="text-text-tertiary">The order you&apos;re looking for doesn&apos;t exist.</p>
           <Link href="/orders" className="mt-4 inline-block">
             <Button variant="outline">Back to orders</Button>
           </Link>
