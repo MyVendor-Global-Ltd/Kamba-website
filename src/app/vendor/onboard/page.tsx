@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { isMockMode, submitMockVendorApplication } from '@/lib/mock-api'
+import { LiveVendorOnboarding } from '@/components/vendor/live-vendor-onboarding'
 
 function MockVendorOnboardPage() {
   const router = useRouter()
