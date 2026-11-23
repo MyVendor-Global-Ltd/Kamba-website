@@ -16,6 +16,9 @@ export interface Product {
   review_count?: number
   view_count?: number
   is_active: boolean
+  is_available?: boolean
+  tags?: string[]
+  deleted_at?: string | null
   in_stock?: boolean
   created_at: string
   updated_at: string
