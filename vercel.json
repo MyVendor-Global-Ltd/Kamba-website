@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "kamba-website.vercel.app"
+        }
+      ],
+      "destination": "https://kamba.ng/:path*",
+      "permanent": true,
+      "preserveQueryParams": true
+    }
+  ]
+}
