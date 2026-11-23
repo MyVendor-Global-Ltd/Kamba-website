@@ -340,7 +340,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     if (!order) throw new Error('Order not found in the prototype session.')
     return response({ order }) as T
   }
-  if ((pathname === '/vendors/orders' || pathname === '/commerce/vendor/orders') && method === 'GET') return response({ orders: Object.values(orders) }) as T
+  if ((pathname === '/vendors/orders' || pathname === '/commerce/vendor/orders') && method === 'GET') return response({ orders: Object.values(orders).map((order) => ({ ...order, total_amount: Number(order.total || 0), item_count: Array.isArray(order.items) ? order.items.reduce((sum, item) => sum + Number((item as Record<string, unknown>).quantity || 0), 0) : 0 })) }) as T
   const vendorOrderMatch = pathname.match(/^\/(?:vendors\/orders\/([^/]+)\/status|commerce\/vendor\/orders\/([^/]+))$/)
   if (vendorOrderMatch && method === 'PATCH') {
     const order = orders[vendorOrderMatch[1] || vendorOrderMatch[2]]
