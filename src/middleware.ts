@@ -10,6 +10,8 @@ const protectedPaths = [
 ]
 
 export function middleware(request: NextRequest) {
+  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_KAMBA_MOCK_MODE === 'true') return NextResponse.next()
+
   const token = request.cookies.get('access_token')?.value
   const path = request.nextUrl.pathname
 

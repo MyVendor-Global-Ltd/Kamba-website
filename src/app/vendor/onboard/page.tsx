@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { isMockMode, submitMockVendorApplication } from '@/lib/mock-api'
 
 export default function VendorOnboardPage() {
+  const router = useRouter()
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<'products' | 'services' | 'both'>('products')
   const [phone, setPhone] = useState('')
@@ -21,24 +24,11 @@ export default function VendorOnboardPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.kamba.ng'}/vendors/onboard`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_name: businessName,
-          business_type: businessType,
-          phone,
-          email,
-          address,
-          city,
-          state,
-        }),
-      })
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}))
-        throw new Error(error.message || 'Onboarding failed')
+      if (!isMockMode) {
+        throw new Error('The production onboarding process is multi-step and includes eligibility/status checks and liveness evidence before store or service creation. This simplified form does not collect that evidence, so it is available as a local prototype only; it will not change a real account or vendor role.')
       }
+      submitMockVendorApplication({ business_name: businessName, business_type: businessType, phone, email, address, city, state })
+      router.push('/vendor/dashboard')
     } catch (err: any) {
       setError(err.message || 'Onboarding failed')
     } finally {

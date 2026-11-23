@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { formatKobo } from "@/lib/formatting"
-import { CartItem } from "@/types/cart"
 import { apiJson } from "@/lib/api"
 import { useCartContext } from "@/context/CartContext"
+import { isMockMode } from "@/lib/mock-api"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -18,18 +17,18 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    email: "",
+    recipientName: "",
     phone: "",
     shippingAddress: "",
     city: "",
     state: "",
-    paymentMethod: "card",
+    deliveryType: "delivery" as "delivery" | "pickup",
   })
 
   const cartItems = cart.items
   const subtotal = cart.subtotal
   const shipping = cart.delivery_fee
-  const total = cart.total
+  const total = subtotal + cart.platform_fee + (formData.deliveryType === 'pickup' ? 0 : shipping)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,25 +36,31 @@ export default function CheckoutPage() {
     setError(null)
 
     try {
-      await apiJson("/api/orders", {
+      if (!isMockMode && formData.deliveryType === "delivery") {
+        throw new Error("Live delivery checkout requires a selected university and delivery zone. Those selectors are not connected in this website yet. Choose pickup or use development prototype mode.")
+      }
+      const idempotencyKey = typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `kamba-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const checkoutBody = formData.deliveryType === "pickup"
+        ? { delivery_type: "pickup" }
+        : {
+            delivery_type: "delivery",
+            delivery_mode: "express",
+            delivery_address: {
+              recipient_name: formData.recipientName,
+              phone: formData.phone,
+              address_line: formData.shippingAddress,
+              city: formData.city,
+              state: formData.state,
+            },
+          }
+      await apiJson("/commerce/checkout", {
         method: "POST",
-        body: JSON.stringify({
-          items: cartItems.map((item) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-              price_kobo: item.price_kobo,
-              name: item.name,
-              image_url: item.image_url,
-              store_id: item.store_id,
-          })),
-          shipping_address: {
-            address: formData.shippingAddress,
-            city: formData.city,
-            state: formData.state,
-          },
-          payment_method: formData.paymentMethod,
-        }),
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify(checkoutBody),
       })
+      await refresh()
       router.push("/orders")
       router.refresh()
     } catch (err: unknown) {
@@ -146,16 +151,26 @@ export default function CheckoutPage() {
         <div className="md:col-span-2 space-y-6">
           <Card variant="elevated">
             <CardHeader>
-              <CardTitle className="text-lg">Shipping Information</CardTitle>
+              <CardTitle className="text-lg">How would you like to receive your order?</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${formData.deliveryType === "delivery" ? "border-primary bg-secondary" : "border-border"}`}>
+                  <input type="radio" name="deliveryType" value="delivery" checked={formData.deliveryType === "delivery"} onChange={() => setFormData({ ...formData, deliveryType: "delivery" })} className="mt-1 accent-primary" />
+                  <span><span className="block font-semibold text-text-primary">Deliver to me</span><span className="text-sm text-text-secondary">Enter the address where you want the order delivered.</span></span>
+                </label>
+                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${formData.deliveryType === "pickup" ? "border-primary bg-secondary" : "border-border"}`}>
+                  <input type="radio" name="deliveryType" value="pickup" checked={formData.deliveryType === "pickup"} onChange={() => setFormData({ ...formData, deliveryType: "pickup" })} className="mt-1 accent-primary" />
+                  <span><span className="block font-semibold text-text-primary">Pick up from the vendor</span><span className="text-sm text-text-secondary">Collection details appear after the vendor confirms and prepares your order.</span></span>
+                </label>
+              </div>
+              {formData.deliveryType === "delivery" ? <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="you@example.com"
+                  label="Full name"
+                  value={formData.recipientName}
+                  onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
+                  placeholder="Your full name"
                   required
                 />
                 <Input
@@ -190,100 +205,42 @@ export default function CheckoutPage() {
                   required
                 />
               </div>
+              </> : <p className="rounded-lg bg-secondary px-4 py-3 text-sm text-secondary-foreground">Your vendor's approved collection point will be shared only when your order is ready. Personal or residential addresses are not shown.</p>}
             </CardContent>
           </Card>
 
           <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-lg">Payment Method</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-ink-raised hover:border-coral/30 hover:bg-coral-dim/20 transition-all cursor-pointer">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    checked={formData.paymentMethod === "card"}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-4 h-4 text-coral border-ink-raised focus:ring-coral"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-ink rounded flex items-center justify-center text-xs font-mono text-text-tertiary">CARD</div>
-                    <span className="text-text-primary font-medium">Credit / Debit Card</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-ink-raised hover:border-coral/30 hover:bg-coral-dim/20 transition-all cursor-pointer">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="transfer"
-                    checked={formData.paymentMethod === "transfer"}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-4 h-4 text-coral border-ink-raised focus:ring-coral"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-ink rounded flex items-center justify-center text-xs font-mono text-text-tertiary">BANK</div>
-                    <span className="text-text-primary font-medium">Bank Transfer</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-ink-raised hover:border-coral/30 hover:bg-coral-dim/20 transition-all cursor-pointer">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="ussd"
-                    checked={formData.paymentMethod === "ussd"}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-4 h-4 text-coral border-ink-raised focus:ring-coral"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-ink rounded flex items-center justify-center text-xs font-mono text-text-tertiary">USSD</div>
-                    <span className="text-text-primary font-medium">USSD Payment</span>
-                  </div>
-                </label>
+            <CardHeader><CardTitle className="text-lg">Payment</CardTitle></CardHeader>
+            <CardContent>
+              <div className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">
+                <p className="font-semibold">Payment is handled by Kamba's checkout service.</p>
+                <p className="mt-1">No payment is collected in development prototype mode. Orders remain payment-pending until a real provider confirms payment.</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-6">
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-lg">Order Summary</CardTitle>
-            </CardHeader>
+          <Card variant="elevated" className="md:sticky md:top-24">
+            <CardHeader><CardTitle className="text-lg">Order summary</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="max-h-64 overflow-y-auto space-y-3">
+              <div className="max-h-64 space-y-3 overflow-y-auto">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="h-16 w-16 bg-ink-raised/50 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-medium text-text-primary truncate">{item.name}</p>
-                      <p className="text-sm text-text-secondary">Qty: {item.quantity}</p>
-                      <p className="text-sm font-medium text-text-primary">{formatKobo(item.price_kobo * item.quantity)}</p>
-                    </div>
+                  <div key={item.id} className="flex items-start justify-between gap-3 text-sm">
+                    <div className="min-w-0"><p className="truncate font-medium text-text-primary">{item.name}</p><p className="text-xs text-text-secondary">Qty {item.quantity}</p></div>
+                    <span className="shrink-0 font-medium text-text-primary">{formatKobo(item.price_kobo * item.quantity)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-ink-raised pt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Subtotal</span>
-                  <span className="text-text-primary">{formatKobo(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Shipping</span>
-                  <span className="text-text-primary">{shipping > 0 ? formatKobo(shipping) : "Free"}</span>
-                </div>
-                <div className="flex justify-between text-lg font-semibold pt-2 border-t border-ink-raised">
-                  <span className="text-text-primary">Total</span>
-                  <span className="text-coral">{formatKobo(total)}</span>
-                </div>
+              <div className="space-y-2 border-t border-border pt-4 text-sm">
+                <div className="flex justify-between"><span className="text-text-secondary">Subtotal</span><span>{formatKobo(subtotal)}</span></div>
+                <div className="flex justify-between"><span className="text-text-secondary">Kamba platform fee</span><span>{formatKobo(cart.platform_fee)}</span></div>
+                <div className="flex justify-between"><span className="text-text-secondary">{formData.deliveryType === 'pickup' ? 'Pickup' : 'Delivery'}</span><span>{formData.deliveryType === 'pickup' ? 'No delivery fee' : shipping > 0 ? formatKobo(shipping) : 'Free'}</span></div>
               </div>
+              <div className="flex items-center justify-between border-t border-border pt-4"><span className="font-semibold text-text-primary">Total</span><span className="font-display text-xl font-bold text-primary">{formatKobo(total)}</span></div>
+              <p className="text-xs text-text-secondary">Final fees and delivery eligibility are confirmed by the backend before payment.</p>
             </CardContent>
-            <CardFooter className="border-t border-ink-raised">
-              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-                {submitting ? "Placing Order..." : `Place Order - ${formatKobo(total)}`}
-              </Button>
-            </CardFooter>
+            <CardFooter><Button type="submit" className="w-full" disabled={submitting || cartItems.length === 0}>{submitting ? 'Placing order…' : 'Place order'}</Button></CardFooter>
           </Card>
 
           <Card variant="outlined" className="p-4">
@@ -293,7 +250,7 @@ export default function CheckoutPage() {
               </svg>
               <div className="text-sm text-text-secondary space-y-1">
                 <p className="font-medium text-text-primary">Secure Checkout</p>
-                <p>Your payment information is encrypted and secure.</p>
+                <p>Card details are handled by Kamba's configured payment provider, not stored by this website.</p>
               </div>
             </div>
           </Card>

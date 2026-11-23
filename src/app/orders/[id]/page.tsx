@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { ChevronLeft, ChevronRight, Truck, Package, CheckCircle, Clock, MapPin, RotateCcw, X, RefreshCw, RefreshCcw } from 'lucide-react'
 
@@ -26,6 +26,7 @@ interface Order {
   status: string
   payment_status: string
   delivery_status: string
+  delivery_type?: 'delivery' | 'pickup'
   subtotal: number
   platform_fee: number
   delivery_fee: number
@@ -71,7 +72,7 @@ export default function OrderDetailPage() {
   const [activeTab, setActiveTab] = useState<'details' | 'tracking'>('details')
 
   useEffect(() => {
-    apiJson<{ order: Order }>(`/api/orders/${id}`)
+    apiJson<{ order: Order }>(`/commerce/orders/${id}`)
       .then((data) => {
         setOrder(data.order)
         setLoading(false)
@@ -86,7 +87,7 @@ export default function OrderDetailPage() {
     if (!order) return
     try {
       for (const item of order.items) {
-        await apiJson('/api/cart', {
+        await apiJson('/commerce/cart/items', {
           method: 'POST',
           body: JSON.stringify({
             product_id: item.product_id,
@@ -107,7 +108,7 @@ export default function OrderDetailPage() {
       addToast({
         type: 'error',
         title: 'Failed to reorder',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     }
   }
@@ -116,7 +117,7 @@ export default function OrderDetailPage() {
     if (!order) return
     if (!confirm('Are you sure you want to request a return for this order?')) return
     try {
-      await apiJson(`/api/orders/${order.id}/return`, { method: 'POST' })
+      throw new Error('Return-request submission is not part of the currently documented commerce API contract. Please contact Kamba support for this order.')
       addToast({
         type: 'success',
         title: 'Return requested',
@@ -234,6 +235,15 @@ export default function OrderDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+      {order.delivery_type === 'pickup' && (
+        <Card variant="outlined">
+          <CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Vendor pickup</CardTitle><Badge variant="outline">Collection workflow</Badge></div></CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-text-secondary">Your order is set for vendor pickup. The approved collection point and one-time pickup code become available only after the vendor confirms and prepares the order.</p>
+            <Link href={`/orders/${order.id}/pickup`} className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">View pickup details</Link>
+          </CardContent>
+        </Card>
+      )}
       <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Order #{order.order_number}</h1>
@@ -241,7 +251,7 @@ export default function OrderDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={getStatusVariant(order.status)} size="md">
-            {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+            {formatOrderStatus(order.status)}
           </Badge>
           <Badge variant={getPaymentStatusVariant(order.payment_status)} size="md">
             {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
@@ -533,7 +543,7 @@ export default function OrderDetailPage() {
                     Tracking details will appear here once your order ships.
                   </p>
                   <p className="text-sm text-text-tertiary">
-                    Current status: <span className="font-medium text-text-primary capitalize">{order.status}</span>
+                    Current status: <span className="font-medium text-text-primary capitalize">{formatOrderStatus(order.status)}</span>
                   </p>
                 </CardContent>
                               </Card>

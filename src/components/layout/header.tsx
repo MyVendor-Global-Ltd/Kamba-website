@@ -6,8 +6,10 @@ import { useAuth } from '@/context/AuthContext'
 import { useCartContext } from '@/context/CartContext'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { ShoppingBag } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { isMockMode } from '@/lib/mock-api'
 
 export function Header() {
   const { state, logout } = useAuth()
@@ -27,17 +29,21 @@ export function Header() {
     { href: '/marketplace', label: 'Marketplace' },
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
+    { href: '/vendor/onboard', label: 'Sell on Kamba' },
+    ...(state.user?.role === 'vendor' ? [{ href: '/vendor/pickup', label: 'Pickup desk' }] : []),
   ]
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border/50">
+    <header className="sticky top-0 z-50 border-b border-border bg-surface">
       <div className="container mx-auto">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label="Kamba Home">
-            <span className="text-2xl font-bold font-display text-text-primary gradient-text">Kamba</span>
+            <span className="relative grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground"><ShoppingBag className="h-[18px] w-[18px]" /><span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-gold" /></span>
+            <span className="text-xl font-bold font-display lowercase tracking-tight text-primary">kamba</span>
             <span className="hidden sm:inline-block w-px h-6 bg-border mx-2" />
             <span className="hidden sm:inline text-sm font-medium text-text-secondary">Marketplace</span>
+            {isMockMode && <span className="hidden md:inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary">Prototype</span>}
           </Link>
 
           {/* Desktop Navigation */}
@@ -108,7 +114,7 @@ export function Header() {
                   Account
                 </Link>
                 {state.user?.role === 'vendor' && (
-                  <Link href="/vendor" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-coral hover:bg-coral-dim transition-all duration-200">
+                  <Link href="/vendor/dashboard" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-coral hover:bg-coral-dim transition-all duration-200">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Filter, RotateCcw, Truck, RefreshCw, X } from 'lucide-react'
@@ -65,7 +65,7 @@ export default function OrdersPage() {
       if (statusFilter !== 'all') {
         params.append('status', statusFilter)
       }
-      const data = await apiJson<OrdersResponse>(`/api/orders?${params.toString()}`)
+      const data = await apiJson<OrdersResponse>(`/commerce/orders?${params.toString()}`)
       setOrders(data.orders || [])
       setTotalPages(data.pagination?.totalPages || 1)
       setTotalOrders(data.pagination?.total || 0)
@@ -84,7 +84,7 @@ export default function OrdersPage() {
     try {
       // Add all items from this order to cart
       for (const item of order.items) {
-        await apiJson('/api/cart', {
+        await apiJson('/commerce/cart/items', {
           method: 'POST',
           body: JSON.stringify({
             product_id: item.product_id,
@@ -105,7 +105,7 @@ export default function OrdersPage() {
       addToast({
         type: 'error',
         title: 'Failed to reorder',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     }
   }
@@ -113,7 +113,7 @@ export default function OrdersPage() {
   const handleRequestReturn = async (orderId: string) => {
     if (!confirm('Are you sure you want to request a return for this order?')) return
     try {
-      await apiJson(`/api/orders/${orderId}/return`, { method: 'POST' })
+      throw new Error('Return-request submission is not part of the currently documented commerce API contract. Please contact Kamba support for this order.')
       addToast({
         type: 'success',
         title: 'Return requested',
@@ -240,7 +240,7 @@ export default function OrdersPage() {
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
                     <Badge variant={getStatusVariant(order.status)} size="sm">
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {formatOrderStatus(order.status)}
                     </Badge>
                     <Badge variant={getPaymentStatusVariant(order.payment_status)} size="sm">
                       {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}

@@ -1,0 +1,185 @@
+import type { Product } from '@/types/commerce'
+import type { Store, ServiceProfile } from '@/types/vendor'
+
+export const isMockMode = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_KAMBA_MOCK_MODE === 'true'
+
+export const mockProducts: Product[] = [
+  { id: 'prd-001', name: 'Wireless Headphones', description: 'Comfortable everyday headphones with clear sound and long battery life.', price: 2850000, stock_quantity: 18, category: 'Electronics', image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop', store_id: 'store-techhub', store_name: 'TechHub Electronics', is_active: true, in_stock: true, created_at: '2026-10-12T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z' },
+  { id: 'prd-002', name: 'Leather Crossbody Bag', description: 'Locally finished crossbody bag for work and everyday use.', price: 4200000, stock_quantity: 7, category: 'Fashion', image_url: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&auto=format&fit=crop', store_id: 'store-stylecraft', store_name: 'StyleCraft', is_active: true, in_stock: true, created_at: '2026-10-20T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z' },
+  { id: 'prd-003', name: 'Insulated Water Bottle', description: 'Reusable stainless-steel bottle for campus, work and travel.', price: 950000, stock_quantity: 31, category: 'Home & Living', image_url: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=800&auto=format&fit=crop', store_id: 'store-techhub', store_name: 'TechHub Electronics', is_active: true, in_stock: true, created_at: '2026-10-25T09:00:00.000Z', updated_at: '2026-11-08T09:00:00.000Z' },
+  { id: 'prd-004', name: 'African Print Notebook Set', description: 'Three notebooks with locally inspired fabric covers.', price: 1250000, stock_quantity: 0, category: 'Books & Stationery', image_url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=800&auto=format&fit=crop', store_id: 'store-paperhouse', store_name: 'Paper House', is_active: true, in_stock: false, created_at: '2026-10-28T09:00:00.000Z', updated_at: '2026-11-14T09:00:00.000Z' },
+  { id: 'prd-005', name: 'Minimal Desk Lamp', description: 'Compact warm-light desk lamp for study spaces.', price: 3600000, stock_quantity: 12, category: 'Home & Living', image_url: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&auto=format&fit=crop', store_id: 'store-homefound', store_name: 'Home Found', is_active: true, in_stock: true, created_at: '2026-11-01T09:00:00.000Z', updated_at: '2026-11-13T09:00:00.000Z' },
+  { id: 'prd-006', name: 'Everyday Leather Wallet', description: 'Slim handcrafted wallet with multiple card slots.', price: 1850000, stock_quantity: 24, category: 'Fashion', image_url: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop', store_id: 'store-stylecraft', store_name: 'StyleCraft', is_active: true, in_stock: true, created_at: '2026-11-03T09:00:00.000Z', updated_at: '2026-11-15T09:00:00.000Z' },
+]
+
+export const mockStores: Store[] = [
+  { id: 'store-techhub', name: 'TechHub Electronics', slug: 'techhub-electronics', description: 'Everyday tech, accessories and practical gadgets.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-01', is_active: true, verification_status: 'pending', created_at: '2026-08-01T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z', category: 'Electronics' },
+  { id: 'store-stylecraft', name: 'StyleCraft', slug: 'stylecraft', description: 'Locally made fashion pieces and accessories.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-02', is_active: true, verification_status: 'pending', created_at: '2026-08-04T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z', category: 'Fashion' },
+  { id: 'store-paperhouse', name: 'Paper House', slug: 'paper-house', description: 'Stationery and thoughtful gifts for study and work.', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-03', is_active: true, verification_status: 'pending', created_at: '2026-08-09T09:00:00.000Z', updated_at: '2026-11-08T09:00:00.000Z', category: 'Books & Stationery' },
+]
+
+export const mockServices: ServiceProfile[] = [
+  { id: 'svc-001', name: 'Home Cleaning', slug: 'bright-home-cleaning', description: 'One-off and recurring home cleaning with clear quotes before booking.', category: 'Cleaning', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-01', is_active: true, verification_status: 'pending', created_at: '2026-09-01T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z' },
+  { id: 'svc-002', name: 'Phone & Laptop Repairs', slug: 'fixpoint-repairs', description: 'Diagnostics and repairs for common phone and laptop issues.', category: 'Repairs', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-02', is_active: true, verification_status: 'pending', created_at: '2026-09-05T09:00:00.000Z', updated_at: '2026-11-11T09:00:00.000Z' },
+  { id: 'svc-003', name: 'Event Photography', slug: 'frame-by-frame', description: 'Portraits, small events and product photography. Request a quote.', category: 'Photography', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-03', is_active: true, verification_status: 'pending', created_at: '2026-09-12T09:00:00.000Z', updated_at: '2026-11-09T09:00:00.000Z' },
+]
+
+export const mockCategories = ['Electronics', 'Fashion', 'Home & Living', 'Books & Stationery', 'Cleaning', 'Repairs', 'Photography']
+
+export function submitMockVendorApplication(data: Record<string, string>) {
+  if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_vendor_application', JSON.stringify({ ...data, status: 'prototype_received', submitted_at: new Date().toISOString() }))
+  return { success: true, prototype: true, status: 'prototype_received' }
+}
+
+type MockCartItem = { id: string; product_id: string; quantity: number; name: string; price_kobo: number; image_url?: string; store_id: string; store_name?: string }
+type MockCart = { items: MockCartItem[]; subtotal: number; platform_fee: number; delivery_fee: number; total: number; itemCount: number }
+const emptyCart = (): MockCart => ({ items: [], subtotal: 0, platform_fee: 0, delivery_fee: 0, total: 0, itemCount: 0 })
+let cart: MockCart = emptyCart()
+let cartHydrated = false
+function hydrateCart() {
+  if (cartHydrated || typeof window === 'undefined') return
+  cartHydrated = true
+  try {
+    const stored = window.localStorage.getItem('kamba_cart')
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<MockCart>
+      if (Array.isArray(parsed.items)) cart = totals(parsed.items as MockCartItem[])
+    }
+  } catch { /* Ignore invalid local prototype data. */ }
+}
+const orders: Record<string, any> = {}
+let ordersHydrated = false
+function hydrateOrders() {
+  if (ordersHydrated || typeof window === 'undefined') return
+  ordersHydrated = true
+  try { Object.assign(orders, JSON.parse(window.localStorage.getItem('kamba_demo_orders') || '{}')) } catch { /* Ignore invalid demo data. */ }
+}
+function persistOrders() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_orders', JSON.stringify(orders)) }
+
+function totals(items: MockCartItem[]): MockCart {
+  const subtotal = items.reduce((sum, item) => sum + item.price_kobo * item.quantity, 0)
+  const platform_fee = Math.round(subtotal * 0.05)
+  const delivery_fee = 0
+  return { items, subtotal, platform_fee, delivery_fee, total: subtotal + platform_fee + delivery_fee, itemCount: items.reduce((sum, item) => sum + item.quantity, 0) }
+}
+function response<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
+function bodyOf(options: RequestInit): any {
+  if (typeof options.body !== 'string') return {}
+  try { return JSON.parse(options.body) } catch { return {} }
+}
+
+export async function mockApiJson<T>(path: string, options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}): Promise<T> {
+  await Promise.resolve()
+  const method = (options.method || 'GET').toUpperCase()
+  hydrateCart()
+  const url = new URL(path, 'http://kamba.local')
+  Object.entries(options.params || {}).forEach(([key, value]) => { if (value !== undefined && value !== null) url.searchParams.set(key, String(value)) })
+  const pathname = url.pathname
+  const query = url.searchParams
+  const body = bodyOf(options)
+
+  if (pathname === '/auth/dashboard' && method === 'GET') {
+    let user = null
+    if (typeof window !== 'undefined') {
+      try { user = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') } catch { user = null }
+    }
+    if (!user) throw new Error('Sign in to view your development account.')
+    return response({ user, cartCount: cart.itemCount, prototype: true }) as T
+  }
+  if (pathname === '/auth/profile' && method === 'PATCH') {
+    if (typeof window === 'undefined') throw new Error('Profile editing requires a browser session.')
+    let user: any = null
+    try { user = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') } catch { user = null }
+    if (!user) throw new Error('Sign in to edit your development profile.')
+    user = { ...user, display_name: body.displayName, username: body.username, phone: body.phone, email: body.email, updated_at: new Date().toISOString() }
+    window.localStorage.setItem('kamba_demo_user', JSON.stringify(user))
+    return response({ success: true, user, prototype: true }) as T
+  }
+  if (pathname === '/vendors/stores') return response({ stores: mockStores }) as T
+  const storeMatch = pathname.match(/^\/vendors\/stores\/([^/]+)$/)
+  if (storeMatch) { const store = mockStores.find(s => s.slug === storeMatch[1]); return response({ store: store || null, products: mockProducts.filter(p => p.store_id === store?.id) }) as T }
+  const storeProductsMatch = pathname.match(/^\/commerce\/stores\/([^/]+)\/products$/)
+  if (storeProductsMatch) { const store = mockStores.find(s => s.slug === storeProductsMatch[1]); return response({ products: mockProducts.filter(p => p.store_id === store?.id) }) as T }
+  if (pathname === '/vendors/services' || pathname === '/commerce/services') {
+    const q = (query.get('q') || '').toLowerCase()
+    const category = (query.get('category') || '').toLowerCase()
+    const location = (query.get('location') || '').toLowerCase()
+    const rows = mockServices.filter(s => (!q || `${s.name} ${s.description} ${s.category}`.toLowerCase().includes(q)) && (!category || s.category?.toLowerCase() === category) && (!location || `${s.city} ${s.state}`.toLowerCase().includes(location)))
+    if (pathname === '/commerce/services') return response({ data: rows, meta: { page: 1, limit: rows.length, total: rows.length, totalPages: 1 } }) as T
+    return response({ services: rows }) as T
+  }
+  if (pathname === '/api/categories') return response({ categories: mockCategories }) as T
+  if (pathname === '/search') {
+    const q = (query.get('q') || '').toLowerCase()
+    const products = mockProducts.filter(p => p.is_active && `${p.name} ${p.description} ${p.store_name} ${p.category}`.toLowerCase().includes(q))
+    const stores = mockStores.filter(s => `${s.name} ${s.description} ${s.city} ${s.category}`.toLowerCase().includes(q))
+    const services = mockServices.filter(s => `${s.name} ${s.description} ${s.city} ${s.category}`.toLowerCase().includes(q))
+    return response({ products, stores, services, total: products.length + stores.length + services.length }) as T
+  }
+
+  const productMatch = pathname.match(/^\/commerce\/products\/([^/]+)$/)
+  if (productMatch) { const product = mockProducts.find(p => p.id === productMatch[1]); if (!product) throw new Error('Product not found in the prototype catalogue.'); return response({ product }) as T }
+  if (pathname === '/commerce/products') {
+    const q = (query.get('q') || '').toLowerCase()
+    const category = (query.get('category') || '').toLowerCase()
+    const location = (query.get('location') || '').toLowerCase()
+    const min = query.get('min_price') ? Number(query.get('min_price')) * 100 : 0
+    const max = query.get('max_price') ? Number(query.get('max_price')) * 100 : Number.MAX_SAFE_INTEGER
+    const rows = mockProducts.filter(p => p.is_active && (!q || `${p.name} ${p.description} ${p.store_name}`.toLowerCase().includes(q)) && (!category || p.category?.toLowerCase() === category) && (!location || `${mockStores.find(s => s.id === p.store_id)?.city || ''} ${mockStores.find(s => s.id === p.store_id)?.state || ''}`.toLowerCase().includes(location)) && p.price >= min && p.price <= max && (query.get('in_stock') !== 'true' || p.stock_quantity > 0))
+    const sort = query.get('sort')
+    if (sort === 'price_asc') rows.sort((a,b) => a.price-b.price)
+    if (sort === 'price_desc') rows.sort((a,b) => b.price-a.price)
+    const page = Math.max(1, Number(query.get('page') || 1))
+    const limit = Math.max(1, Number(query.get('limit') || 12))
+    const start = (page-1)*limit
+    return response({ data: rows.slice(start,start+limit), meta: { page, limit, total: rows.length, totalPages: Math.ceil(rows.length/limit) } }) as T
+  }
+  const cartItemMatch = pathname.match(/^\/commerce\/cart\/items\/([^/]+)$/)
+  if (pathname === '/api/cart' || pathname === '/commerce/cart' || pathname === '/commerce/cart/items' || cartItemMatch) {
+    if (method === 'GET') return response(cart) as T
+    if (method === 'POST') {
+      const product = mockProducts.find(p => p.id === body.product_id)
+      if (!product) throw new Error('This product is not available in the prototype catalogue.')
+      const existing = cart.items.find(i => i.product_id === product.id)
+      const next = existing
+        ? cart.items.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + Number(body.quantity || 1) } : i)
+        : [...cart.items, { id: `cart-${product.id}`, product_id: product.id, quantity: Number(body.quantity || 1), name: product.name, price_kobo: product.price, image_url: product.image_url, store_id: product.store_id, store_name: product.store_name }]
+      cart = totals(next); if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart)); return response(cart) as T
+    }
+    if (method === 'PUT') {
+      const productId = cartItemMatch?.[1] || body.product_id
+      cart = totals(cart.items.map(i => i.product_id === productId ? { ...i, quantity: Math.max(1, Number(body.quantity || 1)) } : i))
+      if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
+      return response(cart) as T
+    }
+    if (method === 'DELETE') {
+      const productId = cartItemMatch?.[1] || body.product_id
+      cart = totals(productId ? cart.items.filter(i => i.product_id !== productId) : [])
+      if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
+      return response(cart) as T
+    }
+  }
+  if ((pathname === '/api/orders' || pathname === '/commerce/checkout') && method === 'POST') {
+    if (!cart.items.length) throw new Error('Add an item to your cart before checkout.')
+    const id = `demo-order-${Object.keys(orders).length + 1}`
+    const order = { id, order_number: `KMB-DEMO-${String(Object.keys(orders).length + 1).padStart(4,'0')}`, status: 'pending', payment_status: 'pending', delivery_status: 'pending', delivery_type: body.delivery_type || 'delivery', subtotal: cart.subtotal, platform_fee: cart.platform_fee, delivery_fee: cart.delivery_fee, total: cart.total, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), shipping_address: body.delivery_address ? { address: body.delivery_address.address_line, city: body.delivery_address.city, state: body.delivery_address.state } : { address: 'Vendor pickup', city: '', state: '' }, payment_method: 'not-selected', customer: { name: 'Demo Buyer', email: 'buyer@kamba.demo' }, items: cart.items.map((i,index) => ({ id: `item-${index+1}`, product_id: i.product_id, product_name: i.name, quantity: i.quantity, price: i.price_kobo, image_url: i.image_url })) }
+    orders[id] = order; persistOrders(); cart = emptyCart(); if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
+    return response({ order }) as T
+  }
+  if ((pathname === '/api/orders' || pathname === '/commerce/orders') && method === 'GET') return response({ orders: Object.values(orders), pagination: { page: 1, limit: Object.keys(orders).length, total: Object.keys(orders).length, totalPages: 1 } }) as T
+  const orderMatch = pathname.match(/^\/(?:api\/orders|commerce\/orders)\/([^/]+)$/)
+  if (orderMatch && method === 'GET') {
+    const order = orders[orderMatch[1]]
+    if (!order) throw new Error('Order not found in the prototype session.')
+    return response({ order }) as T
+  }
+  if ((pathname === '/vendors/orders' || pathname === '/commerce/vendor/orders') && method === 'GET') return response({ orders: Object.values(orders) }) as T
+  const vendorOrderMatch = pathname.match(/^\/(?:vendors\/orders\/([^/]+)\/status|commerce\/vendor\/orders\/([^/]+))$/)
+  if (vendorOrderMatch && method === 'PATCH') {
+    const order = orders[vendorOrderMatch[1] || vendorOrderMatch[2]]
+    if (!order) throw new Error('Order not found in the prototype session.')
+    order.status = body.status; order.updated_at = new Date().toISOString(); persistOrders()
+    return response({ order }) as T
+  }
+  throw new Error(`Prototype service has no fixture for ${method} ${pathname}. This action is not available in mock mode yet.`)
+}

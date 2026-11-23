@@ -48,7 +48,7 @@ export default function OrderConfirmationPage() {
 
     async function fetchOrder() {
       try {
-        const data = await apiJson<{ order: Order }>(`/api/orders/${orderId}`)
+        const data = await apiJson<{ order: Order }>(`/commerce/orders/${orderId}`)
         setOrder(data.order)
       } catch (err) {
         console.error('Failed to fetch order:', err)

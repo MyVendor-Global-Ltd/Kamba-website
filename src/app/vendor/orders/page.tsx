@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { apiJson } from '@/lib/api'
 import { useToast } from '@/components/ui/toast'
 import { Search, Filter, ChevronDown, ChevronUp, Truck, Package, CheckCircle, Clock, X, MoreHorizontal, Eye, Edit } from 'lucide-react'
@@ -84,7 +84,7 @@ export default function VendorOrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true)
-      const data = await apiJson<{ orders: Order[] }>('/vendors/orders')
+      const data = await apiJson<{ orders: Order[] }>('/commerce/vendor/orders')
       setOrders(data.orders || [])
       setError('')
     } catch (err) {
@@ -124,7 +124,7 @@ export default function VendorOrdersPage() {
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingOrder(orderId)
     try {
-      await apiJson(`/vendors/orders/${orderId}/status`, {
+      await apiJson(`/commerce/vendor/orders/${orderId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus }),
       })
@@ -154,15 +154,23 @@ export default function VendorOrdersPage() {
 
   const handleBulkAction = async (action: string) => {
     if (selectedOrders.length === 0) return
+    const targetStatus: Record<string, string> = { confirm: 'confirmed', process: 'processing', ship: 'shipped' }
+    const target = targetStatus[action]
+    if (!target) return
+    const eligible = orders.filter(order => selectedOrders.includes(order.id) && getNextStatus(order.status) === target)
+    if (eligible.length === 0) {
+      addToast({ type: 'error', title: 'No eligible orders', message: 'Selected orders must be at the immediately preceding status before this action.' })
+      return
+    }
     try {
-      await apiJson('/vendors/orders/bulk', {
-        method: 'POST',
-        body: JSON.stringify({ order_ids: selectedOrders, action }),
-      })
+      await Promise.all(eligible.map(order => apiJson(`/commerce/vendor/orders/${order.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: target }),
+      })))
       addToast({
         type: 'success',
         title: 'Bulk action completed',
-        message: `${selectedOrders.length} orders updated.`,
+        message: `${eligible.length} eligible orders moved to ${target}.`,
       })
       setSelectedOrders([])
       loadOrders()
@@ -170,7 +178,7 @@ export default function VendorOrdersPage() {
       addToast({
         type: 'error',
         title: 'Failed to complete bulk action',
-        message: 'Please try again.',
+        message: err instanceof Error ? err.message : 'Please try again.',
       })
     }
   }
@@ -314,7 +322,7 @@ export default function VendorOrdersPage() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
                         <Badge variant={variant as any} size="sm">
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                          {formatOrderStatus(order.status)}
                         </Badge>
                         <Badge variant={statusColors[order.payment_status.toLowerCase()] as any || 'outline'} size="sm">
                           {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}

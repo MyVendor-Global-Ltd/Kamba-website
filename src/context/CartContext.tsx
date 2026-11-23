@@ -90,7 +90,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      const data = await apiJson<CartState>('/api/cart')
+      const data = await apiJson<CartState>('/commerce/cart')
       setCart(data)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to refresh cart'
@@ -102,9 +102,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
     try {
       setError(null)
-      const data = await apiJson<CartState>('/api/cart', {
+      const data = await apiJson<CartState>('/commerce/cart/items', {
         method: 'POST',
-        body: JSON.stringify(item),
+        body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
       })
       setCart(data)
     } catch (err) {
@@ -118,9 +118,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateItem = useCallback(async (productId: string, quantity: number) => {
     try {
       setError(null)
-      const data = await apiJson<CartState>('/api/cart', {
+      const data = await apiJson<CartState>(`/commerce/cart/items/${encodeURIComponent(productId)}`, {
         method: 'PUT',
-        body: JSON.stringify({ product_id: productId, quantity }),
+        body: JSON.stringify({ quantity }),
       })
       setCart(data)
     } catch (err) {
@@ -134,9 +134,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeItem = useCallback(async (productId: string) => {
     try {
       setError(null)
-      const data = await apiJson<CartState>('/api/cart', {
+      const data = await apiJson<CartState>(`/commerce/cart/items/${encodeURIComponent(productId)}`, {
         method: 'DELETE',
-        body: JSON.stringify({ product_id: productId }),
       })
       setCart(data)
     } catch (err) {
@@ -150,7 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(async () => {
     try {
       setError(null)
-      const data = await apiJson<CartState>('/api/cart', {
+      const data = await apiJson<CartState>('/commerce/cart', {
         method: 'DELETE',
       })
       setCart(data)

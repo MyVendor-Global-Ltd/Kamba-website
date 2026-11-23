@@ -42,7 +42,7 @@ export default function ProductDetailPage() {
     if (!product) return
     setAddingToCart(true)
     try {
-      addItem({
+      await addItem({
         product_id: product.id,
         quantity,
           name: product.name,
