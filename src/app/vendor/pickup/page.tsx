@@ -107,7 +107,7 @@ export default function VendorPickupPage() {
     </CardContent></Card>
     {orderId && <Card><CardHeader><CardTitle>Verify collection</CardTitle></CardHeader><CardContent className="space-y-4">
       <div className="flex items-center gap-2"><ScanLine className="h-5 w-5 text-primary" /><p className="text-sm text-text-secondary">QR scanning awaits the backend pickup-token contract. For this prototype, enter the buyer&apos;s one-time code.</p></div>
-      {pickup?.stage === 'ready_for_pickup' && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">Buyer code: <strong className="font-mono tracking-widest text-text-primary">{pickup.pickupCode}</strong>. This is visible in the shared local development session only.</p>}
+      {pickup?.stage === 'ready_for_pickup' && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">Ask the buyer to present the pickup QR code or read out their six-digit code. Enter the code below to validate it; the vendor interface does not reveal the buyer&apos;s code.</p>}
       <label className="block text-sm font-medium text-text-secondary" htmlFor="pickup-code">Buyer&apos;s pickup code</label>
       <Input id="pickup-code" inputMode="numeric" maxLength={6} placeholder="6-digit code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} />
       <Button onClick={verify} disabled={pickup?.stage !== 'ready_for_pickup' || code.length !== 6}><CheckCircle2 className="mr-2 h-4 w-4" /> Confirm collection</Button>
