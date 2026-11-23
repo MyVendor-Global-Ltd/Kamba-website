@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from 'react'
 import type { CartItem } from '@/types/cart'
+import type { Product } from '@/types/commerce'
 import { apiJson } from '@/lib/api'
 import { isMockMode } from '@/lib/mock-api'
 import { useAuth } from '@/context/AuthContext'
@@ -31,13 +32,49 @@ const CART_STORAGE_KEY = 'kamba_cart'
 
 const emptyCart = (): CartState => ({ items: [], subtotal: 0, platform_fee: 0, delivery_fee: 0, total: 0, itemCount: 0 })
 
-function normalizeCart(data: any): CartState {
-  const items: CartItem[] = (Array.isArray(data?.items) ? data.items : []).map((item: any) => {
-    const productId = item.product_id || item.product?.id || item.id
+interface CartProductSnapshot extends Partial<Product> {
+  id?: string
+  name?: string
+  price?: number
+  image_url?: string
+  images?: string[]
+  stock_quantity?: number
+  store_id?: string
+  store_name?: string
+}
+interface CartApiItem {
+  id?: string
+  product_id?: string
+  quantity?: number
+  name?: string
+  product_name?: string
+  price_kobo?: number
+  price?: number
+  image_url?: string
+  images?: string[]
+  stock_quantity?: number
+  available?: boolean
+  store_id?: string
+  store_name?: string
+  line_total?: number
+  product?: CartProductSnapshot
+}
+interface CartApiResponse {
+  items?: CartApiItem[]
+  subtotal?: number
+  platform_fee?: number
+  shipping_amount?: number
+  delivery_fee?: number
+  total?: number
+}
+
+function normalizeCart(data: CartApiResponse): CartState {
+  const items: CartItem[] = (Array.isArray(data.items) ? data.items : []).map((item) => {
+    const productId = item.product_id || item.product?.id || item.id || ''
     const name = item.name || item.product_name || item.product?.name || 'Product'
     const price = Number(item.price_kobo ?? item.price ?? item.product?.price ?? 0)
     const image = item.image_url || item.images?.[0] || item.product?.image_url || item.product?.images?.[0]
-    const product = item.product || {
+    const product = (item.product as Product | undefined) || ({
       id: productId,
       name,
       price,
@@ -47,7 +84,7 @@ function normalizeCart(data: any): CartState {
       store_id: item.store_id || '',
       store_name: item.store_name,
       is_active: item.available ?? true,
-    }
+    } as Product)
     return {
       id: item.id || productId,
       product_id: productId,
@@ -59,21 +96,20 @@ function normalizeCart(data: any): CartState {
       store_name: item.store_name || product.store_name,
       product,
     }
-  }).filter((item: CartItem) => Boolean(item.product_id) && item.quantity > 0)
+  }).filter((item) => Boolean(item.product_id) && item.quantity > 0)
 
-  const subtotal = Number(data?.subtotal ?? items.reduce((sum, item) => sum + item.price_kobo * item.quantity, 0))
-  const platformFee = Number(data?.platform_fee ?? 0)
-  const deliveryFee = Number(data?.shipping_amount ?? data?.delivery_fee ?? 0)
+  const subtotal = Number(data.subtotal ?? items.reduce((sum, item) => sum + item.price_kobo * item.quantity, 0))
+  const platformFee = Number(data.platform_fee ?? 0)
+  const deliveryFee = Number(data.shipping_amount ?? data.delivery_fee ?? 0)
   return {
     items,
     subtotal,
     platform_fee: platformFee,
     delivery_fee: deliveryFee,
-    total: Number(data?.total ?? subtotal + platformFee + deliveryFee),
+    total: Number(data.total ?? subtotal + platformFee + deliveryFee),
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
   }
 }
-
 function getStoredCart(): CartState {
   if (typeof window === 'undefined') return emptyCart()
   try {
@@ -99,10 +135,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => { cartRef.current = cart }, [cart])
 
   useEffect(() => {
-    const stored = getStoredCart()
-    setCart(stored)
-    cartRef.current = stored
-    setIsLoading(false)
+    let active = true
+    void Promise.resolve().then(() => {
+      if (!active) return
+      const stored = getStoredCart()
+      setCart(stored)
+      cartRef.current = stored
+      setIsLoading(false)
+    })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
@@ -112,7 +153,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      let data = await apiJson<any>('/commerce/cart')
+      let data = await apiJson<CartApiResponse>('/commerce/cart')
       let normalized = normalizeCart(data)
 
       // Merge a guest cart into a newly authenticated buyer account once.
@@ -123,7 +164,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
           })
         }
-        data = await apiJson<any>('/commerce/cart')
+        data = await apiJson<CartApiResponse>('/commerce/cart')
         normalized = normalizeCart(data)
       }
 
