@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -76,15 +76,11 @@ export default function AccountPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [editing, setEditing] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formData, setFormData] = useState<Record<string, string | number | boolean | null>>({})
   const [showAddAddress, setShowAddAddress] = useState(false)
   const [showAddPayment, setShowAddPayment] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       const [profileRes, ordersRes] = await Promise.allSettled([
@@ -101,8 +97,12 @@ export default function AccountPage() {
       console.error('Failed to load account data:', err)
     } finally {
       setLoading(false)
-    }
+    }, [])
   }
+
+  useEffect(() => {
+    void Promise.resolve().then(loadData)
+  }, [loadData])
 
   const handleSaveProfile = async () => {
     try {
