@@ -63,7 +63,7 @@ interface OrderDetailResponse {
   items?: OrderDetailItem[]
 }
 
-type StatusFilter = 'all' | 'pending' | 'paid_held' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+type StatusFilter = 'all' | 'awaiting_payment' | 'paid_held' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'disputed' | 'cancelled'
 
 export default function OrdersPage() {
   const router = useRouter()
@@ -106,7 +106,11 @@ export default function OrdersPage() {
     void Promise.resolve().then(fetchOrders)
   }, [fetchOrders])
 
-  const filteredOrders = orders.filter((order) => statusFilter === 'all' || order.status === statusFilter)
+  const filteredOrders = orders.filter((order) => {
+    if (statusFilter === 'all') return true
+    if (statusFilter === 'awaiting_payment') return ['pending', 'pending_payment', 'payment_pending'].includes(order.status)
+    return order.status === statusFilter
+  })
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / limit))
   const visibleOrders = filteredOrders.slice((page - 1) * limit, page * limit)
 
@@ -213,13 +217,13 @@ export default function OrdersPage() {
               className="appearance-none pl-10 pr-8 py-2 bg-ink-raised/50 border border-border/50 rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-coral focus:border-transparent"
             >
               <option value="all">All Orders</option>
-              <option value="pending">Pending payment</option>
-              <option value="paid_held">Paid — awaiting vendor</option>
+              <option value="awaiting_payment">Awaiting payment</option>
               <option value="paid_held">Paid — awaiting vendor</option>
               <option value="confirmed">Confirmed</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
+              <option value="disputed">Disputed</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -248,7 +252,7 @@ export default function OrdersPage() {
                       {formatOrderStatus(order.status)}
                     </Badge>
                     <Badge variant={getPaymentStatusVariant(order.payment_status)} size="sm">
-                      {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                      {formatOrderStatus(order.payment_status)}
                     </Badge>
                   </div>
                   <p className="text-sm text-text-tertiary">{formatDateTime(order.created_at)} · {order.store_name || 'Kamba vendor'} · {order.delivery_type === 'pickup' ? 'Pickup' : 'Delivery'}</p>
