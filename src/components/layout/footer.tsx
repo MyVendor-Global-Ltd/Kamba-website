@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ShoppingBag } from 'lucide-react'
+import { KambaLogo } from '@/components/layout/kamba-logo'
 
 const linkGroups = [
   {
@@ -32,13 +32,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-10 lg:py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div className="space-y-4">
-            <Link href="/" className="inline-flex items-center gap-2" aria-label="Kamba home">
-              <span className="relative grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
-                <ShoppingBag className="h-[18px] w-[18px]" />
-                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-gold" />
-              </span>
-              <span className="font-display text-xl font-bold lowercase tracking-tight text-primary">kamba</span>
-            </Link>
+            <KambaLogo iconSize={36} />
             <p className="max-w-xs text-sm leading-6 text-text-secondary">
               Discover products, independent shops and useful services in your neighbourhood.
             </p>
