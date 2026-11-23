@@ -28,7 +28,7 @@ export default function ServiceDetailPage() {
   useEffect(() => {
     apiJson<{ service_profile?: ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }; service?: ServiceProfile }>(`/vendors/services/${slug}`)
       .then((data) => {
-        const raw = data.service_profile || data.service
+        const raw = (data.service_profile || data.service) as (ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }) | undefined
         if (!raw) throw new Error('This service is not available.')
         const tier = raw.vendor_profiles?.verification_tier
         const verificationStatus: ServiceProfile['verification_status'] = raw.verification_status || (raw.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
