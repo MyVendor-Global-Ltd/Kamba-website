@@ -291,7 +291,15 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     if (sort === 'price_asc') rows.sort((a, b) => a.price - b.price)
     else if (sort === 'price_desc') rows.sort((a, b) => b.price - a.price)
     else if (sort === 'popular') rows.sort((a, b) => (Number((b as Product & { view_count?: number }).view_count) || 0) - (Number((a as Product & { view_count?: number }).view_count) || 0))
-    else rows.sort((a, b) => b.created_at.localeCompare(a.created_at))
+    else if (sort === 'nearest' && lat !== null && lng !== null) {
+      rows.sort((a, b) => {
+        const storeA = mockStores.find((store) => store.id === a.store_id)
+        const storeB = mockStores.find((store) => store.id === b.store_id)
+        const distanceA = storeA?.latitude !== undefined && storeA.longitude !== undefined ? distanceKm(lat, lng, storeA.latitude, storeA.longitude) : Number.POSITIVE_INFINITY
+        const distanceB = storeB?.latitude !== undefined && storeB.longitude !== undefined ? distanceKm(lat, lng, storeB.latitude, storeB.longitude) : Number.POSITIVE_INFINITY
+        return distanceA - distanceB || b.created_at.localeCompare(a.created_at)
+      })
+    } else rows.sort((a, b) => b.created_at.localeCompare(a.created_at))
     const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 24)))
     const offset = Math.max(0, Number(query.get('offset') || 0))
     return response({
