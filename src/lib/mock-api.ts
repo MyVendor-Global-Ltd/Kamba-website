@@ -149,6 +149,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     const q = (query.get('search') || '').toLowerCase()
     const category = (query.get('category') || '').toLowerCase()
     const location = (query.get('location') || '').toLowerCase()
+    const storeSlug = query.get('store') || ''
     const min = query.get('min_price') ? Number(query.get('min_price')) : 0
     const max = query.get('max_price') ? Number(query.get('max_price')) : Number.MAX_SAFE_INTEGER
     const stockStatus = query.get('stock_status') || 'in_stock'
@@ -158,6 +159,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
       return product.is_active &&
         (!q || `${product.name} ${product.description} ${product.store_name} ${(product as Product & { tags?: string[] }).tags?.join(' ') || ''}`.toLowerCase().includes(q)) &&
         (!category || product.category?.toLowerCase() === category) &&
+        (!storeSlug || store?.slug === storeSlug) &&
         (!location || `${store?.city || ''} ${store?.state || ''}`.toLowerCase().includes(location)) &&
         product.price >= min && product.price <= max && matchesStock
     })
@@ -169,7 +171,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 24)))
     const offset = Math.max(0, Number(query.get('offset') || 0))
     return response({
-      products: rows.slice(offset, offset + limit).map((product) => ({ ...product, images: product.images || (product.image_url ? [product.image_url] : []), original_price: product.compare_at_price })),
+      products: rows.slice(offset, offset + limit).map((product) => ({ ...product, images: product.images || (product.image_url ? [product.image_url] : []), original_price: product.compare_at_price, store_slug: mockStores.find((store) => store.id === product.store_id)?.slug })),
       limit,
       offset,
       total_count: rows.length,
