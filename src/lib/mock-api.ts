@@ -16,6 +16,7 @@ export const mockStores: Store[] = [
   { id: 'store-techhub', name: 'TechHub Electronics', slug: 'techhub-electronics', description: 'Everyday tech, accessories and practical gadgets.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-01', is_active: true, verification_status: 'pending', created_at: '2026-08-01T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z', category: 'Electronics' },
   { id: 'store-stylecraft', name: 'StyleCraft', slug: 'stylecraft', description: 'Locally made fashion pieces and accessories.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-02', is_active: true, verification_status: 'pending', created_at: '2026-08-04T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z', category: 'Fashion' },
   { id: 'store-paperhouse', name: 'Paper House', slug: 'paper-house', description: 'Stationery and thoughtful gifts for study and work.', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-03', is_active: true, verification_status: 'pending', created_at: '2026-08-09T09:00:00.000Z', updated_at: '2026-11-08T09:00:00.000Z', category: 'Books & Stationery' },
+  { id: 'store-homefound', name: 'Home Found', slug: 'home-found', description: 'Useful home and study essentials.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', vendor_id: 'vendor-04', is_active: true, verification_status: 'pending', created_at: '2026-08-12T09:00:00.000Z', updated_at: '2026-11-13T09:00:00.000Z', category: 'Home & Living' },
 ]
 
 export const mockServices: ServiceProfile[] = [
@@ -24,7 +25,7 @@ export const mockServices: ServiceProfile[] = [
   { id: 'svc-003', name: 'Event Photography', slug: 'frame-by-frame', description: 'Portraits, small events and product photography. Request a quote.', category: 'Photography', city: 'Obio/Akpor', state: 'Rivers', country: 'Nigeria', vendor_id: 'service-03', is_active: true, verification_status: 'pending', created_at: '2026-09-12T09:00:00.000Z', updated_at: '2026-11-09T09:00:00.000Z' },
 ]
 
-export const mockCategories = ['Electronics', 'Fashion', 'Home & Living', 'Books & Stationery', 'Cleaning', 'Repairs', 'Photography']
+export const mockCategories = ['Electronics', 'Fashion', 'Home & Living', 'Books & Stationery']
 
 export function submitMockVendorApplication(data: Record<string, string>) {
   if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_vendor_application', JSON.stringify({ ...data, status: 'prototype_received', submitted_at: new Date().toISOString() }))
@@ -100,15 +101,27 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   if (storeMatch) { const store = mockStores.find(s => s.slug === storeMatch[1]); return response({ store: store || null, products: mockProducts.filter(p => p.store_id === store?.id) }) as T }
   const storeProductsMatch = pathname.match(/^\/commerce\/stores\/([^/]+)\/products$/)
   if (storeProductsMatch) { const store = mockStores.find(s => s.slug === storeProductsMatch[1]); return response({ products: mockProducts.filter(p => p.store_id === store?.id) }) as T }
-  if (pathname === '/vendors/services' || pathname === '/commerce/services') {
-    const q = (query.get('q') || '').toLowerCase()
+  if (pathname === '/vendors/services') {
+    const q = (query.get('search') || '').toLowerCase()
     const category = (query.get('category') || '').toLowerCase()
     const location = (query.get('location') || '').toLowerCase()
-    const rows = mockServices.filter(s => (!q || `${s.name} ${s.description} ${s.category}`.toLowerCase().includes(q)) && (!category || s.category?.toLowerCase() === category) && (!location || `${s.city} ${s.state}`.toLowerCase().includes(location)))
-    if (pathname === '/commerce/services') return response({ data: rows, meta: { page: 1, limit: rows.length, total: rows.length, totalPages: 1 } }) as T
-    return response({ services: rows }) as T
+    const rows = mockServices.filter((service) =>
+      (!q || `${service.name} ${service.description} ${service.category}`.toLowerCase().includes(q)) &&
+      (!category || service.category?.toLowerCase() === category) &&
+      (!location || `${service.city} ${service.state}`.toLowerCase().includes(location))
+    ).sort((a, b) => b.created_at.localeCompare(a.created_at))
+    const page = Math.max(1, Number(query.get('page') || 1))
+    const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 20)))
+    const offset = (page - 1) * limit
+    return response({ services: rows.slice(offset, offset + limit), page, limit, count: rows.length, has_more: offset + limit < rows.length }) as T
   }
-  if (pathname === '/api/categories') return response({ categories: mockCategories }) as T
+  if (pathname === '/marketplace/categories') {
+    const categories = mockCategories.map((category) => ({
+      category,
+      product_count: mockProducts.filter((product) => product.category === category && product.stock_quantity > 0).length,
+    }))
+    return response({ categories }) as T
+  }
   if (pathname === '/search') {
     const q = (query.get('q') || '').toLowerCase()
     const products = mockProducts.filter(p => p.is_active && `${p.name} ${p.description} ${p.store_name} ${p.category}`.toLowerCase().includes(q))
@@ -120,19 +133,35 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   const productMatch = pathname.match(/^\/commerce\/products\/([^/]+)$/)
   if (productMatch) { const product = mockProducts.find(p => p.id === productMatch[1]); if (!product) throw new Error('Product not found in the prototype catalogue.'); return response({ product }) as T }
   if (pathname === '/commerce/products') {
-    const q = (query.get('q') || '').toLowerCase()
+    const q = (query.get('search') || '').toLowerCase()
     const category = (query.get('category') || '').toLowerCase()
     const location = (query.get('location') || '').toLowerCase()
-    const min = query.get('min_price') ? Number(query.get('min_price')) * 100 : 0
-    const max = query.get('max_price') ? Number(query.get('max_price')) * 100 : Number.MAX_SAFE_INTEGER
-    const rows = mockProducts.filter(p => p.is_active && (!q || `${p.name} ${p.description} ${p.store_name}`.toLowerCase().includes(q)) && (!category || p.category?.toLowerCase() === category) && (!location || `${mockStores.find(s => s.id === p.store_id)?.city || ''} ${mockStores.find(s => s.id === p.store_id)?.state || ''}`.toLowerCase().includes(location)) && p.price >= min && p.price <= max && (query.get('in_stock') !== 'true' || p.stock_quantity > 0))
-    const sort = query.get('sort')
-    if (sort === 'price_asc') rows.sort((a,b) => a.price-b.price)
-    if (sort === 'price_desc') rows.sort((a,b) => b.price-a.price)
-    const page = Math.max(1, Number(query.get('page') || 1))
-    const limit = Math.max(1, Number(query.get('limit') || 12))
-    const start = (page-1)*limit
-    return response({ data: rows.slice(start,start+limit), meta: { page, limit, total: rows.length, totalPages: Math.ceil(rows.length/limit) } }) as T
+    const min = query.get('min_price') ? Number(query.get('min_price')) : 0
+    const max = query.get('max_price') ? Number(query.get('max_price')) : Number.MAX_SAFE_INTEGER
+    const stockStatus = query.get('stock_status') || 'in_stock'
+    const rows = mockProducts.filter((product) => {
+      const store = mockStores.find((candidate) => candidate.id === product.store_id)
+      const matchesStock = stockStatus === 'all' || (stockStatus === 'in_stock' ? product.stock_quantity > 0 : product.stock_quantity <= 0)
+      return product.is_active &&
+        (!q || `${product.name} ${product.description} ${product.store_name} ${(product as Product & { tags?: string[] }).tags?.join(' ') || ''}`.toLowerCase().includes(q)) &&
+        (!category || product.category?.toLowerCase() === category) &&
+        (!location || `${store?.city || ''} ${store?.state || ''}`.toLowerCase().includes(location)) &&
+        product.price >= min && product.price <= max && matchesStock
+    })
+    const sort = query.get('sort') || 'newest'
+    if (sort === 'price_asc') rows.sort((a, b) => a.price - b.price)
+    else if (sort === 'price_desc') rows.sort((a, b) => b.price - a.price)
+    else if (sort === 'popular') rows.sort((a, b) => (Number((b as any).view_count) || 0) - (Number((a as any).view_count) || 0))
+    else rows.sort((a, b) => b.created_at.localeCompare(a.created_at))
+    const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 24)))
+    const offset = Math.max(0, Number(query.get('offset') || 0))
+    return response({
+      products: rows.slice(offset, offset + limit).map((product) => ({ ...product, images: product.images || (product.image_url ? [product.image_url] : []), original_price: product.compare_at_price })),
+      limit,
+      offset,
+      total_count: rows.length,
+      has_more: offset + limit < rows.length,
+    }) as T
   }
   const cartItemMatch = pathname.match(/^\/commerce\/cart\/items\/([^/]+)$/)
   if (pathname === '/api/cart' || pathname === '/commerce/cart' || pathname === '/commerce/cart/items' || cartItemMatch) {
