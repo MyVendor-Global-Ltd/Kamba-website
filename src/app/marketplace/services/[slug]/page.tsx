@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { apiJson } from '@/lib/api'
 import { ServiceProfile } from '@/types/vendor'
 import { useToast } from '@/components/ui/toast'
-import { Calendar, Clock, Star, MapPin, Phone, Mail, Shield, CheckCircle, XCircle, ChevronLeft, ChevronRight, MessageSquare, User, Briefcase } from 'lucide-react'
+import { Calendar, Star, MapPin, Phone, Mail, Shield, CheckCircle, ChevronLeft, ChevronRight, MessageSquare, User, Briefcase } from 'lucide-react'
 
 export default function ServiceDetailPage() {
   const params = useParams()
