@@ -129,10 +129,28 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
   const clearFilters = useCallback(() => setFiltersState(DEFAULT_FILTERS), [])
 
   const requestFilters = useMemo(() => ({
-    ...filters,
     query: isMockMode ? filters.query : '',
     location: isMockMode ? filters.location : '',
-  }), [filters, isMockMode])
+    category: filters.category,
+    latitude: filters.latitude,
+    longitude: filters.longitude,
+    radius: filters.radius,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
+    inStock: filters.inStock,
+    sortBy: filters.sortBy,
+  }), [
+    filters.category,
+    filters.latitude,
+    filters.longitude,
+    filters.radius,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.inStock,
+    filters.sortBy,
+    isMockMode ? filters.query : '',
+    isMockMode ? filters.location : '',
+  ])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void fetchServices(1, requestFilters) }, 250)
