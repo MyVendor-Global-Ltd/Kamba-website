@@ -62,11 +62,7 @@ export default function CheckoutPage() {
   }, [])
 
   useEffect(() => {
-    if (formData.deliveryType !== 'delivery' || !selectedUniversity) {
-      setZones([])
-      setSelectedZoneId('')
-      return
-    }
+    if (formData.deliveryType !== 'delivery' || !selectedUniversity) return
     let active = true
     setZonesLoading(true)
     setSelectedZoneId('')
@@ -78,11 +74,7 @@ export default function CheckoutPage() {
   }, [formData.deliveryType, selectedUniversity])
 
   useEffect(() => {
-    if (formData.deliveryType !== 'delivery' || !selectedUniversityId || !selectedZoneId || storeIds.length === 0) {
-      setDeliveryQuote(null)
-      setQuoteLoading(false)
-      return
-    }
+    if (formData.deliveryType !== 'delivery' || !selectedUniversityId || !selectedZoneId || storeIds.length === 0) return
     let active = true
     setQuoteLoading(true)
     setDeliveryError(null)
@@ -198,11 +190,11 @@ export default function CheckoutPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className={`flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${formData.deliveryType === 'pickup' ? 'border-primary bg-secondary' : 'border-border'}`}>
-                  <input type="radio" name="deliveryType" value="pickup" checked={formData.deliveryType === 'pickup'} onChange={() => setFormData((previous) => ({ ...previous, deliveryType: 'pickup' }))} className="mt-1 accent-primary" />
+                  <input type="radio" name="deliveryType" value="pickup" checked={formData.deliveryType === 'pickup'} onChange={() => { setFormData((previous) => ({ ...previous, deliveryType: 'pickup' })); setZones([]); setSelectedZoneId(''); setDeliveryQuote(null); setDeliveryError(null) }} className="mt-1 accent-primary" />
                   <span><span className="block font-semibold text-text-primary">Pick up from the vendor</span><span className="text-sm text-text-secondary">The approved collection point is shared when the order is ready.</span></span>
                 </label>
                 <label className={`flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${formData.deliveryType === 'delivery' ? 'border-primary bg-secondary' : 'border-border'}`}>
-                  <input type="radio" name="deliveryType" value="delivery" checked={formData.deliveryType === 'delivery'} onChange={() => setFormData((previous) => ({ ...previous, deliveryType: 'delivery' }))} className="mt-1 accent-primary" />
+                  <input type="radio" name="deliveryType" value="delivery" checked={formData.deliveryType === 'delivery'} onChange={() => { setFormData((previous) => ({ ...previous, deliveryType: 'delivery' })); setDeliveryQuote(null); setDeliveryError(null) }} className="mt-1 accent-primary" />
                   <span><span className="block font-semibold text-text-primary">Deliver to me</span><span className="text-sm text-text-secondary">Choose a supported university and delivery zone.</span></span>
                 </label>
               </div>
@@ -220,14 +212,14 @@ export default function CheckoutPage() {
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block text-sm font-medium text-text-secondary">
                           University
-                          <select value={selectedUniversityId} onChange={(event) => { setSelectedUniversityId(event.target.value); setSelectedZoneId(''); setDeliveryQuote(null) }} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
+                          <select value={selectedUniversityId} onChange={(event) => { setSelectedUniversityId(event.target.value); setZones([]); setSelectedZoneId(''); setDeliveryQuote(null); setDeliveryError(null) }} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                             <option value="">Choose a university</option>
                             {universities.map((university) => <option key={university.id} value={university.id}>{university.name}</option>)}
                           </select>
                         </label>
                         <label className="block text-sm font-medium text-text-secondary">
                           Delivery zone
-                          <select value={selectedZoneId} onChange={(event) => setSelectedZoneId(event.target.value)} required disabled={!selectedUniversityId || zonesLoading} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary disabled:opacity-50">
+                          <select value={selectedZoneId} onChange={(event) => { setSelectedZoneId(event.target.value); setDeliveryQuote(null); setDeliveryError(null) }} required disabled={!selectedUniversityId || zonesLoading} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary disabled:opacity-50">
                             <option value="">{zonesLoading ? 'Loading zones…' : 'Choose a zone'}</option>
                             {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
                           </select>
