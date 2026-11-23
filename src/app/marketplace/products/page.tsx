@@ -32,8 +32,8 @@ export default function ProductsPage() {
 
   // Fetch categories on mount
   useEffect(() => {
-    apiJson<{ categories: string[] }>('/api/categories')
-      .then((data) => setCategories(data.categories || []))
+    apiJson<{ categories: Array<string | { category?: string }> }>('/marketplace/categories')
+      .then((data) => setCategories(data.categories.map((item) => typeof item === 'string' ? item : item.category || '').filter(Boolean)))
       .catch(() => setCategories(['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Sports', 'Books']))
   }, [])
 
