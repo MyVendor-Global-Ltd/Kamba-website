@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, MapPin, Package, Search, Store, Wrench } from 'lucide-react'
-import { apiJson, type PaginatedResponse } from '@/lib/api'
+import { apiJson } from '@/lib/api'
 import type { Product } from '@/types/commerce'
 import { formatKobo } from '@/lib/formatting'
 
@@ -15,8 +15,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiJson<PaginatedResponse<Product>>('/commerce/products', { params: { page: 1, limit: 4 } })
-      .then((result) => setProducts(result.data || []))
+    apiJson<{ products: Product[] }>('/commerce/products', { params: { offset: 0, limit: 4 } })
+      .then((result) => setProducts(result.products || []))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
   }, [])
