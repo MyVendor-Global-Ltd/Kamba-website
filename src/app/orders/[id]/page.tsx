@@ -177,8 +177,6 @@ export default function OrderDetailPage() {
         return 'secondary'
       case 'cancelled':
         return 'destructive'
-      case 'return_requested':
-        return 'warning'
       default:
         return 'outline'
     }
@@ -347,7 +345,7 @@ export default function OrderDetailPage() {
           </div>
           
           {/* Cancelled/Return status message */}
-          {(order.status.toLowerCase() === 'cancelled' || order.status.toLowerCase() === 'return_requested') && (
+          {(order.status.toLowerCase() === 'cancelled') && (
             <div className="mt-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
               <div className="flex items-center gap-3">
                 <X className="w-5 h-5 text-destructive" />
@@ -504,12 +502,7 @@ export default function OrderDetailPage() {
                       Reorder Items
                     </Button>
                   )}
-                  {false && (
-                    <Button variant="outline" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" onClick={handleRequestReturn}>
-                      <Truck className="w-4 h-4 mr-2" />
-                      Request Return
-                    </Button>
-                  )}
+
                 </CardContent>
                               </Card>
             </div>
