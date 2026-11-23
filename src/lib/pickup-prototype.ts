@@ -19,6 +19,13 @@ const DEMO_LOCATION = 'Kamba Demo Collection Point, Port Harcourt, Rivers State 
 function readAll(): Record<string, PickupDemo> {
   try { return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} }
 }
+function createUniquePickupCode(usedCodes: Set<string>) {
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate = String(Math.floor(100000 + Math.random() * 900000))
+    if (!usedCodes.has(candidate)) return candidate
+  }
+  throw new Error('Could not generate a unique pickup code. Try again.')
+}
 function save(record: PickupDemo) {
   const all = readAll()
   all[record.orderId] = record
@@ -41,7 +48,8 @@ export function setPickupStage(orderId: string, stage: 'preparing' | 'ready_for_
   if (stage === 'ready_for_pickup' && current.stage !== 'preparing') throw new Error('Move the order to Preparing before marking it ready.')
   const next: PickupDemo = { ...current, stage }
   if (stage === 'ready_for_pickup') {
-    next.pickupCode = String(Math.floor(100000 + Math.random() * 900000))
+    const usedCodes = new Set(Object.values(readAll()).map((record) => record.pickupCode).filter((code): code is string => Boolean(code)))
+    next.pickupCode = createUniquePickupCode(usedCodes)
     next.pickupLocation = DEMO_LOCATION
     next.readyAt = new Date().toISOString()
   }
