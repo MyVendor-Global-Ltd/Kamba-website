@@ -85,7 +85,7 @@ export default function VendorProductsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((product) => {
-              const status = !product.is_active || !product.is_available ? 'Unavailable' : product.stock_quantity <= 0 ? 'Out of stock' : product.stock_quantity <= 5 ? 'Low stock' : 'Available'
+              const status = !product.is_active || product.is_available === false ? 'Unavailable' : product.stock_quantity <= 0 ? 'Out of stock' : product.stock_quantity <= 5 ? 'Low stock' : 'Available'
               const variant = status === 'Available' ? 'success' : status === 'Low stock' ? 'warning' : status === 'Out of stock' ? 'destructive' : 'outline'
               return (
                 <Card key={product.id} variant="outlined" className="overflow-hidden">
