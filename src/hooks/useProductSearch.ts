@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { apiPaginated } from '@/lib/api'
+import { apiJson } from '@/lib/api'
+import { isMockMode } from '@/lib/mock-api'
 import { Product } from '@/types/commerce'
 import { MarketplaceFilterState } from '@/components/marketplace/product-filters'
 
@@ -60,30 +61,44 @@ export function useProductSearch(options: UseProductSearchOptions = {}): UseProd
     try {
       setError(null)
       setLoading(true)
+      const offset = (page - 1) * pageSize
       const params: Record<string, string | number | boolean | undefined> = {
-        page,
         limit: pageSize,
-        q: currentFilters.query.trim() || undefined,
+        offset,
+        search: currentFilters.query.trim() || undefined,
         category: currentFilters.category || undefined,
-        location: currentFilters.location.trim() || undefined,
-        min_price: currentFilters.minPrice ?? undefined,
-        max_price: currentFilters.maxPrice ?? undefined,
-        sort: currentFilters.sortBy === 'newest' ? undefined : currentFilters.sortBy,
-        in_stock: currentFilters.inStock || undefined,
+        min_price: currentFilters.minPrice === null ? undefined : Math.round(currentFilters.minPrice * 100),
+        max_price: currentFilters.maxPrice === null ? undefined : Math.round(currentFilters.maxPrice * 100),
+        sort: currentFilters.sortBy,
+        stock_status: currentFilters.inStock ? 'in_stock' : 'all',
+        ...(isMockMode && currentFilters.location.trim() ? { location: currentFilters.location.trim() } : {}),
       }
-      const result = await apiPaginated<Product>('/commerce/products', { params, signal: controller.signal })
+      const result = await apiJson<{
+        products: Array<Product & { original_price?: number; store_slug?: string; in_stock?: boolean }>
+        limit: number
+        offset: number
+        total_count: number
+        has_more: boolean
+      }>('/commerce/products', { params, signal: controller.signal })
       if (requestId !== requestIdRef.current) return
 
+      const mappedProducts = result.products.map((product) => ({
+        ...product,
+        image_url: product.image_url || product.images?.[0],
+        compare_at_price: product.compare_at_price ?? product.original_price,
+        in_stock: product.in_stock ?? product.stock_quantity > 0,
+      }))
       if (append) {
         setProducts((previous) => {
           const existing = new Set(previous.map((product) => product.id))
-          return [...previous, ...result.data.filter((product) => !existing.has(product.id))]
+          return [...previous, ...mappedProducts.filter((product) => !existing.has(product.id))]
         })
       } else {
-        setProducts(result.data)
+        setProducts(mappedProducts)
       }
-      setPagination(result.meta)
-      setHasMore(result.meta.page < result.meta.totalPages)
+      const totalPages = Math.max(1, Math.ceil(result.total_count / pageSize))
+      setPagination({ page, limit: result.limit, total: result.total_count, totalPages })
+      setHasMore(result.has_more)
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
       if (requestId === requestIdRef.current) {
