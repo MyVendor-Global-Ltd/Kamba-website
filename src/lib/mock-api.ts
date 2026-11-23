@@ -137,7 +137,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     let user: MockUser | null = null
     try { user = JSON.parse(window.localStorage.getItem('kamba_demo_user') || 'null') } catch { user = null }
     if (!user) throw new Error('Sign in to edit your development profile.')
-    user = { ...user, display_name: body.displayName, username: body.username, phone: body.phone, email: body.email, updated_at: new Date().toISOString() }
+    user = { ...user, display_name: body.displayName, username: body.username, phone: body.phone, email: typeof body.email === 'string' ? body.email : user.email, updated_at: new Date().toISOString() }
     window.localStorage.setItem('kamba_demo_user', JSON.stringify(user))
     return response({ success: true, user, prototype: true }) as T
   }
