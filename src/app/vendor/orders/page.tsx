@@ -246,6 +246,47 @@ export default function VendorOrdersPage() {
     }
   }
 
+  const toggleOrderDetails = async (orderId: string) => {
+    if (expandedOrder === orderId) {
+      setExpandedOrder(null)
+      return
+    }
+    setExpandedOrder(orderId)
+    const existing = orders.find((order) => order.id === orderId)
+    if (existing && existing.items.length > 0) return
+
+    setLoadingOrderDetails(orderId)
+    try {
+      const data = await apiJson<VendorOrderDetailResponse>(`/commerce/orders/${encodeURIComponent(orderId)}`)
+      const raw = data.order || data
+      const items = (raw.order_items || raw.items || []).map((item) => ({
+        id: item.product_id,
+        product_id: item.product_id,
+        product_name: item.name || item.product_name || 'Product',
+        quantity: item.quantity,
+        price: Number(item.unit_amount ?? item.price ?? 0),
+        image_url: item.image_url,
+      }))
+      setOrders((previous) => previous.map((order) => order.id === orderId ? {
+        ...order,
+        items,
+        shipping_address: raw.delivery_address ? {
+          address: raw.delivery_address.address_line || '',
+          city: raw.delivery_address.city || '',
+          state: raw.delivery_address.state || '',
+        } : order.shipping_address,
+        customer: { name: raw.delivery_address?.recipient_name || order.customer.name },
+        payment_status: raw.payment_status || order.payment_status,
+        delivery_status: raw.delivery_status || order.delivery_status,
+        payment_method: raw.payment_method || order.payment_method,
+      } : order))
+    } catch (err) {
+      addToast({ type: 'error', title: 'Could not load order details', message: err instanceof Error ? err.message : 'Please try again.' })
+    } finally {
+      setLoadingOrderDetails(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
@@ -517,45 +558,4 @@ export default function VendorOrdersPage() {
       </div>
     </div>
   )
-}  const toggleOrderDetails = async (orderId: string) => {
-    if (expandedOrder === orderId) {
-      setExpandedOrder(null)
-      return
-    }
-    setExpandedOrder(orderId)
-    const existing = orders.find((order) => order.id === orderId)
-    if (existing && existing.items.length > 0) return
-
-    setLoadingOrderDetails(orderId)
-    try {
-      const data = await apiJson<VendorOrderDetailResponse>(`/commerce/orders/${encodeURIComponent(orderId)}`)
-      const raw = data.order || data
-      const items = (raw.order_items || raw.items || []).map((item) => ({
-        id: item.product_id,
-        product_id: item.product_id,
-        product_name: item.name || item.product_name || 'Product',
-        quantity: item.quantity,
-        price: Number(item.unit_amount ?? item.price ?? 0),
-        image_url: item.image_url,
-      }))
-      setOrders((previous) => previous.map((order) => order.id === orderId ? {
-        ...order,
-        items,
-        shipping_address: raw.delivery_address ? {
-          address: raw.delivery_address.address_line || '',
-          city: raw.delivery_address.city || '',
-          state: raw.delivery_address.state || '',
-        } : order.shipping_address,
-        customer: { name: raw.delivery_address?.recipient_name || order.customer.name },
-        payment_status: raw.payment_status || order.payment_status,
-        delivery_status: raw.delivery_status || order.delivery_status,
-        payment_method: raw.payment_method || order.payment_method,
-      } : order))
-    } catch (err) {
-      addToast({ type: 'error', title: 'Could not load order details', message: err instanceof Error ? err.message : 'Please try again.' })
-    } finally {
-      setLoadingOrderDetails(null)
-    }
-  }
-
-
+}
