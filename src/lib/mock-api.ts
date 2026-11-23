@@ -73,6 +73,14 @@ function hydrateServiceRequests() {
 }
 function persistServiceRequests() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_service_requests', JSON.stringify(serviceRequests)) }
 const orders: Record<string, any> = {}
+const marketplaceCheckouts: Record<string, any> = {}
+let checkoutsHydrated = false
+function hydrateCheckouts() {
+  if (checkoutsHydrated || typeof window === 'undefined') return
+  checkoutsHydrated = true
+  try { Object.assign(marketplaceCheckouts, JSON.parse(window.localStorage.getItem('kamba_demo_checkouts') || '{}')) } catch { /* Ignore invalid prototype data. */ }
+}
+function persistCheckouts() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_checkouts', JSON.stringify(marketplaceCheckouts)) }
 let ordersHydrated = false
 function hydrateOrders() {
   if (ordersHydrated || typeof window === 'undefined') return
@@ -246,6 +254,64 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
       if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
       return response(cart) as T
     }
+  }
+  if (pathname === '/delivery/universities' && method === 'GET') return response({ universities: [] }) as T
+  const universityZonesMatch = pathname.match(/^\\/delivery\\/universities\\/([^/]+)\\/zones$/)
+  if (universityZonesMatch && method === 'GET') return response({ zones: [] }) as T
+  if (pathname === '/delivery/quote' && method === 'POST') throw new Error('No delivery university or route pricing is configured in the development prototype. Choose pickup.')
+  if (pathname === '/commerce/marketplace-checkouts' && method === 'POST') {
+    if (!cart.items.length) throw new Error('Add an item to your cart before checkout.')
+    const checkoutId = `demo-checkout-${Object.keys(marketplaceCheckouts).length + 1}`
+    const storeGroups = new Map<string, MockCartItem[]>()
+    for (const item of cart.items) {
+      const group = storeGroups.get(item.store_id) || []
+      group.push(item)
+      storeGroups.set(item.store_id, group)
+    }
+    const childOrders = [...storeGroups.entries()].map(([storeId, items], index) => {
+      const subtotal = items.reduce((sum, item) => sum + item.price_kobo * item.quantity, 0)
+      const platform_fee = Math.round(subtotal * 0.05)
+      const orderId = `demo-order-${Object.keys(orders).length + index + 1}`
+      return {
+        id: orderId,
+        order_number: `KMB-DEMO-${String(Object.keys(orders).length + index + 1).padStart(4, '0')}`,
+        status: 'pending',
+        payment_status: 'pending',
+        delivery_status: 'pending',
+        delivery_type: body.delivery_type || 'pickup',
+        subtotal,
+        platform_fee,
+        delivery_fee: 0,
+        shipping_amount: 0,
+        total: subtotal + platform_fee,
+        store_id: storeId,
+        store_name: items[0]?.store_name,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        shipping_address: body.delivery_address ? { address: body.delivery_address.address_line, city: body.delivery_address.city, state: body.delivery_address.state } : { address: 'Vendor pickup', city: '', state: '' },
+        payment_method: 'not-configured',
+        customer: { name: 'Demo Buyer', email: 'buyer@kamba.demo' },
+        items: items.map((item, itemIndex) => ({ id: `item-${index + 1}-${itemIndex + 1}`, product_id: item.product_id, product_name: item.name, quantity: item.quantity, price: item.price_kobo, image_url: item.image_url })),
+      }
+    })
+    childOrders.forEach((order) => { orders[order.id] = order })
+    const amount = childOrders.reduce((sum, order) => sum + order.total, 0)
+    const checkout = { id: checkoutId, amount, currency: 'NGN', status: 'pending', delivery_type: body.delivery_type || 'pickup', created_at: new Date().toISOString(), prototype: true }
+    marketplaceCheckouts[checkoutId] = { checkout, orders: childOrders.map((order) => ({ order_id: order.id, store_id: order.store_id, store_name: order.store_name, order_status: order.status, payment_status: order.payment_status, subtotal: order.subtotal, platform_fee: order.platform_fee, shipping_amount: order.shipping_amount, total: order.total })) }
+    persistOrders()
+    persistCheckouts()
+    cart = emptyCart()
+    if (typeof window !== 'undefined') window.localStorage.setItem('kamba_cart', JSON.stringify(cart))
+    return response({ checkout, orders: childOrders, idempotent: false, prototype: true }) as T
+  }
+  const marketplaceCheckoutMatch = pathname.match(/^\\/commerce\\/marketplace-checkouts\\/([^/]+)$/)
+  if (marketplaceCheckoutMatch && method === 'GET') {
+    const data = marketplaceCheckouts[marketplaceCheckoutMatch[1]]
+    if (!data) throw new Error('Checkout not found in the prototype session.')
+    return response(data) as T
+  }
+  if (marketplaceCheckoutMatch && method === 'POST' && pathname.endsWith('/payment')) {
+    throw new Error('Payment collection is disabled in prototype mode. No money has been collected.')
   }
   if ((pathname === '/api/orders' || pathname === '/commerce/checkout') && method === 'POST') {
     if (!cart.items.length) throw new Error('Add an item to your cart before checkout.')
