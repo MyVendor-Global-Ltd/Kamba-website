@@ -10,7 +10,7 @@ export interface MarketplaceFilterState {
   category: string
   minPrice: number | null
   maxPrice: number | null
-  sortBy: 'newest' | 'price_asc' | 'price_desc'
+  sortBy: 'newest' | 'price_asc' | 'price_desc' | 'nearest'
   location: string
   latitude: number | null
   longitude: number | null
@@ -26,6 +26,8 @@ export interface ProductFiltersProps {
   hasActiveFilters: boolean
   mode?: 'products' | 'services'
   showSearch?: boolean
+  showLocationText?: boolean
+  supportsNearest?: boolean
 }
 
 export function ProductFilters({
@@ -36,6 +38,8 @@ export function ProductFilters({
   hasActiveFilters,
   mode = 'products',
   showSearch = true,
+  showLocationText = true,
+  supportsNearest = false,
 }: ProductFiltersProps) {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
@@ -78,16 +82,16 @@ export function ProductFilters({
 
       <div>
         <label htmlFor={`marketplace-filter-location-${mode}-${surface}`} className="mb-2 block text-sm font-medium text-text-secondary">
-          Location
+          {showLocationText ? 'Location' : 'Nearby search'}
         </label>
-        <input
+        {showLocationText && <input
           id={`marketplace-filter-location-${mode}-${surface}`}
           type="search"
           value={filters.location}
-          onChange={(event) => onFiltersChange({ location: event.target.value, latitude: null, longitude: null })}
+          onChange={(event) => onFiltersChange({ location: event.target.value, latitude: null, longitude: null, sortBy: filters.sortBy === 'nearest' ? 'newest' : filters.sortBy })}
           placeholder="City or state"
           className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary focus:ring-2 focus:ring-primary/15"
-        />
+        />}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -103,7 +107,7 @@ export function ProductFilters({
               setLocationMessage('')
               navigator.geolocation.getCurrentPosition(
                 (position) => {
-                  onFiltersChange({ location: '', latitude: position.coords.latitude, longitude: position.coords.longitude })
+                  onFiltersChange({ location: '', latitude: position.coords.latitude, longitude: position.coords.longitude, sortBy: supportsNearest ? 'nearest' : filters.sortBy })
                   setIsLocating(false)
                   setLocationMessage('Nearby results are now being shown.')
                 },
@@ -216,6 +220,7 @@ export function ProductFilters({
               <option value="newest">Newest first</option>
               <option value="price_asc">Price: low to high</option>
               <option value="price_desc">Price: high to low</option>
+              {supportsNearest && filters.latitude !== null && filters.longitude !== null && <option value="nearest">Nearest first</option>}
             </select>
           </div>
         </>
