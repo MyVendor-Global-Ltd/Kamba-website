@@ -6,10 +6,12 @@ import * as authApi from '@/lib/auth'
 
 const AuthContext = createContext<{
   state: AuthState
+  user: AuthState['user']
   login: (email: string, password: string) => Promise<void>
   register: (data: Parameters<typeof authApi.register>[0]) => Promise<void>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
+  updateUser: (data: Partial<User>) => void
 } | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -79,8 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+    const updateUser = (data: Partial<User>) => {
+      setState(prev => ({
+        ...prev,
+        user: prev.user ? { ...prev.user, ...data } : null,
+      }))
+    }
+
   return (
-    <AuthContext.Provider value={{ state, login, register, logout, refreshProfile }}>
+      <AuthContext.Provider value={{ state, user: state.user, login, register, logout, refreshProfile, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

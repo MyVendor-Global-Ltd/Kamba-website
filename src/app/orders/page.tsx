@@ -1,42 +1,168 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
 import { formatKobo, formatDateTime } from '@/lib/formatting'
+import { useToast } from '@/components/ui/toast'
+import { useRouter } from 'next/navigation'
+import { ChevronLeft, ChevronRight, Filter, RotateCcw, Truck, RefreshCw, X } from 'lucide-react'
 
 interface Order {
   id: string
   order_number: string
   status: string
+  payment_status: string
+  delivery_status: string
   total: number
   created_at: string
   items: Array<{
+    id: string
+    product_id: string
     product_name: string
     quantity: number
     price: number
+    image_url?: string
   }>
 }
 
+interface OrdersResponse {
+  orders: Order[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+type StatusFilter = 'all' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+
 export default function OrdersPage() {
+  const router = useRouter()
+  const { addToast } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const limit = 10
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      })
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter)
+      }
+      const data = await apiJson<OrdersResponse>(`/api/orders?${params.toString()}`)
+      setOrders(data.orders || [])
+      setTotalPages(data.pagination?.totalPages || 1)
+      setTotalOrders(data.pagination?.total || 0)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load orders')
+    } finally {
+      setLoading(false)
+    }
+  }, [page, statusFilter])
 
   useEffect(() => {
-    apiJson<{ orders: Order[] }>('/commerce/orders')
-      .then((data) => {
-        setOrders(data.orders || [])
-        setLoading(false)
+    fetchOrders()
+  }, [fetchOrders])
+
+  const handleReorder = async (order: Order) => {
+    try {
+      // Add all items from this order to cart
+      for (const item of order.items) {
+        await apiJson('/api/cart', {
+          method: 'POST',
+          body: JSON.stringify({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            name: item.product_name,
+            price_kobo: item.price,
+            image_url: item.image_url,
+          }),
+        })
+      }
+      addToast({
+        type: 'success',
+        title: 'Items added to cart',
+        message: 'All items from this order have been added to your cart.',
       })
-      .catch((err) => {
-        setError(err.message || 'Failed to load orders')
-        setLoading(false)
+      router.push('/cart')
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Failed to reorder',
+        message: 'Please try again.',
       })
-  }, [])
+    }
+  }
+
+  const handleRequestReturn = async (orderId: string) => {
+    if (!confirm('Are you sure you want to request a return for this order?')) return
+    try {
+      await apiJson(`/api/orders/${orderId}/return`, { method: 'POST' })
+      addToast({
+        type: 'success',
+        title: 'Return requested',
+        message: 'Your return request has been submitted. We\'ll contact you shortly.',
+      })
+      fetchOrders()
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Failed to request return',
+        message: 'Please try again.',
+      })
+    }
+  }
+
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return 'success'
+      case 'shipped':
+      case 'processing':
+        return 'secondary'
+      case 'cancelled':
+        return 'destructive'
+      default:
+        return 'outline'
+    }
+  }
+
+  const getPaymentStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return 'success'
+      case 'pending':
+        return 'warning'
+      case 'failed':
+        return 'destructive'
+      default:
+        return 'outline'
+    }
+  }
+
+  const canReorder = (status: string) => {
+    return ['delivered', 'cancelled'].includes(status.toLowerCase())
+  }
+
+  const canReturn = (status: string, deliveryStatus: string) => {
+    return status.toLowerCase() === 'delivered' && deliveryStatus.toLowerCase() === 'delivered'
+  }
 
   if (loading) {
     return (
@@ -60,38 +186,48 @@ export default function OrdersPage() {
                   <div className="h-4 w-16 bg-ink-raised/50 rounded" />
                   <div className="h-5 w-24 bg-ink-raised/50 rounded" />
                 </div>
-                          </CardContent>
-                        </Card>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
     )
   }
 
-  const getStatusVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'delivered':
-        return 'success'
-      case 'shipped':
-      case 'processing':
-        return 'secondary'
-      case 'cancelled':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
-      <header className="animate-fade-in">
-        <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">My Orders</h1>
-        <p className="text-text-secondary mt-2">Track your purchases.</p>
+      <header className="animate-fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">My Orders</h1>
+          <p className="text-text-secondary mt-2">Track and manage your purchases.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              className="appearance-none pl-10 pr-8 py-2 bg-ink-raised/50 border border-border/50 rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-coral focus:border-transparent"
+            >
+              <option value="all">All Orders</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
       </header>
 
       {error && (
-        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up">
-          {error}
+        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up flex items-center justify-between">
+          <span>{error}</span>
+          <Button variant="ghost" size="sm" onClick={fetchOrders}>
+            <RotateCcw className="w-4 h-4 mr-1" />
+            Retry
+          </Button>
         </div>
       )}
 
@@ -99,27 +235,46 @@ export default function OrdersPage() {
         {orders.map((order) => (
           <Card key={order.id} variant="elevated">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
-                  <p className="text-sm text-text-tertiary mt-1">{formatDateTime(order.created_at)}</p>
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
+                    <Badge variant={getStatusVariant(order.status)} size="sm">
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </Badge>
+                    <Badge variant={getPaymentStatusVariant(order.payment_status)} size="sm">
+                      {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-text-tertiary">{formatDateTime(order.created_at)}</p>
+                  <p className="text-sm text-text-secondary mt-1">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
                 </div>
-                <Badge variant={getStatusVariant(order.status)} size="sm">
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </Badge>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:ml-4">
+                  <div className="text-right sm:text-left flex-1">
+                    <span className="text-text-secondary text-sm">Total</span>
+                    <div className="font-bold text-text-primary text-lg">{formatKobo(order.total)}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/orders/${order.id}`}>
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
+                    </Link>
+                    {canReorder(order.status) && (
+                      <Button variant="secondary" size="sm" onClick={() => handleReorder(order)}>
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        Reorder
+                      </Button>
+                    )}
+                    {canReturn(order.status, order.delivery_status) && (
+                      <Button variant="outline" size="sm" onClick={() => handleRequestReturn(order.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
+                        <Truck className="w-4 h-4 mr-1" />
+                        Return
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-text-secondary">Total</span>
-                <span className="font-bold text-text-primary text-lg">{formatKobo(order.total)}</span>
-              </div>
-              <Link href={`/orders/${order.id}`} className="mt-4 inline-block">
-                <Button variant="ghost" size="sm" className="group-hover:text-coral transition-colors">
-                  View details
-                  <svg className="ml-1.5 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Button>
-              </Link>
             </CardContent>
           </Card>
         ))}
@@ -130,13 +285,76 @@ export default function OrdersPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">No orders yet</h3>
-            <p className="text-text-tertiary mb-6">When you place an order, it will appear here.</p>
-            <Link href="/marketplace/products">
-              <Button size="lg">Browse products</Button>
-            </Link>
+            <h3 className="text-lg font-semibold text-text-primary mb-2">No orders found</h3>
+            <p className="text-text-tertiary mb-6">
+              {statusFilter !== 'all' ? 'No orders match this filter.' : 'When you place an order, it will appear here.'}
+            </p>
+            {statusFilter !== 'all' && (
+              <Button variant="outline" onClick={() => setStatusFilter('all')}>
+                <X className="w-4 h-4 mr-1" />
+                Clear filter
+              </Button>
+            )}
+            {statusFilter === 'all' && (
+              <Link href="/marketplace/products">
+                <Button size="lg">Browse products</Button>
+              </Link>
+            )}
           </div>
         )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum: number
+              if (totalPages <= 5) {
+                pageNum = i + 1
+              } else if (page <= 3) {
+                pageNum = i + 1
+              } else if (page >= totalPages - 2) {
+                pageNum = totalPages - 4 + i
+              } else {
+                pageNum = page - 2 + i
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={page === pageNum ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPage(pageNum)}
+                  className="w-10 h-10"
+                >
+                  {pageNum}
+                </Button>
+              )
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            aria-label="Next page"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
+      <div className="text-center text-sm text-text-tertiary animate-fade-in" style={{ animationDelay: '300ms' }}>
+        Showing {orders.length} of {totalOrders} order{totalOrders !== 1 ? 's' : ''}
       </div>
     </div>
   )

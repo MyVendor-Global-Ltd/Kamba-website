@@ -4,38 +4,192 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { formatKobo, formatDateTime } from '@/lib/formatting'
 import { apiJson } from '@/lib/api'
+import { useToast } from '@/components/ui/toast'
+import { Search, Filter, ChevronDown, ChevronUp, Truck, Package, CheckCircle, Clock, X, MoreHorizontal, Eye, Edit } from 'lucide-react'
+
+interface OrderItem {
+  id: string
+  product_id: string
+  product_name: string
+  quantity: number
+  price: number
+  image_url?: string
+}
 
 interface Order {
   id: string
   order_number: string
   status: string
+  payment_status: string
+  delivery_status: string
+  subtotal: number
+  platform_fee: number
+  delivery_fee: number
   total: number
   created_at: string
-  items: Array<{
-    product_name: string
-    quantity: number
-    price: number
-  }>
+  updated_at: string
+  shipping_address: {
+    address: string
+    city: string
+    state: string
+  }
+  payment_method: string
+  items: OrderItem[]
+  customer: {
+    name: string
+    email: string
+    phone?: string
+  }
+}
+
+const statusFlow = [
+  { key: 'pending', label: 'Pending', next: 'confirmed' },
+  { key: 'confirmed', label: 'Confirmed', next: 'processing' },
+  { key: 'processing', label: 'Processing', next: 'shipped' },
+  { key: 'shipped', label: 'Shipped', next: 'delivered' },
+  { key: 'delivered', label: 'Delivered', next: null },
+  { key: 'cancelled', label: 'Cancelled', next: null },
+  { key: 'return_requested', label: 'Return Requested', next: null },
+]
+
+const statusColors: Record<string, string> = {
+  pending: 'outline',
+  confirmed: 'secondary',
+  processing: 'secondary',
+  shipped: 'secondary',
+  delivered: 'success',
+  cancelled: 'destructive',
+  return_requested: 'warning',
 }
 
 export default function VendorOrdersPage() {
+  const { addToast } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'total'>('newest')
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([])
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
   useEffect(() => {
-    apiJson<{ orders: Order[] }>('/vendors/orders')
-      .then((data) => {
-        setOrders(data.orders || [])
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load orders')
-        setLoading(false)
-      })
+    loadOrders()
   }, [])
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true)
+      const data = await apiJson<{ orders: Order[] }>('/vendors/orders')
+      setOrders(data.orders || [])
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load orders')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredOrders = orders
+    .filter(order => {
+      if (statusFilter !== 'all' && order.status.toLowerCase() !== statusFilter.toLowerCase()) {
+        return false
+      }
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        return (
+          order.order_number.toLowerCase().includes(query) ||
+          order.customer.name.toLowerCase().includes(query) ||
+          order.customer.email.toLowerCase().includes(query) ||
+          order.items.some(item => item.product_name.toLowerCase().includes(query))
+        )
+      }
+      return true
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'total':
+          return b.total - a.total
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    setUpdatingOrder(orderId)
+    try {
+      await apiJson(`/vendors/orders/${orderId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      })
+      setOrders(prev => prev.map(order =>
+        order.id === orderId ? { ...order, status: newStatus, updated_at: new Date().toISOString() } : order
+      ))
+      addToast({
+        type: 'success',
+        title: 'Order updated',
+        message: `Order status changed to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+      })
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Failed to update',
+        message: 'Please try again.',
+      })
+    } finally {
+      setUpdatingOrder(null)
+    }
+  }
+
+  const getNextStatus = (currentStatus: string) => {
+    const current = statusFlow.find(s => s.key === currentStatus.toLowerCase())
+    return current?.next || null
+  }
+
+  const handleBulkAction = async (action: string) => {
+    if (selectedOrders.length === 0) return
+    try {
+      await apiJson('/vendors/orders/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ order_ids: selectedOrders, action }),
+      })
+      addToast({
+        type: 'success',
+        title: 'Bulk action completed',
+        message: `${selectedOrders.length} orders updated.`,
+      })
+      setSelectedOrders([])
+      loadOrders()
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Failed to complete bulk action',
+        message: 'Please try again.',
+      })
+    }
+  }
+
+  const toggleSelectOrder = (orderId: string) => {
+    setSelectedOrders(prev =>
+      prev.includes(orderId)
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.length === filteredOrders.length) {
+      setSelectedOrders([])
+    } else {
+      setSelectedOrders(filteredOrders.map(o => o.id))
+    }
+  }
 
   if (loading) {
     return (
@@ -59,33 +213,55 @@ export default function VendorOrdersPage() {
                   <div className="h-4 w-16 bg-ink-raised/50 rounded" />
                   <div className="h-5 w-24 bg-ink-raised/50 rounded" />
                 </div>
-                          </CardContent>
-                        </Card>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
     )
   }
 
-  const getStatusVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'delivered':
-        return 'success'
-      case 'shipped':
-      case 'processing':
-        return 'secondary'
-      case 'cancelled':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
-      <header className="animate-fade-in">
-        <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Vendor Orders</h1>
-        <p className="text-text-secondary mt-2">Manage orders for your store.</p>
+      <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Vendor Orders</h1>
+          <p className="text-text-secondary mt-2">Manage orders for your store.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+            <Input
+              placeholder="Search orders..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-64"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="return_requested">Return Requested</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'total')}
+            className="px-4 py-2 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="total">Highest Total</option>
+          </select>
+        </div>
       </header>
 
       {error && (
@@ -94,35 +270,190 @@ export default function VendorOrdersPage() {
         </div>
       )}
 
+      {selectedOrders.length > 0 && (
+        <div className="animate-slide-up bg-coral/10 border border-coral/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <span className="text-text-primary font-medium">
+            {selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleBulkAction('confirm')}>
+              Confirm
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleBulkAction('process')}>
+              Process
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleBulkAction('ship')}>
+              Ship
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedOrders([])}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '100ms' }}>
-        {orders.map((order) => (
-          <Card key={order.id} variant="elevated">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
-                  <p className="text-sm text-text-tertiary mt-1">{formatDateTime(order.created_at)}</p>
+        {filteredOrders.map((order) => {
+          const isExpanded = expandedOrder === order.id
+          const nextStatus = getNextStatus(order.status)
+          const canAdvance = nextStatus && !['delivered', 'cancelled', 'return_requested'].includes(order.status.toLowerCase())
+          const variant = statusColors[order.status.toLowerCase()] || 'outline'
+
+          return (
+            <Card key={order.id} variant="elevated" className={selectedOrders.includes(order.id) ? 'ring-2 ring-coral/50' : ''}>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrders.includes(order.id)}
+                      onChange={() => toggleSelectOrder(order.id)}
+                      className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="font-semibold text-text-primary">Order #{order.order_number}</h3>
+                        <Badge variant={variant as any} size="sm">
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                        </Badge>
+                        <Badge variant={statusColors[order.payment_status.toLowerCase()] as any || 'outline'} size="sm">
+                          {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-text-tertiary mt-1">
+                        {formatDateTime(order.created_at)} • {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm text-text-secondary mt-1">
+                        {order.customer.name} • {order.customer.email}
+                        {order.customer.phone && ` • ${order.customer.phone}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="text-right">
+                      <p className="font-bold text-text-primary text-lg">{formatKobo(order.total)}</p>
+                      <p className="text-sm text-text-tertiary">Subtotal: {formatKobo(order.subtotal)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setExpandedOrder(isExpanded ? null : order.id)}>
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => {}}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <Badge variant={getStatusVariant(order.status)} size="sm">
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </Badge>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-text-secondary">Total</span>
-                <span className="font-bold text-text-primary text-lg">{formatKobo(order.total)}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {orders.length === 0 && (
+
+                {/* Expandable Order Details */}
+                {isExpanded && (
+                  <div className="mt-4 pt-4 border-t border-ink-raised/30 animate-slide-down">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Items */}
+                      <div className="md:col-span-2">
+                        <h4 className="font-medium text-text-primary mb-3">Items</h4>
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                          {order.items.map((item) => (
+                            <div key={item.id} className="flex gap-3 p-3 bg-ink-raised/30 rounded-lg">
+                              <div className="w-12 h-12 bg-ink-raised/50 rounded-lg flex-shrink-0 overflow-hidden">
+                                {item.image_url ? (
+                                  <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-text-tertiary">
+                                    <Package className="w-5 h-5" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-text-primary truncate">{item.product_name}</p>
+                                <p className="text-sm text-text-tertiary">Qty: {item.quantity} × {formatKobo(item.price)}</p>
+                              </div>
+                              <span className="font-medium text-text-primary whitespace-nowrap">{formatKobo(item.price * item.quantity)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Shipping Address */}
+                      <div>
+                        <h4 className="font-medium text-text-primary mb-3">Shipping Address</h4>
+                        <address className="text-text-secondary not-italic space-y-1 bg-ink-raised/30 p-3 rounded-lg">
+                          <p className="font-medium text-text-primary">{order.shipping_address?.address}</p>
+                          <p>{order.shipping_address?.city}, {order.shipping_address?.state}</p>
+                        </address>
+                      </div>
+
+                      {/* Payment Info */}
+                      <div>
+                        <h4 className="font-medium text-text-primary mb-3">Payment</h4>
+                        <div className="space-y-2 bg-ink-raised/30 p-3 rounded-lg">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-text-secondary">Method</span>
+                            <span className="text-text-primary capitalize">{order.payment_method.replace('_', ' ')}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-text-secondary">Platform Fee</span>
+                            <span className="text-text-primary">{formatKobo(order.platform_fee)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-text-secondary">Delivery Fee</span>
+                            <span className="text-text-primary">{order.delivery_fee > 0 ? formatKobo(order.delivery_fee) : 'Free'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Actions */}
+                    <div className="mt-4 pt-4 border-t border-ink-raised/30">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-sm font-medium text-text-secondary">Update Status:</span>
+                        {canAdvance && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStatusUpdate(order.id, nextStatus!)}
+                            disabled={updatingOrder === order.id}
+                          >
+                            {updatingOrder === order.id ? (
+                              <span className="flex items-center gap-2">
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                Updating...
+                              </span>
+                            ) : (
+                              `Mark as ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`
+                            )}
+                          </Button>
+                        )}
+                        {order.status.toLowerCase() === 'delivered' && (
+                          <Badge variant="success" size="sm">Completed</Badge>
+                        )}
+                        {order.status.toLowerCase() === 'cancelled' && (
+                          <Badge variant="destructive" size="sm">Cancelled</Badge>
+                        )}
+                        {order.status.toLowerCase() === 'return_requested' && (
+                          <Badge variant="warning" size="sm">Return Requested</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
+
+        {filteredOrders.length === 0 && (
           <div className="text-center py-16">
             <div className="w-20 h-20 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-6 text-text-tertiary">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <Package className="w-10 h-10" />
             </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">No orders yet</h3>
-            <p className="text-text-tertiary">When customers place orders, they will appear here.</p>
+            <h3 className="text-lg font-semibold text-text-primary mb-2">
+              {searchQuery || statusFilter !== 'all' ? 'No matching orders' : 'No orders yet'}
+            </h3>
+            <p className="text-text-tertiary">
+              {searchQuery || statusFilter !== 'all'
+                ? 'Try adjusting your search or filters.'
+                : 'When customers place orders, they will appear here.'}
+            </p>
           </div>
         )}
       </div>
