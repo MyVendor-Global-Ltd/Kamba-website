@@ -30,7 +30,14 @@ export function Header() {
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
     { href: '/vendor/onboard', label: 'Sell on Kamba' },
-    ...(state.user?.role === 'vendor' ? [{ href: '/vendor/pickup', label: 'Pickup desk' }] : []),
+    ...(state.user?.role === 'vendor'
+      ? [
+          { href: '/vendor/service-requests', label: 'Service requests' },
+          { href: '/vendor/pickup', label: 'Pickup desk' },
+        ]
+      : state.isAuthenticated
+        ? [{ href: '/service-requests', label: 'My requests' }]
+        : []),
   ]
 
   return (
