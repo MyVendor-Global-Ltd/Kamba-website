@@ -28,6 +28,9 @@ type ServiceRequest = {
   requested_start_at?: string | null
   scheduled_start_at?: string | null
   scheduled_end_at?: string | null
+  service_title?: string
+  buyer_username?: string
+  service_location?: { address?: string; city?: string; state?: string }
   service_profile?: { name?: string; service_title?: string }
   service?: { name?: string }
   buyer?: { username?: string; email?: string }
@@ -87,7 +90,7 @@ export function ServiceRequestManager({ mode }: Props) {
   const submitQuote = (request: ServiceRequest) => {
     const naira = Number(quoteAmounts[request.id])
     const scope = (quoteScopes[request.id] || '').trim()
-    if (!Number.isFinite(naira) || naira <= 0 || !scope) {
+    if (!Number.isFinite(naira) || naira <= 0 || scope.length < 5) {
       addToast({ type: 'error', title: 'Quote details required', message: 'Enter a valid amount and describe what the quote covers.' })
       return
     }
@@ -121,7 +124,7 @@ export function ServiceRequestManager({ mode }: Props) {
   }
 
   const titleFor = (request: ServiceRequest) =>
-    request.service_profile?.name || request.service_profile?.service_title || request.service?.name || 'Service request'
+    request.service_title || request.service_profile?.name || request.service_profile?.service_title || request.service?.name || 'Service request'
 
   return (
     <main className="container mx-auto max-w-5xl space-y-6 px-4 py-8 lg:py-12">
@@ -157,7 +160,9 @@ export function ServiceRequestManager({ mode }: Props) {
               <Badge variant={statusVariant(request.status)}>{formatOrderStatus(request.status)}</Badge>
             </CardHeader>
             <CardContent className="space-y-5">
+              {mode === 'vendor' && request.buyer_username && <p className="text-sm text-text-secondary">Requested by @{request.buyer_username}</p>}
               {request.description && <p className="whitespace-pre-line text-sm leading-6 text-text-secondary">{request.description}</p>}
+              {request.service_location?.address && <p className="text-sm text-text-secondary">Service location: {request.service_location.address}</p>}
               {request.requested_start_at && <p className="flex items-center gap-2 text-sm text-text-secondary"><CalendarClock className="h-4 w-4" /> Preferred: {formatDateTime(request.requested_start_at)}</p>}
               {quotes.length > 0 && <section className="space-y-3">
                 <h3 className="text-sm font-semibold text-text-primary">Quotations</h3>
@@ -184,6 +189,15 @@ export function ServiceRequestManager({ mode }: Props) {
                 </div>
                 <Button size="sm" onClick={() => submitQuote(request)} disabled={busyId === request.id}>{busyId === request.id ? 'Sending…' : 'Send quotation'}</Button>
               </section>}
+              {mode === 'vendor' && request.status === 'requested' && request.request_type === 'booking' && (
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => updateStatus(request, 'accepted')} disabled={busyId === request.id}>Accept booking</Button>
+                  <Button size="sm" variant="outline" onClick={() => updateStatus(request, 'declined')} disabled={busyId === request.id}>Decline booking</Button>
+                </div>
+              )}
+              {mode === 'vendor' && request.status === 'quoted' && (
+                <Button size="sm" variant="outline" onClick={() => updateStatus(request, 'declined')} disabled={busyId === request.id}>Decline request</Button>
+              )}
               {mode === 'vendor' && request.status === 'accepted' && (
                 <section className="space-y-3 rounded-lg bg-surface-muted p-4">
                   <label className="block text-sm font-medium text-text-secondary">Agreed appointment</label>
@@ -194,6 +208,9 @@ export function ServiceRequestManager({ mode }: Props) {
               {mode === 'vendor' && request.status === 'scheduled' && <Button size="sm" onClick={() => updateStatus(request, 'in_progress')} disabled={busyId === request.id}>Mark work started</Button>}
               {mode === 'vendor' && request.status === 'in_progress' && <Button size="sm" onClick={() => updateStatus(request, 'completed')} disabled={busyId === request.id}>Mark work completed</Button>}
               {mode === 'buyer' && acceptedQuote && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">Accepted quotation: {formatKobo(acceptedQuote.amount)}. Payment is not enabled in this prototype; no money has been collected.</p>}
+              {mode === 'buyer' && ['requested', 'quoted', 'accepted', 'scheduled'].includes(request.status) && (
+                <Button size="sm" variant="outline" onClick={() => updateStatus(request, 'cancelled')} disabled={busyId === request.id}>Cancel request</Button>
+              )}
             </CardContent>
           </Card>
         )
