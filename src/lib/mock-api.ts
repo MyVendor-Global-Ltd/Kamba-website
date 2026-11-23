@@ -172,7 +172,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   }
 
   const productMatch = pathname.match(/^\/commerce\/products\/([^/]+)$/)
-  if (productMatch) { const product = mockProducts.find(p => p.id === productMatch[1]); if (!product) throw new Error('Product not found in the prototype catalogue.'); return response({ product }) as T }
+  if (productMatch) { const product = mockProducts.find(p => p.id === productMatch[1]); if (!product) throw new Error('Product not found in the prototype catalogue.'); return response({ product: { ...product, store_slug: mockStores.find((store) => store.id === product.store_id)?.slug } }) as T }
   if (pathname === '/commerce/products') {
     const q = (query.get('search') || '').toLowerCase()
     const category = (query.get('category') || '').toLowerCase()
