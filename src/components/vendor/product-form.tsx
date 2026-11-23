@@ -10,7 +10,7 @@ export interface ProductFormValues {
   price: number
   original_price: number | null
   stock_quantity: number
-  category: string
+  category?: string
   tags: string[]
   images: string[]
   is_available: boolean
@@ -59,6 +59,8 @@ export function VendorProductForm({
     if (!Number.isFinite(priceNaira) || priceNaira <= 0) return setError('Enter a valid price greater than zero.')
     if (originalNaira !== null && (!Number.isFinite(originalNaira) || originalNaira < 0)) return setError('Enter a valid original price or leave it empty.')
     if (!Number.isInteger(stockQuantity) || stockQuantity < 0) return setError('Stock quantity must be a whole number of zero or more.')
+    const tagValues = tags.split(',').map((value) => value.trim()).filter(Boolean)
+    if (tagValues.length > 20) return setError('You can add up to 20 tags.')
     const imageUrls = images.split(/\n|,/).map((value) => value.trim()).filter(Boolean)
     if (imageUrls.some((value) => !/^https?:\/\//i.test(value))) return setError('Product images must be valid HTTP or HTTPS URLs.')
     if (imageUrls.length > 20) return setError('You can add up to 20 image URLs.')
@@ -68,8 +70,8 @@ export function VendorProductForm({
       price: Math.round(priceNaira * 100),
       original_price: originalNaira === null ? null : Math.round(originalNaira * 100),
       stock_quantity: stockQuantity,
-      category: category.trim(),
-      tags: tags.split(',').map((value) => value.trim()).filter(Boolean),
+      category: category.trim() || undefined,
+      tags: tagValues,
       images: imageUrls,
       is_available: available,
     })
