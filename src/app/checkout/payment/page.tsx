@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { apiJson } from '@/lib/api'
@@ -52,7 +52,7 @@ interface CheckoutApiResponse {
   created_at?: string
 }
 
-export default function CheckoutPaymentPage() {
+function CheckoutPaymentContent() {
   const searchParams = useSearchParams()
   const checkoutId = searchParams.get('checkout_id')
   const { addToast } = useToast()
@@ -212,4 +212,9 @@ export default function CheckoutPaymentPage() {
       </div>
     </div>
   )
+}
+
+
+export default function CheckoutPaymentPage() {
+  return <Suspense fallback={<div className="container mx-auto px-4 py-12"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>}><CheckoutPaymentContent /></Suspense>
 }
