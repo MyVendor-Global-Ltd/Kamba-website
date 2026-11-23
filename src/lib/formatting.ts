@@ -32,6 +32,13 @@ export function formatDateTime(dateString: string): string {
 export function formatOrderStatus(status: string): string {
   const labels: Record<string, string> = {
     pending: 'Awaiting payment',
+    pending_payment: 'Awaiting payment',
+    held: 'Payment secured',
+    released: 'Payment settled',
+    refunding: 'Refund processing',
+    refund_pending: 'Refund processing',
+    failed: 'Payment failed',
+    expired: 'Expired',
     awaiting_payment: 'Awaiting payment',
     paid_held: 'Payment secured — awaiting vendor confirmation',
     awaiting_confirmation: 'Awaiting confirmation',
