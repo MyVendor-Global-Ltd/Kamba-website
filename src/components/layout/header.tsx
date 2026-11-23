@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useCartContext } from '@/context/CartContext'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ShoppingBag } from 'lucide-react'
+import { KambaLogo } from '@/components/layout/kamba-logo'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { isMockMode } from '@/lib/mock-api'
@@ -38,9 +38,8 @@ export function Header() {
       <div className="container mx-auto">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label="Kamba Home">
-            <span className="relative grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground"><ShoppingBag className="h-[18px] w-[18px]" /><span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-gold" /></span>
-            <span className="text-xl font-bold font-display lowercase tracking-tight text-primary">kamba</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <KambaLogo iconSize={34} />
             <span className="hidden sm:inline-block w-px h-6 bg-border mx-2" />
             <span className="hidden sm:inline text-sm font-medium text-text-secondary">Marketplace</span>
             {isMockMode && <span className="hidden md:inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary">Prototype</span>}
