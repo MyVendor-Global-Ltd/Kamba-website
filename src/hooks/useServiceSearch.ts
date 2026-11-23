@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { apiJson } from '@/lib/api'
 import { isMockMode } from '@/lib/mock-api'
 import type { MarketplaceFilterState } from '@/components/marketplace/product-filters'
@@ -128,10 +128,16 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
 
   const clearFilters = useCallback(() => setFiltersState(DEFAULT_FILTERS), [])
 
+  const requestFilters = useMemo(() => ({
+    ...filters,
+    query: isMockMode ? filters.query : '',
+    location: isMockMode ? filters.location : '',
+  }), [filters, isMockMode])
+
   useEffect(() => {
-    const timeout = window.setTimeout(() => { void fetchServices(1, filters) }, 250)
+    const timeout = window.setTimeout(() => { void fetchServices(1, requestFilters) }, 250)
     return () => window.clearTimeout(timeout)
-  }, [filters.category, filters.latitude, filters.longitude, filters.radius, isMockMode ? filters.query : '', isMockMode ? filters.location : '', fetchServices])
+  }, [requestFilters, fetchServices])
 
   useEffect(() => () => abortControllerRef.current?.abort(), [])
 
