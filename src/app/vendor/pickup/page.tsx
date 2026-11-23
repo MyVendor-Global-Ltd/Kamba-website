@@ -64,6 +64,7 @@ export default function VendorPickupPage() {
 
   const confirmOrder = () => {
     try {
+      if (!orderId.trim()) throw new Error('Enter an order ID from your vendor orders first.')
       setError(''); setFeedback('')
       const next = confirmPickupOrderDemo(orderId)
       setPickup(next)
@@ -82,6 +83,7 @@ export default function VendorPickupPage() {
 
   const verify = () => {
     try {
+      if (!orderId.trim()) throw new Error('Enter an order ID from your vendor orders first.')
       setError(''); setFeedback('')
       const next = confirmPickupDemo(orderId, code)
       setPickup(next)
