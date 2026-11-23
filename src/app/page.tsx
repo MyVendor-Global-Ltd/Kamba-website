@@ -16,7 +16,7 @@ export default function Home() {
 
   useEffect(() => {
     apiJson<{ products: Product[] }>('/commerce/products', { params: { offset: 0, limit: 4 } })
-      .then((result) => setProducts(result.products || []))
+      .then((result) => setProducts((result.products || []).map((product) => ({ ...product, image_url: product.image_url || product.images?.[0] }))))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
   }, [])
