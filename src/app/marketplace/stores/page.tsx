@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button'
 import { formatDistance } from '@/lib/haversine'
 import { apiJson } from '@/lib/api'
-import { Store } from '@/types/vendor'
+import type { Store } from '@/types/vendor'
 import { StoreCardSkeleton } from '@/components/ui/skeleton'
 
 export default function StoresPage() {
@@ -16,9 +16,13 @@ export default function StoresPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiJson<{ stores: Store[] }>('/vendors/stores')
+    apiJson<{ stores: Array<Store & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores')
       .then((data) => {
-        setStores(data.stores || [])
+        setStores((data.stores || []).map((store) => {
+          const tier = store.vendor_profiles?.verification_tier
+          const verificationStatus: Store['verification_status'] = store.verification_status || (store.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
+          return { ...store, name: store.name || store.store_name || 'Local store', city: store.city || store.location_text, vendor_id: store.vendor_id || '', is_active: store.is_active ?? true, created_at: store.created_at || '', updated_at: store.updated_at || '', verification_status: verificationStatus }
+        }))
         setLoading(false)
       })
       .catch((err) => {
