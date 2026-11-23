@@ -77,7 +77,7 @@ export default function OrdersPage() {
   }, [page, statusFilter])
 
   useEffect(() => {
-    fetchOrders()
+    void Promise.resolve().then(fetchOrders)
   }, [fetchOrders])
 
   const handleReorder = async (order: Order) => {
