@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { apiJson } from '@/lib/api'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default function AdminVendorsPage() {
   const [vendors, setVendors] = useState<any[]>([])
@@ -35,6 +37,7 @@ export default function AdminVendorsPage() {
       <div>
         <h1 className="text-3xl font-bold">Vendor Management</h1>
         <p className="text-muted-foreground">Review and verify vendor applications.</p>
+        <div className="mt-4"><Button asChild variant="outline"><Link href="/admin/service-payment-disputes">Service payment disputes</Link></Button></div>
       </div>
 
       {error && (
