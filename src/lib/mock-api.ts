@@ -20,6 +20,20 @@ export const mockProducts: Product[] = [
   { id: 'prd-006', name: 'Everyday Leather Wallet', description: 'Slim handcrafted wallet with multiple card slots.', price: 1850000, stock_quantity: 24, category: 'Fashion', image_url: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop', store_id: 'store-stylecraft', store_name: 'StyleCraft', is_active: true, in_stock: true, created_at: '2026-11-03T09:00:00.000Z', updated_at: '2026-11-15T09:00:00.000Z' },
 ]
 
+let productsHydrated = false
+function hydrateProducts() {
+  if (productsHydrated || typeof window === 'undefined') return
+  productsHydrated = true
+  try {
+    const saved: unknown = JSON.parse(window.localStorage.getItem('kamba_demo_products') || 'null')
+    if (Array.isArray(saved)) mockProducts.splice(0, mockProducts.length, ...(saved as Product[]))
+  } catch { /* Keep the bundled prototype catalogue if storage is invalid. */ }
+}
+function persistProducts() {
+  if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_products', JSON.stringify(mockProducts))
+}
+
+
 export const mockStores: Store[] = [
   { id: 'store-techhub', name: 'TechHub Electronics', slug: 'techhub-electronics', description: 'Everyday tech, accessories and practical gadgets.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8156, longitude: 7.0498, vendor_id: 'vendor-01', is_active: true, verification_status: 'pending', created_at: '2026-08-01T09:00:00.000Z', updated_at: '2026-11-12T09:00:00.000Z', category: 'Electronics' },
   { id: 'store-stylecraft', name: 'StyleCraft', slug: 'stylecraft', description: 'Locally made fashion pieces and accessories.', city: 'Port Harcourt', state: 'Rivers', country: 'Nigeria', latitude: 4.8200, longitude: 7.0350, vendor_id: 'vendor-02', is_active: true, verification_status: 'pending', created_at: '2026-08-04T09:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z', category: 'Fashion' },
@@ -229,6 +243,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
       view_count: 0,
     } as Product
     mockProducts.unshift(product)
+    persistProducts()
     return response({ product }) as T
   }
   const vendorProductMatch = pathname.match(/^\/commerce\/vendor\/products\/([^/]+)$/)
@@ -237,6 +252,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     if (!product) throw new Error('Product not found in the prototype catalogue.')
     Object.assign(product, body, { updated_at: new Date().toISOString() })
     if (typeof body.stock_quantity === 'number') product.in_stock = body.stock_quantity > 0
+    persistProducts()
     return response({ product }) as T
   }
   if (vendorProductMatch && method === 'DELETE') {
@@ -244,6 +260,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     if (!product) throw new Error('Product not found in the prototype catalogue.')
     product.is_active = false
     product.is_available = false
+    persistProducts()
     return response({ product: { id: product.id, is_active: false } }) as T
   }
   const productMatch = pathname.match(/^\/commerce\/products\/([^/]+)$/)
