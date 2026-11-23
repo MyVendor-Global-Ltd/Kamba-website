@@ -34,7 +34,7 @@ export default function ProductDetailPage() {
         setProduct({ ...item, image_url: item.image_url || item.images?.[0], compare_at_price: item.compare_at_price ?? item.original_price, store_slug: item.store_slug })
         setLoading(false)
         apiJson<{ items: Array<{ product_id: string }> }>('/marketplace/wishlist')
-          .then((wishlist) => setIsSaved(wishlist.items.some((item) => item.product_id === item.id || item.product_id === id)))
+          .then((wishlist) => setIsSaved(wishlist.items.some((item) => item.product_id === id)))
           .catch(() => undefined)
       })
       .catch((err) => {
@@ -46,7 +46,7 @@ export default function ProductDetailPage() {
   const handleToggleWishlist = async () => {
     if (!product) return
     try {
-      await apiJson(isSaved ? `/marketplace/wishlist/${product.id}` : `/marketplace/wishlist/${product.id}`, { method: isSaved ? 'DELETE' : 'POST' })
+      await apiJson(`/marketplace/wishlist/${product.id}`, { method: isSaved ? 'DELETE' : 'POST' })
       setIsSaved(!isSaved)
       addToast({ type: 'success', title: isSaved ? 'Removed from saved items' : 'Saved for later', message: isSaved ? 'This product was removed from your wishlist.' : 'This product is now in your wishlist.' })
     } catch (err) {
