@@ -8,11 +8,11 @@ Last updated: 2026-11-23
 - Active branch: `feat/kamba-brand-prototype-pickup`
 - Do not work directly on `main`.
 - Do not merge this branch without the user's approval.
-- At the last check, this branch was 183 commits ahead of `main` and 0 commits behind.
+- At the last check, this branch was 185 commits ahead of `main` and 0 commits behind.
 
 ## Last verified checkpoint
 
-- Commit: `5f0d6f5e7a38feb20655743e578b8c3873a24047`
+- Latest commit: `bf7736d51d50cbe28a8c35f181b5853ad206944c` (service-request mock workflow)
 - GitHub Actions run: https://github.com/MyVendor-Global-Ltd/Kamba-website/actions/runs/45177152750
 - Dependency installation: passed
 - TypeScript: passed
@@ -21,6 +21,8 @@ Last updated: 2026-11-23
 - `package.json` has no test script or configured test runner. Do not claim automated tests ran.
 
 ## Work completed in the latest continuation
+
+- Extended the development mock service-booking adapter: vendors can submit/revise quotes in kobo, buyers can accept/decline a quote, and request status transitions now follow the backend's documented workflow. Changes persist in browser local storage. No real payment is simulated.
 
 - Product filters: exposed backend-supported Popular and Nearest sorting; nearest is shown only after browser location is available; mock nearest sorting uses vendor coordinates.
 - Service filters: category options now include categories found in loaded services; mock nearby services sort by distance before pagination.
@@ -46,7 +48,7 @@ Mock mode only activates when `NODE_ENV=development` and the flag is exactly `tr
 ## Known gaps — do not hide these
 
 1. **Pickup is prototype-only.** The web screens and mock adapter exist, but the backend does not currently expose pickup token issuance, QR verification, vendor collection confirmation, pickup event history or payout/dispute-window status endpoints. Local storage is not production verification. Do not report a pickup as collected unless a real backend response confirms it.
-2. **Service request management is incomplete in the website.** The service detail page can create a booking request through the existing `/service-bookings/requests` backend contract, but there are no buyer/vendor service-request management pages for quote submission, quote acceptance/decline, scheduling, progress, completion and payment. The backend routes already exist; inspect their service contracts before implementing them. Do not invent new endpoints.
+2. **Service request management is incomplete in the website.** The service detail page can create a booking request through the existing `/service-bookings/requests` contract, and mock quote/status actions are now supported. Buyer/vendor management pages are still missing for quote decisions, scheduling, progress, completion and payment. Implement against `docs/SERVICE_BOOKINGS_API.md` in `MyVendor-Global-Ltd/Kamba`; do not invent endpoints. Payment must remain clearly disabled in mock mode.
 3. **Vendor analytics are not fully backed by live API data.** The live dashboard uses real vendor orders/products and labels unavailable analytics; the legacy development dashboard has clearly labelled demo figures.
 4. **Lint debt remains.** Latest observed repository lint output had about 55 errors and 80 warnings, including `no-explicit-any`, unused imports/variables and hook rules. Fix regressions in touched files first, then work through remaining files without suppressing the rules globally.
 5. **No automated test script exists.** Add a small test suite only after selecting a suitable runner and identifying stable service-layer seams. Until then, rely on CI type/build checks plus explicit browser smoke testing.
@@ -54,7 +56,7 @@ Mock mode only activates when `NODE_ENV=development` and the flag is exactly `tr
 ## Next recommended work
 
 1. Continue API-contract review and repair remaining live response-shape mismatches, especially buyer/vendor order, store and product flows.
-2. Complete service request management against the existing service-booking routes, including buyer quote decisions and vendor quote/status actions.
+2. Build buyer/vendor service-request management pages against the existing service-booking routes, including quote decisions, scheduling, progress and completion. Keep mock payment disabled and honest.
 3. Complete a manual responsive browser smoke test for buyer discovery → product details → cart → checkout → pending payment → orders, and vendor login → products → orders → pickup desk.
 4. Add backend pickup contracts before enabling production pickup actions.
 5. Reduce ESLint errors and warnings, add automated tests, then run the full production checklist from README.
