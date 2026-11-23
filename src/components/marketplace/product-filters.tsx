@@ -90,7 +90,7 @@ export function ProductFilters({
             type="button"
             size="sm"
             variant="outline"
-            disabled={isLocating || !('geolocation' in navigator)}
+            disabled={isLocating}
             onClick={() => {
               if (!navigator.geolocation) {
                 setLocationMessage('Location access is not supported by this browser.')
