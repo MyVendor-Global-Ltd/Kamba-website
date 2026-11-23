@@ -34,6 +34,9 @@ const DEFAULT_FILTERS: ProductSearchFilters = {
   maxPrice: null,
   sortBy: 'newest',
   location: '',
+  latitude: null,
+  longitude: null,
+  radius: 15,
   inStock: false,
 }
 
@@ -71,6 +74,9 @@ export function useProductSearch(options: UseProductSearchOptions = {}): UseProd
         max_price: currentFilters.maxPrice === null ? undefined : Math.round(currentFilters.maxPrice * 100),
         sort: currentFilters.sortBy,
         stock_status: currentFilters.inStock ? 'in_stock' : 'all',
+        lat: currentFilters.latitude ?? undefined,
+        lng: currentFilters.longitude ?? undefined,
+        radius: currentFilters.latitude !== null && currentFilters.longitude !== null ? currentFilters.radius : undefined,
         ...(isMockMode && currentFilters.location.trim() ? { location: currentFilters.location.trim() } : {}),
       }
       const result = await apiJson<{
@@ -135,7 +141,7 @@ export function useProductSearch(options: UseProductSearchOptions = {}): UseProd
   }, [filters, fetchProducts])
 
   const hasActiveFilters = filters.query.trim() !== '' || filters.category !== '' ||
-    filters.location.trim() !== '' || filters.minPrice !== null || filters.maxPrice !== null ||
+    filters.location.trim() !== '' || filters.latitude !== null || filters.longitude !== null || filters.minPrice !== null || filters.maxPrice !== null ||
     filters.sortBy !== 'newest' || filters.inStock
 
   return { products, loading, error, filters, setFilters, clearFilters, hasActiveFilters, pagination, loadMore, hasMore, refresh }
