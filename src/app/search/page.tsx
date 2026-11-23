@@ -219,7 +219,7 @@ export default function SearchPage() {
 
         {query && (
           <p className="text-center text-text-secondary">
-            Showing results for <span className="font-medium text-text-primary">"{query}"</span>
+            Showing results for <span className="font-medium text-text-primary">&quot;{query}&quot;</span>
             {results.total > 0 && <span className="ml-2">({results.total} result{results.total !== 1 ? 's' : ''})</span>}
           </p>
         )}
