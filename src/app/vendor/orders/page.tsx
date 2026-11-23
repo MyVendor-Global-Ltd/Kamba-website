@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -203,7 +204,7 @@ export default function VendorOrdersPage() {
     const targetStatus: Record<string, string> = { confirm: 'confirmed', process: 'processing', ship: 'shipped' }
     const target = targetStatus[action]
     if (!target) return
-    const eligible = orders.filter(order => selectedOrders.includes(order.id) && getNextStatus(order.status) === target)
+    const eligible = orders.filter(order => order.delivery_type !== 'pickup' && selectedOrders.includes(order.id) && getNextStatus(order.status) === target)
     if (eligible.length === 0) {
       addToast({ type: 'error', title: 'No eligible orders', message: 'Selected orders must be at the immediately preceding status before this action.' })
       return
@@ -350,7 +351,7 @@ export default function VendorOrdersPage() {
         {filteredOrders.map((order) => {
           const isExpanded = expandedOrder === order.id
           const nextStatus = getNextStatus(order.status)
-          const canAdvance = nextStatus && !['delivered', 'cancelled', 'return_requested'].includes(order.status.toLowerCase())
+          const canAdvance = order.delivery_type !== 'pickup' && nextStatus && !['delivered', 'cancelled', 'return_requested'].includes(order.status.toLowerCase())
           const variant = statusColors[order.status.toLowerCase()] || 'outline'
 
           return (
@@ -362,6 +363,8 @@ export default function VendorOrdersPage() {
                       type="checkbox"
                       checked={selectedOrders.includes(order.id)}
                       onChange={() => toggleSelectOrder(order.id)}
+                      disabled={order.delivery_type === 'pickup'}
+                      aria-label={order.delivery_type === 'pickup' ? 'Pickup orders are managed in the pickup desk' : `Select order ${order.order_number}`}
                       className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
                     />
                     <div className="flex-1 min-w-0">
@@ -459,8 +462,10 @@ export default function VendorOrdersPage() {
                     {/* Status Actions */}
                     <div className="mt-4 pt-4 border-t border-ink-raised/30">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="text-sm font-medium text-text-secondary">Update Status:</span>
-                        {canAdvance && (
+                        <span className="text-sm font-medium text-text-secondary">{order.delivery_type === 'pickup' ? 'Pickup workflow:' : 'Update Status:'}</span>
+                        {order.delivery_type === 'pickup' ? (
+                          <Link href="/vendor/pickup" className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">Open pickup desk</Link>
+                        ) : canAdvance && (
                           <Button
                             size="sm"
                             onClick={() => handleStatusUpdate(order.id, nextStatus!)}
