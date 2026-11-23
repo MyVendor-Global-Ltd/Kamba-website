@@ -12,7 +12,7 @@ import type { Product } from '@/types/commerce'
 import { formatKobo } from '@/lib/formatting'
 import { useCart } from '@/hooks/useCart'
 import { useToast } from '@/components/ui/toast'
-import { ChevronLeft, ChevronRight, Heart, Share2, Truck, Shield, RotateCcw, Star } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Heart, Share2, Star } from 'lucide-react'
 
 export default function ProductDetailPage() {
   const params = useParams()
