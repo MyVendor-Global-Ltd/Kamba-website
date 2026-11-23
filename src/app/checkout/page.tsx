@@ -210,7 +210,7 @@ export default function CheckoutPage() {
 
               {formData.deliveryType === 'pickup' ? (
                 <p className="rounded-lg bg-secondary px-4 py-3 text-sm text-secondary-foreground">
-                  Your vendor's approved collection point will only be shown after the order is confirmed and ready. Personal or residential addresses are not exposed.
+                  Your vendor&apos;s approved collection point will only be shown after the order is confirmed and ready. Personal or residential addresses are not exposed.
                 </p>
               ) : (
                 <div className="space-y-4">
