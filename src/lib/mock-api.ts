@@ -180,9 +180,15 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     if (description.length < 10 || description.length > 5000) throw new Error('Description must contain 10 to 5000 characters.')
     if (!['booking', 'quotation'].includes(String(body.request_type))) throw new Error('Request type must be booking or quotation.')
+    const idempotencyKey = new Headers(options.headers).get('Idempotency-Key')
+    if (idempotencyKey && (idempotencyKey.length < 8 || idempotencyKey.length > 128)) throw new Error('Idempotency-Key must contain 8 to 128 characters.')
+    if (idempotencyKey) {
+      const prior = Object.values(serviceRequests).find((item) => item.buyer_id === currentUser?.id && item.idempotency_key === idempotencyKey)
+      if (prior) return response({ request: prior, idempotent: true }) as T
+    }
     const id = `demo-service-request-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const request: MockEntity = {
-      id, ...body, description, buyer_id: currentUser.id,
+      id, ...body, description, buyer_id: currentUser.id, idempotency_key: idempotencyKey,
       buyer_username: typeof currentUser.email === 'string' ? currentUser.email.split('@')[0] : 'buyer',
       service_title: service.name, status: 'requested',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
