@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { ProductFilters } from '@/components/marketplace/product-filters'
 import { useServiceSearch } from '@/hooks/useServiceSearch'
-import { Briefcase, MapPin } from 'lucide-react'
+import { Search, Filter, Briefcase, MapPin } from 'lucide-react'
 
 export default function ServicesPage() {
   const {
@@ -26,12 +26,7 @@ export default function ServicesPage() {
     refresh,
   } = useServiceSearch({ pageSize: 12 })
 
-  const [categories, setCategories] = useState<string[]>([])
-
-  // The current backend exposes category filtering but no public service-category endpoint.
-  useEffect(() => {
-    setCategories(['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography'])
-  }, [])
+  const [categories, setCategories] = useState<string[]>(['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography'])
 
   // Load more on scroll
   useEffect(() => {
