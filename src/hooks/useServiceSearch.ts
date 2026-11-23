@@ -131,7 +131,7 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
   useEffect(() => {
     const timeout = window.setTimeout(() => { void fetchServices(1, filters) }, 250)
     return () => window.clearTimeout(timeout)
-  }, [filters, fetchServices])
+  }, [filters.category, filters.latitude, filters.longitude, filters.radius, isMockMode ? filters.query : '', isMockMode ? filters.location : '', fetchServices])
 
   useEffect(() => () => abortControllerRef.current?.abort(), [])
 
