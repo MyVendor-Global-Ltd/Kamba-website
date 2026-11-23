@@ -64,39 +64,48 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (formData.deliveryType !== 'delivery' || !selectedUniversity) return
     let active = true
-    setZonesLoading(true)
-    setSelectedZoneId('')
-    apiJson<{ zones: DeliveryZone[] }>(`/delivery/universities/${encodeURIComponent(selectedUniversity.slug)}/zones`)
-      .then((data) => { if (active) setZones(data.zones || []) })
-      .catch((err) => { if (active) setDeliveryError(err instanceof Error ? err.message : 'Could not load delivery zones.') })
-      .finally(() => { if (active) setZonesLoading(false) })
+    const loadZones = async () => {
+      setZonesLoading(true)
+      try {
+        const data = await apiJson<{ zones: DeliveryZone[] }>(`/delivery/universities/${encodeURIComponent(selectedUniversity.slug)}/zones`)
+        if (active) setZones(data.zones || [])
+      } catch (err) {
+        if (active) setDeliveryError(err instanceof Error ? err.message : 'Could not load delivery zones.')
+      } finally {
+        if (active) setZonesLoading(false)
+      }
+    }
+    void loadZones()
     return () => { active = false }
   }, [formData.deliveryType, selectedUniversity])
 
   useEffect(() => {
     if (formData.deliveryType !== 'delivery' || !selectedUniversityId || !selectedZoneId || storeIds.length === 0) return
     let active = true
-    setQuoteLoading(true)
-    setDeliveryError(null)
-    Promise.all(storeIds.map((storeId) => apiJson<{ quote: { buyer_delivery_charge_kobo: number } }>('/delivery/quote', {
-      method: 'POST',
-      body: JSON.stringify({
-        store_id: storeId,
-        university_id: selectedUniversityId,
-        destination_zone_id: selectedZoneId,
-        delivery_mode: 'express',
-      }),
-    })))
-      .then((quotes) => {
+    const loadQuotes = async () => {
+      setQuoteLoading(true)
+      setDeliveryError(null)
+      try {
+        const quotes = await Promise.all(storeIds.map((storeId) => apiJson<{ quote: { buyer_delivery_charge_kobo: number } }>('/delivery/quote', {
+          method: 'POST',
+          body: JSON.stringify({
+            store_id: storeId,
+            university_id: selectedUniversityId,
+            destination_zone_id: selectedZoneId,
+            delivery_mode: 'express',
+          }),
+        })))
         if (active) setDeliveryQuote(quotes.reduce((sum, result) => sum + Number(result.quote.buyer_delivery_charge_kobo || 0), 0))
-      })
-      .catch((err) => {
+      } catch (err) {
         if (active) {
           setDeliveryQuote(null)
           setDeliveryError(err instanceof Error ? err.message : 'Delivery is not available for one or more stores at this destination.')
         }
-      })
-      .finally(() => { if (active) setQuoteLoading(false) })
+      } finally {
+        if (active) setQuoteLoading(false)
+      }
+    }
+    void loadQuotes()
     return () => { active = false }
   }, [formData.deliveryType, selectedUniversityId, selectedZoneId, storeIds])
 
