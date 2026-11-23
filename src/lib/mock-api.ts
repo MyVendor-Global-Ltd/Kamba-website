@@ -56,6 +56,14 @@ function hydrateWishlist() {
   try { (JSON.parse(window.localStorage.getItem('kamba_demo_wishlist') || '[]') as string[]).forEach((id) => wishlist.add(id)) } catch { /* Ignore invalid prototype data. */ }
 }
 function persistWishlist() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_wishlist', JSON.stringify([...wishlist])) }
+const serviceRequests: Record<string, any> = {}
+let serviceRequestsHydrated = false
+function hydrateServiceRequests() {
+  if (serviceRequestsHydrated || typeof window === 'undefined') return
+  serviceRequestsHydrated = true
+  try { Object.assign(serviceRequests, JSON.parse(window.localStorage.getItem('kamba_demo_service_requests') || '{}')) } catch { /* Ignore invalid prototype data. */ }
+}
+function persistServiceRequests() { if (typeof window !== 'undefined') window.localStorage.setItem('kamba_demo_service_requests', JSON.stringify(serviceRequests)) }
 const orders: Record<string, any> = {}
 let ordersHydrated = false
 function hydrateOrders() {
@@ -82,6 +90,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   const method = (options.method || 'GET').toUpperCase()
   hydrateCart()
   hydrateWishlist()
+  hydrateServiceRequests()
   const url = new URL(path, 'http://kamba.local')
   Object.entries(options.params || {}).forEach(([key, value]) => { if (value !== undefined && value !== null) url.searchParams.set(key, String(value)) })
   const pathname = url.pathname
@@ -106,6 +115,25 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
     return response({ success: true, user, prototype: true }) as T
   }
   if (pathname === '/vendors/stores') return response({ stores: mockStores }) as T
+  const publicServiceMatch = pathname.match(/^\\/vendors\\/services\\/([^/]+)$/)
+  if (publicServiceMatch && method === 'GET') {
+    const service = mockServices.find((item) => item.slug === publicServiceMatch[1])
+    return response({ service_profile: service || null }) as T
+  }
+  if (pathname === '/service-bookings/requests' && method === 'POST') {
+    const id = `demo-service-request-${Object.keys(serviceRequests).length + 1}`
+    const request = { id, ...body, status: 'requested', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), prototype: true }
+    serviceRequests[id] = request
+    persistServiceRequests()
+    return response({ request, idempotent: false }) as T
+  }
+  if (pathname === '/service-bookings/requests' && method === 'GET') return response({ requests: Object.values(serviceRequests) }) as T
+  const serviceRequestMatch = pathname.match(/^\\/service-bookings\\/requests\\/([^/]+)$/)
+  if (serviceRequestMatch && method === 'GET') {
+    const request = serviceRequests[serviceRequestMatch[1]]
+    if (!request) throw new Error('Service request not found in the prototype session.')
+    return response({ request }) as T
+  }
   if (pathname === '/marketplace/wishlist' && method === 'GET') return response({ items: [...wishlist].map((product_id) => ({ product_id })) }) as T
   const wishlistMatch = pathname.match(/^\/marketplace\/wishlist\/([^/]+)$/)
   if (wishlistMatch && method === 'POST') { wishlist.add(wishlistMatch[1]); persistWishlist(); return response({ saved: true, product_id: wishlistMatch[1] }) as T }
