@@ -27,7 +27,7 @@ export interface UseServiceSearchReturn {
   refresh: () => Promise<void>
 }
 
-const DEFAULT_FILTERS: ServiceFilters = { query: '', category: '', location: '', minPrice: null, maxPrice: null, inStock: false, sortBy: 'newest' }
+const DEFAULT_FILTERS: ServiceFilters = { query: '', category: '', location: '', latitude: null, longitude: null, radius: 15, minPrice: null, maxPrice: null, inStock: false, sortBy: 'newest' }
 
 export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServiceSearchReturn {
   const { initialFilters = {}, pageSize = 12 } = options
@@ -57,6 +57,9 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
         page,
         limit: pageSize,
         category: currentFilters.category || undefined,
+        lat: currentFilters.latitude ?? undefined,
+        lng: currentFilters.longitude ?? undefined,
+        radius: currentFilters.latitude !== null && currentFilters.longitude !== null ? currentFilters.radius : undefined,
         ...(isMockMode ? {
           search: currentFilters.query.trim() || undefined,
           location: currentFilters.location.trim() || undefined,
@@ -140,7 +143,7 @@ export function useServiceSearch(options: UseServiceSearchOptions = {}): UseServ
     await fetchServices(1, filters)
   }, [filters, fetchServices])
 
-  const hasActiveFilters = filters.query.trim() !== '' || filters.category !== '' || filters.location.trim() !== ''
+  const hasActiveFilters = filters.query.trim() !== '' || filters.category !== '' || filters.location.trim() !== '' || filters.latitude !== null || filters.longitude !== null
 
   return { services, loading, error, filters, setFilters, clearFilters, hasActiveFilters, pagination, loadMore, hasMore, refresh }
 }
