@@ -143,7 +143,7 @@ export default function StoreDetailPage() {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-text-primary mb-2">No products available</h3>
-            <p className="text-text-tertiary">This store hasn't added any products yet.</p>
+            <p className="text-text-tertiary">This store hasn&apos;t added any products yet.</p>
           </div>
         )}
       </section>
