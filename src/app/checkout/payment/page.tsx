@@ -34,7 +34,9 @@ interface PaymentInstructions {
   account_name?: string
   account_number?: string
   amount?: number
+  amount_minor?: number
   currency?: string
+  display_text?: string
   reference?: string
   expires_at?: string
   [key: string]: unknown
@@ -97,7 +99,7 @@ function CheckoutPaymentContent() {
         currency: string
         payment_instructions: PaymentInstructions
         payment_status: string
-      }>(`/commerce/marketplace-checkouts/${encodeURIComponent(checkoutId)}/payment`, { method: 'POST' })
+      }>(`/commerce/marketplace-checkouts/${encodeURIComponent(checkoutId)}/payment`, { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } })
       setInstructions(result.payment_instructions)
       addToast({ type: 'success', title: 'Payment instructions ready', message: 'Use the exact amount and temporary account details shown below.' })
     } catch (err) {
@@ -187,10 +189,11 @@ function CheckoutPaymentContent() {
         <Card variant="elevated">
           <CardHeader><CardTitle>Temporary bank-transfer instructions</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {instructions.display_text && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">{instructions.display_text}</p>}
             {instructions.bank_name && <div><p className="text-xs text-text-tertiary">Bank</p><p className="font-semibold text-text-primary">{instructions.bank_name}</p></div>}
             {instructions.account_name && <div><p className="text-xs text-text-tertiary">Account name</p><p className="font-semibold text-text-primary">{instructions.account_name}</p></div>}
             {instructions.account_number && <div className="flex items-center justify-between gap-3"><div><p className="text-xs text-text-tertiary">Temporary account number</p><p className="font-mono text-xl font-bold text-text-primary">{instructions.account_number}</p></div><Button type="button" variant="outline" size="sm" onClick={() => void copyValue(instructions.account_number!, 'Account number')}>Copy</Button></div>}
-            <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><div><p className="text-xs text-text-tertiary">Exact amount</p><p className="font-display text-xl font-bold text-primary">{formatKobo(instructions.amount ?? checkout.amount)}</p></div><Button type="button" variant="outline" size="sm" onClick={() => void copyValue(String(instructions.amount ?? checkout.amount), 'Amount')}>Copy</Button></div>
+            <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><div><p className="text-xs text-text-tertiary">Exact amount</p><p className="font-display text-xl font-bold text-primary">{formatKobo(instructions.amount ?? instructions.amount_minor ?? checkout.amount)}</p></div><Button type="button" variant="outline" size="sm" onClick={() => void copyValue(formatKobo(instructions.amount ?? instructions.amount_minor ?? checkout.amount), 'Amount')}>Copy</Button></div>
             {instructions.reference && <div><p className="text-xs text-text-tertiary">Payment reference</p><p className="break-all font-mono text-sm text-text-primary">{instructions.reference}</p></div>}
             {(instructions.expires_at || checkout.payment_expires_at) && <p className="rounded-lg bg-gold-soft p-3 text-sm text-text-primary">These temporary details expire at {formatDateTime(String(instructions.expires_at || checkout.payment_expires_at))}. Transfer the exact amount before expiry.</p>}
             <p className="text-xs leading-5 text-text-secondary">Kamba will update the order only after the payment provider verifies the transfer. Do not treat a bank transfer receipt alone as confirmation.</p>
