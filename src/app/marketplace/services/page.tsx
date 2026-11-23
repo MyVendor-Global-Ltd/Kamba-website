@@ -29,11 +29,9 @@ export default function ServicesPage() {
 
   const [categories, setCategories] = useState<string[]>([])
 
-  // Fetch categories on mount
+  // The current backend exposes category filtering but no public service-category endpoint.
   useEffect(() => {
-    apiJson<{ categories: string[] }>('/api/categories')
-      .then((data) => setCategories(data.categories || []))
-      .catch(() => setCategories(['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography']))
+    setCategories(['Cleaning', 'Repairs', 'Plumbing', 'Electrical', 'Beauty', 'Tutoring', 'Delivery', 'Photography'])
   }, [])
 
   // Load more on scroll
