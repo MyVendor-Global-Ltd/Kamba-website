@@ -41,8 +41,10 @@ function OrderConfirmationContent() {
 
   useEffect(() => {
     if (!orderId) {
-      setError('No order ID provided')
-      setLoading(false)
+      void Promise.resolve().then(() => {
+        setError('No order ID provided')
+        setLoading(false)
+      })
       return
     }
 
