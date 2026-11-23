@@ -97,8 +97,8 @@ export default function AccountPage() {
       console.error('Failed to load account data:', err)
     } finally {
       setLoading(false)
-    }, [])
-  }
+    }
+  }, [])
 
   useEffect(() => {
     void Promise.resolve().then(loadData)
