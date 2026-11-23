@@ -195,7 +195,14 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
       (!category || service.category?.toLowerCase() === category) &&
       (!location || `${service.city} ${service.state}`.toLowerCase().includes(location)) &&
       (lat === null || lng === null || (service.latitude !== undefined && service.longitude !== undefined && distanceKm(lat, lng, service.latitude, service.longitude) <= radius))
-    ).sort((a, b) => b.created_at.localeCompare(a.created_at))
+    ).sort((a, b) => {
+      if (lat !== null && lng !== null) {
+        const distanceA = a.latitude !== undefined && a.longitude !== undefined ? distanceKm(lat, lng, a.latitude, a.longitude) : Number.POSITIVE_INFINITY
+        const distanceB = b.latitude !== undefined && b.longitude !== undefined ? distanceKm(lat, lng, b.latitude, b.longitude) : Number.POSITIVE_INFINITY
+        return distanceA - distanceB || b.created_at.localeCompare(a.created_at)
+      }
+      return b.created_at.localeCompare(a.created_at)
+    })
     const page = Math.max(1, Number(query.get('page') || 1))
     const limit = Math.max(1, Math.min(100, Number(query.get('limit') || 20)))
     const offset = (page - 1) * limit
