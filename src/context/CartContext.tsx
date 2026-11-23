@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from 'react'
 import type { CartItem } from '@/types/cart'
 import { apiJson } from '@/lib/api'
+import { isMockMode } from '@/lib/mock-api'
 import { useAuth } from '@/context/AuthContext'
 
 interface CartState {
@@ -134,7 +135,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!authState.isLoading && authState.isAuthenticated) void refresh()
+    if (!authState.isLoading && (authState.isAuthenticated || isMockMode)) void refresh()
   }, [authState.isAuthenticated, authState.isLoading, refresh])
 
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
