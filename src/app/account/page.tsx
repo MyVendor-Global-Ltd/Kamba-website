@@ -122,7 +122,9 @@ export default function AccountPage() {
         body: JSON.stringify({
           displayName: [formData.first_name, formData.last_name].filter(Boolean).join(' '),
           username: formData.username,
-          ...(String(formData.phone || '').trim() ? { phone: String(formData.phone).trim() } : {}),
+          ...(String(formData.phone || '').trim() !== (profile?.phone || '')
+            ? { phone: String(formData.phone || '').trim() || null }
+            : {}),
         }),
       })
       updateUser({ display_name: [formData.first_name, formData.last_name].filter(Boolean).join(' ') })
