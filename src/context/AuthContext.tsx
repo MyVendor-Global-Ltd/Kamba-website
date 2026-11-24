@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     try {
       const data = await authApi.getProfile()
-      const profile = data.user || data.result?.user || data.result || data
+      const profile = data.user || data
       if (!profile?.id) throw new Error('The API did not return an authenticated user.')
 
       setState({
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    void refreshProfile()
+    void Promise.resolve().then(refreshProfile)
   }, [refreshProfile])
 
   const login = async (email: string, password: string) => {
