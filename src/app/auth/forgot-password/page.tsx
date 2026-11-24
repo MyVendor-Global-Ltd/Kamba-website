@@ -1,26 +1,52 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { forgotPassword } from '@/lib/auth'
+import { forgotPassword, resetPassword } from '@/lib/auth'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [step, setStep] = useState<'request' | 'reset' | 'complete'>('request')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleRequest = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
     try {
       await forgotPassword(email)
-      setSent(true)
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset link')
+      setStep('reset')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not request a password reset.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleReset = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError('')
+    if (password.length < 8) {
+      setError('Your new password must be at least 8 characters.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('The passwords do not match.')
+      return
+    }
+    setLoading(true)
+    try {
+      await resetPassword(email, otpCode, password)
+      setStep('complete')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password reset failed.')
     } finally {
       setLoading(false)
     }
@@ -29,39 +55,52 @@ export default function ForgotPasswordPage() {
   return (
     <Card className="w-full max-w-md mx-auto mt-10">
       <CardHeader>
-        <CardTitle>Forgot password</CardTitle>
+        <CardTitle>{step === 'request' ? 'Forgot password' : step === 'reset' ? 'Reset your password' : 'Password updated'}</CardTitle>
         <CardDescription>
-          {sent ? 'A reset link has been sent to your email.' : 'Enter your email to receive a password reset link.'}
+          {step === 'request'
+            ? 'Enter your account email. We will send a password reset code if the account exists.'
+            : step === 'reset'
+              ? 'Enter the code sent to your email and choose a new password.'
+              : 'Your password has been reset. You can now sign in with your new password.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">
+          <div role="alert" className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">
             {error}
           </div>
         )}
-        {!sent ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {step === 'request' && (
+          <form onSubmit={handleRequest} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email address</label>
-              <Input
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <label htmlFor="reset-email" className="text-sm font-medium">Email address</label>
+              <Input id="reset-email" type="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Send reset link'}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Sending code...' : 'Send reset code'}</Button>
           </form>
-        ) : (
-          <div className="text-center space-y-4">
-            <p className="text-sm text-muted-foreground">Check your inbox for the reset link.</p>
-            <Button asChild className="w-full">
-              <a href="/auth/login">Back to sign in</a>
-            </Button>
+        )}
+        {step === 'reset' && (
+          <form onSubmit={handleReset} className="space-y-4">
+            <p className="text-sm text-muted-foreground">If the account exists, a reset code has been sent to {email.trim().toLowerCase()}.</p>
+            <div className="space-y-2">
+              <label htmlFor="reset-code" className="text-sm font-medium">Reset code</label>
+              <Input id="reset-code" inputMode="numeric" autoComplete="one-time-code" value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required minLength={6} maxLength={6} />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="new-password" className="text-sm font-medium">New password</label>
+              <Input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="new-password" />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="confirm-password" className="text-sm font-medium">Confirm new password</label>
+              <Input id="confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required minLength={8} autoComplete="new-password" />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Updating password...' : 'Reset password'}</Button>
+          </form>
+        )}
+        {step === 'complete' && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Your existing sessions have been revoked. Sign in again with your new password.</p>
+            <Button asChild className="w-full"><Link href="/auth/login">Back to sign in</Link></Button>
           </div>
         )}
       </CardContent>
