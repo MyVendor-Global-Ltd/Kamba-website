@@ -111,7 +111,7 @@ export default function VendorOrdersPage() {
         created_at: string
         store_name?: string
         item_count: number
-      }> }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } })
+      }> }>('/commerce/orders')
       setOrders((data.orders || []).map((order) => ({
         id: order.id,
         order_number: order.id,
