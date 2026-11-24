@@ -34,12 +34,18 @@ export function Footer() {
         { label: 'Vendor dashboard', href: dashboardHref },
       ],
     },
+    {
+      title: 'Mobile app',
+      links: [
+        { label: 'Get the Kamba app', href: '/download' },
+      ],
+    },
   ]
 
   return (
     <footer className="mt-auto border-t border-border bg-surface">
       <div className="container mx-auto px-4 py-10 lg:py-12">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
           <div className="space-y-4">
             <KambaLogo iconSize={36} />
             <p className="max-w-xs text-sm leading-6 text-text-secondary">
