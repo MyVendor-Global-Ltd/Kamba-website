@@ -120,12 +120,12 @@ export default function AccountPage() {
         body: JSON.stringify({
           displayName: [formData.first_name, formData.last_name].filter(Boolean).join(' '),
           username: formData.username,
-          phone: formData.phone,
-          email: formData.email,
+          ...(String(formData.phone || '').trim() ? { phone: String(formData.phone).trim() } : {}),
         }),
       })
-      updateUser({ ...user, ...formData })
+      updateUser({ ...user, display_name: [formData.first_name, formData.last_name].filter(Boolean).join(' ') } as any)
       setEditing(null)
+      await loadData()
       addToast({ type: 'success', title: 'Profile updated', message: 'Your profile has been saved.' })
     } catch (err) {
       addToast({ type: 'error', title: 'Failed to update', message: 'Please try again.' })
@@ -668,13 +668,14 @@ export default function AccountPage() {
                 <CardTitle className="text-text-primary">Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <p className="text-sm text-text-tertiary">Notification preferences are not yet connected to persistent account settings. These controls are disabled so they do not imply a change has been saved.</p>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-text-primary">Push Notifications</p>
                     <p className="text-sm text-text-tertiary">Receive order updates and promotions</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" />
+                    <input type="checkbox" disabled aria-label="Push notification preference is not connected" className="sr-only peer" />
                     <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
                   </label>
                 </div>
@@ -685,7 +686,7 @@ export default function AccountPage() {
                     <p className="text-sm text-text-tertiary">Receive order confirmations and receipts</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" />
+                    <input type="checkbox" disabled aria-label="Email notification preference is not connected" className="sr-only peer" />
                     <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
                   </label>
                 </div>
@@ -696,7 +697,7 @@ export default function AccountPage() {
                     <p className="text-sm text-text-tertiary">Receive delivery updates via SMS</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
+                    <input type="checkbox" disabled aria-label="SMS notification preference is not connected" className="sr-only peer" />
                     <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
                   </label>
                 </div>
@@ -734,9 +735,9 @@ export default function AccountPage() {
                 <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                   <div>
                     <p className="font-medium text-destructive">Delete Account</p>
-                    <p className="text-sm text-text-tertiary">Permanently delete your account and all data</p>
+                    <p className="text-sm text-text-tertiary">Account deletion is not yet connected to the account API</p>
                   </div>
-                  <Button variant="destructive" size="sm">Delete Account</Button>
+                  <Button variant="destructive" size="sm" disabled title="Account deletion is not implemented by the backend yet">Unavailable</Button>
                 </div>
                             </CardContent>
                           </Card>
