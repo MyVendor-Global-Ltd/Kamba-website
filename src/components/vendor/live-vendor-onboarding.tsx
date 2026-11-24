@@ -120,7 +120,12 @@ export function LiveVendorOnboarding() {
   }
 
   const createStore = async (event: React.FormEvent) => {
-    event.preventDefault(); setSubmitting(true); setError(''); setSuccess('')
+    event.preventDefault()
+    if (storeForm.location_mode === 'hybrid' && !storeForm.location_text.trim() && !storeForm.service_area_text.trim() && !storeForm.online_url.trim()) {
+      setError('For a hybrid business, provide at least a physical location, service area or website.')
+      return
+    }
+    setSubmitting(true); setError(''); setSuccess('')
     try {
       await apiJson('/vendors/onboard/store', {
         method: 'POST',
@@ -142,7 +147,12 @@ export function LiveVendorOnboarding() {
   }
 
   const createService = async (event: React.FormEvent) => {
-    event.preventDefault(); setSubmitting(true); setError(''); setSuccess('')
+    event.preventDefault()
+    if (serviceForm.location_mode === 'hybrid' && !serviceForm.location_text.trim() && !serviceForm.service_area_text.trim() && !serviceForm.online_url.trim()) {
+      setError('For a hybrid business, provide at least a physical location, service area or website.')
+      return
+    }
+    setSubmitting(true); setError(''); setSuccess('')
     try {
       await apiJson('/vendors/onboard/service', {
         method: 'POST',
