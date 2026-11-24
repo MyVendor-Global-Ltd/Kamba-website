@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { formatKobo } from '@/lib/formatting'
 
 export default function CartPage() {
-  const { cart, updateItem, removeItem, clear, isLoading } = useCartContext()
+  const { cart, updateItem, removeItem, clear, isLoading, isGuest } = useCartContext()
 
   if (isLoading) {
     return (
@@ -144,16 +144,17 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-secondary">Platform fee</span>
-                <span className="text-text-primary font-medium">{formatKobo(cart.platform_fee)}</span>
+                <span className="text-text-primary font-medium">{isGuest ? 'Calculated after sign in' : formatKobo(cart.platform_fee)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-secondary">Delivery fee</span>
-                <span className="text-text-primary font-medium">{formatKobo(cart.delivery_fee)}</span>
+                <span className="text-text-primary font-medium">{isGuest ? 'Calculated at checkout' : formatKobo(cart.delivery_fee)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold font-display text-text-primary border-t border-ink-raised/30 pt-4">
-                <span>Total</span>
+                <span>{isGuest ? 'Items subtotal' : 'Total'}</span>
                 <span>{formatKobo(cart.total)}</span>
               </div>
+              {isGuest && <p className="rounded-lg bg-secondary px-3 py-2 text-xs leading-5 text-secondary-foreground">Your cart is saved on this device. Sign in as a buyer to sync it and calculate the final platform and delivery fees.</p>}
               <div className="space-y-3 pt-2">
                 <Button variant="outline" className="w-full" onClick={() => clear()}>
                   Clear cart
