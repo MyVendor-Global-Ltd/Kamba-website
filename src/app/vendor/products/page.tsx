@@ -29,28 +29,38 @@ interface VendorProduct {
 export default function VendorProductsPage() {
   const [products, setProducts] = useState<VendorProduct[]>([])
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setOffset(0)
+      setDebouncedSearch(search.trim())
+    }, 250)
+    return () => window.clearTimeout(timeout)
+  }, [search])
 
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
-      const data = await apiJson<{ products: VendorProduct[] }>('/commerce/vendor/products', { params: { limit: 100, offset: 0 } })
+      const data = await apiJson<{ products: VendorProduct[] }>('/commerce/vendor/products', { params: { limit: 100, offset, search: debouncedSearch || undefined } })
       setProducts(data.products || [])
+      setHasMore((data.products || []).length === 100)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load your products.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [offset, debouncedSearch])
 
   useEffect(() => { void Promise.resolve().then(loadProducts) }, [loadProducts])
 
-  const filteredProducts = useMemo(() => products.filter((product) =>
-    `${product.name} ${product.category || ''} ${product.description || ''}`.toLowerCase().includes(search.toLowerCase())
-  ), [products, search])
+  const filteredProducts = useMemo(() => products, [products])
 
   const archiveProduct = async (product: VendorProduct) => {
     if (!window.confirm(`Archive “${product.name}”? It will no longer be available for purchase.`)) return
@@ -75,14 +85,14 @@ export default function VendorProductsPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" /><Input aria-label="Search products" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your products…" className="pl-9" /></div>
-        <p className="text-sm text-text-secondary">{filteredProducts.length} of {products.length} products</p>
+        <p className="text-sm text-text-secondary">Showing {filteredProducts.length} products{debouncedSearch ? ` matching “${debouncedSearch}”` : ''}</p>
       </div>
 
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
 
       {loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="h-52 animate-pulse rounded-xl bg-surface-muted" />)}</div> :
         filteredProducts.length === 0 ? (
-          <Card variant="outlined"><CardContent className="flex flex-col items-center gap-3 p-10 text-center"><Package className="h-10 w-10 text-text-tertiary" /><h2 className="font-semibold text-text-primary">{products.length ? 'No matching products' : 'No products yet'}</h2><p className="max-w-sm text-sm text-text-secondary">{products.length ? 'Try another search term.' : 'Create your first listing to start selling through your Kamba storefront.'}</p>{!products.length && <Link href="/vendor/products/new"><Button>Add your first product</Button></Link>}</CardContent></Card>
+          <Card variant="outlined"><CardContent className="flex flex-col items-center gap-3 p-10 text-center"><Package className="h-10 w-10 text-text-tertiary" /><h2 className="font-semibold text-text-primary">{debouncedSearch || products.length ? 'No matching products' : 'No products yet'}</h2><p className="max-w-sm text-sm text-text-secondary">{debouncedSearch || products.length ? 'Try another search term or move to another page.' : 'Create your first listing to start selling through your Kamba storefront.'}</p>{!products.length && <Link href="/vendor/products/new"><Button>Add your first product</Button></Link>}</CardContent></Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((product) => {
@@ -105,6 +115,16 @@ export default function VendorProductsPage() {
           </div>
         )
       }
+
+      {!loading && (offset > 0 || hasMore) && (
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <p className="text-xs text-text-secondary">Page {Math.floor(offset / 100) + 1}</p>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" disabled={offset === 0} onClick={() => setOffset((current) => Math.max(0, current - 100))}>Previous</Button>
+            <Button type="button" variant="outline" disabled={!hasMore} onClick={() => setOffset((current) => current + 100)}>Next</Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

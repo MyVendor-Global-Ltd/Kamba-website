@@ -22,8 +22,15 @@ export default function EditVendorProductPage() {
   const loadProduct = useCallback(async () => {
     try {
       setError('')
-      const data = await apiJson<{ products: VendorProduct[] }>('/commerce/vendor/products', { params: { limit: 100, offset: 0 } })
-      const found = (data.products || []).find((item) => item.id === params.id)
+      let offset = 0
+      let found: VendorProduct | undefined
+      while (!found) {
+        const data = await apiJson<{ products: VendorProduct[] }>('/commerce/vendor/products', { params: { limit: 100, offset } })
+        const page = data.products || []
+        found = page.find((item) => item.id === params.id)
+        if (found || page.length < 100) break
+        offset += page.length
+      }
       if (!found) throw new Error('Product not found in your vendor inventory.')
       setProduct(found)
     } catch (err) {
