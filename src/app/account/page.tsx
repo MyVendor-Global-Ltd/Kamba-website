@@ -229,7 +229,7 @@ export default function AccountPage() {
       <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">My Account</h1>
-          <p className="text-text-secondary mt-2">Manage your profile, addresses, and orders</p>
+          <p className="text-text-secondary mt-2">Manage your profile, notification preferences and orders</p>
         </div>
         <Button variant="outline" onClick={handleLogout}>
           <LogOut className="w-4 h-4 mr-2" />
