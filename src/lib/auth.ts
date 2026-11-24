@@ -86,7 +86,7 @@ export async function requestPhoneOTP(phone: string) {
 
 export async function verifyPhoneOTP(otp: string) {
   if (isMockMode) {
-    if (!phone.trim() || otp !== '000000') throw new Error('For the prototype only, enter 000000. No real phone verification is performed.')
+    if (otp !== '000000') throw new Error('For the prototype only, enter 000000. No real phone verification is performed.')
     return { success: true, prototype: true, verified: false }
   }
   const res = await fetch(`${API_BASE}/api/v1/auth/phone/verify`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ otp_code: otp }) })
