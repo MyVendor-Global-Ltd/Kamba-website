@@ -13,8 +13,9 @@ async function refreshAccessToken(): Promise<string | null> {
         credentials: 'include',
       })
       if (!res.ok) return null
-      const data = await res.json()
-      return data.access_token || null
+      await res.json().catch(() => ({}))
+      // The API rotates HttpOnly cookies and does not return a readable access token.
+      return 'refreshed'
     } finally {
       refreshPromise = null
     }
