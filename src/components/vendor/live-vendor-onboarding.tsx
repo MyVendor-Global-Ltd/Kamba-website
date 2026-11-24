@@ -223,7 +223,7 @@ export function LiveVendorOnboarding() {
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
       {success && <p role="status" className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{success}</p>}
 
-      {stage === 'not_eligible' && (
+      {(stage === 'not_eligible' || (stage === 'liveness_required' && !eligibility.eligible)) && (
         <Card variant="outlined"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-gold" /> Complete these account requirements first</CardTitle></CardHeader><CardContent className="space-y-3">
           {(eligibility?.issues || []).map((issue) => <p key={issue.code} className="text-sm text-text-secondary">{issue.message}</p>)}
           <p className="text-sm text-text-secondary">Finish your username and phone verification in account settings, then return here.</p>
@@ -231,7 +231,7 @@ export function LiveVendorOnboarding() {
         </CardContent></Card>
       )}
 
-      {(stage === 'liveness_required' || stage === 'liveness_done') && (
+      {stage === 'liveness_required' && eligibility.eligible && (
         <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Camera className="h-5 w-5 text-primary" /> Selfie and vendor type</CardTitle></CardHeader><CardContent>
           <form onSubmit={submitLiveness} className="space-y-4">
             <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
@@ -245,6 +245,12 @@ export function LiveVendorOnboarding() {
             <p className="text-xs leading-5 text-text-tertiary">Your selfie is uploaded to Kamba&apos;s configured storage for the vendor onboarding check. Submit only your own image. The backend records this step; final verification remains subject to Kamba's review.</p>
             <Button type="submit" disabled={submitting || (!eligibility?.eligible && stage !== 'liveness_done')}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
           </form>
+        </CardContent></Card>
+      )}
+
+      {stage === 'liveness_done' && (
+        <Card variant="outlined"><CardHeader><CardTitle>Vendor profile needs attention</CardTitle></CardHeader><CardContent className="space-y-3">
+          <p className="text-sm text-text-secondary">Your liveness check is already recorded, but the vendor profile is missing. We will not ask you to submit another selfie or pretend the profile exists. Contact Kamba support to repair this onboarding record.</p>
         </CardContent></Card>
       )}
 
