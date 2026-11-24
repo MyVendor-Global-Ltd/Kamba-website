@@ -1,4 +1,5 @@
 import { isMockMode } from '@/lib/mock-api'
+import { apiJson } from '@/lib/api'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001'
 const MOCK_USER_KEY = 'kamba_demo_user'
@@ -72,10 +73,9 @@ export async function getProfile() {
     if (!user) throw new Error('No development session')
     return { user, cartCount: 0, prototype: true }
   }
-  const res = await fetch(`${API_BASE}/api/v1/auth/dashboard`, { credentials: 'include' })
-  const payload = await readResponse(res, 'Failed to fetch profile')
-  const profile = payload.result?.user || payload.result || payload.user || payload
-  return { user: profile, cartCount: payload.result?.cartCount || payload.cartCount || 0 }
+  const payload = await apiJson<any>('/auth/dashboard')
+  const profile = payload.user || payload.result?.user || payload.result || payload
+  return { user: profile, cartCount: payload.cartCount || profile.cartCount || 0 }
 }
 
 export async function requestPhoneOTP(phone: string) {
