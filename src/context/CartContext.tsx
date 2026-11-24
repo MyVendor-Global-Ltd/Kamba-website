@@ -29,6 +29,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null)
 const CART_STORAGE_KEY = 'kamba_cart'
+const GUEST_CART_STORAGE_KEY = 'kamba_guest_cart'
 
 const emptyCart = (): CartState => ({ items: [], subtotal: 0, platform_fee: 0, delivery_fee: 0, total: 0, itemCount: 0 })
 
@@ -120,6 +121,33 @@ function getStoredCart(): CartState {
   }
 }
 
+function getStoredGuestCart(): CartState {
+  if (typeof window === 'undefined') return emptyCart()
+  try {
+    const stored = window.localStorage.getItem(GUEST_CART_STORAGE_KEY)
+    return stored ? normalizeCart(JSON.parse(stored)) : emptyCart()
+  } catch {
+    return emptyCart()
+  }
+}
+
+function setStoredGuestCart(cart: CartState) {
+  if (typeof window === 'undefined') return
+  try { window.localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(cart)) } catch { /* Storage is optional. */ }
+}
+
+function createGuestCart(items: CartItem[]): CartState {
+  const subtotal = items.reduce((sum, item) => sum + Number(item.price_kobo || 0) * Number(item.quantity || 0), 0)
+  return {
+    items,
+    subtotal,
+    platform_fee: 0,
+    delivery_fee: 0,
+    total: subtotal,
+    itemCount: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+  }
+}
+
 function setStoredCart(cart: CartState) {
   if (typeof window === 'undefined') return
   try { window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)) } catch { /* Storage is optional. */ }
@@ -127,6 +155,8 @@ function setStoredCart(cart: CartState) {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { state: authState } = useAuth()
+  const isAuthenticatedBuyer = authState.isAuthenticated && authState.user?.role === 'buyer'
+  const isGuest = !isMockMode && !isAuthenticatedBuyer
   const [cart, setCart] = useState<CartState>(emptyCart)
   const cartRef = useRef(cart)
   const [isLoading, setIsLoading] = useState(true)
@@ -150,38 +180,86 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!isLoading) setStoredCart(cart)
   }, [cart, isLoading])
 
+  // Preserve an existing browser cart as a guest cart until the buyer signs in.
+  useEffect(() => {
+    if (authState.isLoading || authState.isAuthenticated || isMockMode || isLoading) return
+    if (getStoredGuestCart().items.length === 0 && cartRef.current.items.length > 0) {
+      setStoredGuestCart(cartRef.current)
+    }
+  }, [authState.isAuthenticated, authState.isLoading, isLoading])
+
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      let data = await apiJson<CartApiResponse>('/commerce/cart')
-      let normalized = normalizeCart(data)
 
-      // Merge a guest cart into a newly authenticated buyer account once.
-      if (normalized.items.length === 0 && cartRef.current.items.length > 0) {
-        for (const item of cartRef.current.items) {
-          await apiJson('/commerce/cart/items', {
-            method: 'POST',
-            body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
-          })
+      if (!isMockMode && isAuthenticatedBuyer) {
+        const guestCart = getStoredGuestCart()
+        if (guestCart.items.length > 0) {
+          const current = normalizeCart(await apiJson<CartApiResponse>('/commerce/cart'))
+          for (const item of guestCart.items) {
+            const existing = current.items.find((candidate) => candidate.product_id === item.product_id)
+            if (!existing) {
+              await apiJson('/commerce/cart/items', {
+                method: 'POST',
+                body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
+              })
+            } else if (existing.quantity < item.quantity) {
+              await apiJson(`/commerce/cart/items/${encodeURIComponent(item.product_id)}`, {
+                method: 'PUT',
+                body: JSON.stringify({ quantity: item.quantity }),
+              })
+            }
+          }
+          // Remove the guest copy only after every merge request has succeeded.
+          if (typeof window !== 'undefined') window.localStorage.removeItem(GUEST_CART_STORAGE_KEY)
         }
-        data = await apiJson<CartApiResponse>('/commerce/cart')
-        normalized = normalizeCart(data)
       }
 
+      const data = await apiJson<CartApiResponse>('/commerce/cart')
+      const normalized = normalizeCart(data)
       setCart(normalized)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to refresh cart'
       setError(message)
     }
-  }, [])
+  }, [isAuthenticatedBuyer])
 
   useEffect(() => {
     if (!authState.isLoading && (isMockMode || (authState.isAuthenticated && authState.user?.role === 'buyer'))) void Promise.resolve().then(refresh)
   }, [authState.isAuthenticated, authState.isLoading, refresh])
 
+  const persistGuestCart = (next: CartState) => {
+    cartRef.current = next
+    setCart(next)
+    setStoredGuestCart(next)
+    setStoredCart(next)
+  }
+
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
     try {
       setError(null)
+      if (isGuest) {
+        const existing = cartRef.current.items.find((candidate) => candidate.product_id === item.product_id)
+        const product = item.product || ({
+          id: item.product_id,
+          name: item.name,
+          price: item.price_kobo,
+          image_url: item.image_url,
+          images: item.image_url ? [item.image_url] : [],
+          store_id: item.store_id,
+          store_name: item.store_name,
+          stock_quantity: 0,
+          is_active: true,
+        } as Product)
+        const nextItems = existing
+          ? cartRef.current.items.map((candidate) => candidate.product_id === item.product_id
+              ? { ...candidate, quantity: candidate.quantity + item.quantity }
+              : candidate)
+          : [...cartRef.current.items, { ...item, id: `guest-${item.product_id}`, product }]
+        persistGuestCart(createGuestCart(nextItems))
+        return
+      }
+      if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can add products to the cart.')
       await apiJson('/commerce/cart/items', {
         method: 'POST',
         body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
@@ -192,11 +270,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [refresh])
+  }, [isAuthenticatedBuyer, isGuest, refresh])
 
   const updateItem = useCallback(async (productId: string, quantity: number) => {
     try {
       setError(null)
+      if (isGuest) {
+        const nextItems = cartRef.current.items
+          .map((item) => item.product_id === productId ? { ...item, quantity: Math.max(1, quantity) } : item)
+        persistGuestCart(createGuestCart(nextItems))
+        return
+      }
+      if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can update the cart.')
       await apiJson(`/commerce/cart/items/${encodeURIComponent(productId)}`, {
         method: 'PUT',
         body: JSON.stringify({ quantity }),
@@ -207,11 +292,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [refresh])
+  }, [isAuthenticatedBuyer, isGuest, refresh])
 
   const removeItem = useCallback(async (productId: string) => {
     try {
       setError(null)
+      if (isGuest) {
+        const nextItems = cartRef.current.items.filter((item) => item.product_id !== productId)
+        persistGuestCart(createGuestCart(nextItems))
+        return
+      }
+      if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can remove cart items.')
       await apiJson(`/commerce/cart/items/${encodeURIComponent(productId)}`, { method: 'DELETE' })
       await refresh()
     } catch (err) {
@@ -219,11 +310,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [refresh])
+  }, [isAuthenticatedBuyer, isGuest, refresh])
 
   const clear = useCallback(async () => {
     try {
       setError(null)
+      if (isGuest) {
+        const empty = emptyCart()
+        persistGuestCart(empty)
+        return
+      }
+      if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can clear the cart.')
       await Promise.all(cartRef.current.items.map((item) =>
         apiJson(`/commerce/cart/items/${encodeURIComponent(item.product_id)}`, { method: 'DELETE' })
       ))
@@ -233,7 +330,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [refresh])
+  }, [isAuthenticatedBuyer, isGuest, refresh])
 
   return (
     <CartContext.Provider value={{ cart, isLoading, error, addItem, updateItem, removeItem, clear, refresh }}>
