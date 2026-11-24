@@ -387,6 +387,23 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+      {product.videos && product.videos.length > 0 && (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-text-primary">Product videos</h2>
+            <p className="mt-1 text-sm text-text-secondary">See the product in action.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {product.videos.map((videoUrl, index) => (
+              <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-xl bg-ink">
+                <source src={videoUrl} />
+                Your browser does not support embedded videos.
+              </video>
+            ))}
+          </div>
+        </section>
+      )}
+
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up">
           {error}
