@@ -20,6 +20,7 @@ interface VendorProduct {
   stock_quantity: number
   category?: string | null
   images?: string[]
+  videos?: string[]
   is_active: boolean
   is_available: boolean
   created_at?: string
