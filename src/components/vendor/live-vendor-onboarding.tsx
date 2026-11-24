@@ -194,7 +194,7 @@ export function LiveVendorOnboarding() {
         <Card variant="outlined"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-gold" /> Complete these account requirements first</CardTitle></CardHeader><CardContent className="space-y-3">
           {(eligibility?.issues || []).map((issue) => <p key={issue.code} className="text-sm text-text-secondary">{issue.message}</p>)}
           <p className="text-sm text-text-secondary">Finish your username and phone verification in account settings, then return here.</p>
-          <Button onClick={() => router.push('/account')}>Open account settings</Button>
+          <Button onClick={() => router.push((eligibility?.issues || []).some((issue) => issue.code === 'PHONE_NOT_VERIFIED') ? '/auth/phone?callbackUrl=%2Fvendor%2Fonboard' : '/account')}>{(eligibility?.issues || []).some((issue) => issue.code === 'PHONE_NOT_VERIFIED') ? 'Verify phone number' : 'Open account settings'}</Button>
         </CardContent></Card>
       )}
 
