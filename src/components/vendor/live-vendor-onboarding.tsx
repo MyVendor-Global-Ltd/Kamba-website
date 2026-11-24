@@ -240,7 +240,7 @@ export function LiveVendorOnboarding() {
               </select>
             </label>
             <label className="block text-sm font-medium text-text-secondary">Selfie image
-              <input type="file" accept="image/*" capture="user" onChange={(event) => setSelfie(event.target.files?.[0] || null)} className="mt-2 block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" required />
+              <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(event) => setSelfie(event.target.files?.[0] || null)} className="mt-2 block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" required />
             </label>
             <p className="text-xs leading-5 text-text-tertiary">Your selfie is uploaded to Kamba&apos;s configured storage for the vendor onboarding check. Submit only your own image. The backend records this step; final verification remains subject to Kamba&apos;s review.</p>
             <Button type="submit" disabled={submitting}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
@@ -295,7 +295,7 @@ export function LiveVendorOnboarding() {
             <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
               <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
               <p className="text-sm text-text-secondary">Choose 2–6 photos of your actual business location. These are used for the store-location verification step.</p>
-              <input type="file" accept="image/*" multiple onChange={(event) => setStorePhotos(Array.from(event.target.files || []).slice(0, 6))} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" />
+              <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setStorePhotos(Array.from(event.target.files || []).slice(0, 6))} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" />
               <p className="text-xs text-text-tertiary">{storePhotos.length} photo(s) selected</p>
               <Button type="submit" variant="outline" disabled={submitting || storePhotos.length < 2}>{submitting ? 'Uploading…' : 'Upload location photos'}</Button>
             </form>
