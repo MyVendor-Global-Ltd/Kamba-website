@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { apiJson } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,17 +18,12 @@ export default function SetUsernamePage() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.kamba.ng'}/api/v1/auth/username`, {
+      await apiJson('/auth/username/set', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username: username.trim().replace(/^@+/, '').toLowerCase() }),
       })
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}))
-        throw new Error(error.message || 'Failed to set username')
-      }
       router.push('/auth/profile')
+      router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to set username')
     } finally {
@@ -42,24 +38,13 @@ export default function SetUsernamePage() {
         <CardDescription>Choose a unique username for your profile.</CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">
-            {error}
-          </div>
-        )}
+        {error && <div role="alert" className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Username</label>
-            <Input
-              placeholder="johndoe"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
+            <label htmlFor="username" className="text-sm font-medium">Username</label>
+            <Input id="username" placeholder="johndoe" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={16} />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Saving...' : 'Save username'}
-          </Button>
+          <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Saving...' : 'Save username'}</Button>
         </form>
       </CardContent>
     </Card>
