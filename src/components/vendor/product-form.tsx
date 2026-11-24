@@ -44,7 +44,7 @@ export function VendorProductForm({
   const [name, setName] = useState(initial?.name || '')
   const [description, setDescription] = useState(initial?.description || '')
   const [price, setPrice] = useState(initial?.price ? String(initial.price / 100) : '')
-  const [originalPrice, setOriginalPrice] = useState(initial?.original_price ? String(initial.original_price / 100) : '')
+  const [originalPrice, setOriginalPrice] = useState(initial?.original_price != null ? String(initial.original_price / 100) : '')
   const [stock, setStock] = useState(String(initial?.stock_quantity ?? 0))
   const [category, setCategory] = useState(initial?.category || '')
   const [tags, setTags] = useState((initial?.tags || []).join(', '))
