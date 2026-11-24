@@ -124,7 +124,7 @@ export default function AccountPage() {
           ...(String(formData.phone || '').trim() ? { phone: String(formData.phone).trim() } : {}),
         }),
       })
-      updateUser({ ...user, display_name: [formData.first_name, formData.last_name].filter(Boolean).join(' ') } as any)
+      updateUser({ display_name: [formData.first_name, formData.last_name].filter(Boolean).join(' ') })
       setEditing(null)
       await loadData()
       addToast({ type: 'success', title: 'Profile updated', message: 'Your profile has been saved.' })
