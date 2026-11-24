@@ -752,7 +752,7 @@ export default function AccountPage() {
                         <input
                           type="checkbox"
                           checked={notificationPreferences[key]}
-                          disabled={preferencesSaving}
+                          disabled={preferencesSaving || key === 'push_enabled'}
                           onChange={(event) => void handlePreferenceChange(key, event.target.checked)}
                           aria-label={label}
                           className="h-5 w-5 accent-coral disabled:opacity-50"
