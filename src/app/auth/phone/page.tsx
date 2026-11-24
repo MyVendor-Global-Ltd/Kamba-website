@@ -5,22 +5,32 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AuthGuard } from '@/components/auth/auth-guard'
 import { requestPhoneOTP } from '@/lib/auth'
+
+function safeReturnTo(value: string | null) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/account'
+}
 
 export default function PhonePage() {
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [otpSent, setOtpSent] = useState(false)
   const router = useRouter()
 
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSendOTP = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await requestPhoneOTP(phone)
-      setOtpSent(true)
+      const response = await requestPhoneOTP(phone)
+      const result = response.result || response
+      if (!result.userId) throw new Error('The API did not return a verification session.')
+      sessionStorage.setItem('kamba_phone_verification_user_id', result.userId)
+      sessionStorage.setItem('kamba_phone_verification_phone', result.phone || phone)
+      const params = new URLSearchParams(window.location.search)
+      sessionStorage.setItem('kamba_phone_verification_return_to', safeReturnTo(params.get('callbackUrl')))
+      router.push('/auth/otp/verify')
     } catch (err: any) {
       setError(err.message || 'Failed to send OTP')
     } finally {
@@ -29,50 +39,23 @@ export default function PhonePage() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto mt-10">
-      <CardHeader>
-        <CardTitle>Verify your phone</CardTitle>
-        <CardDescription>
-          {otpSent ? 'Enter the OTP sent to your phone.' : 'Enter your phone number to receive a verification code.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <div className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">
-            {error}
-          </div>
-        )}
-        {!otpSent ? (
+    <AuthGuard>
+      <Card className="w-full max-w-md mx-auto mt-10">
+        <CardHeader>
+          <CardTitle>Verify your phone</CardTitle>
+          <CardDescription>Enter the phone number you want linked to your Kamba account. We&apos;ll send a verification code.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && <div role="alert" className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">{error}</div>}
           <form onSubmit={handleSendOTP} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Phone number</label>
-              <Input
-                type="tel"
-                placeholder="+234 801 234 5678"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
+              <Input type="tel" placeholder="+234 801 234 5678" value={phone} onChange={(event) => setPhone(event.target.value)} required autoComplete="tel" />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Send OTP'}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Sending…' : 'Send verification code'}</Button>
           </form>
-        ) : (
-          <form onSubmit={(e) => {
-            e.preventDefault()
-            router.push('/auth/otp/verify')
-          }} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Verification code</label>
-              <Input type="text" placeholder="123456" required />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify OTP'}
-            </Button>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </AuthGuard>
   )
 }
