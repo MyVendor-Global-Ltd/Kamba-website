@@ -168,7 +168,7 @@ export default function RegisterPage() {
           </Button>
         </form>
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Already have an account? <a href="/auth/login" className="font-medium">Sign in</a>
+          Already have an account? <a href={`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="font-medium">Sign in</a>
         </p>
       </CardContent>
     </Card>
