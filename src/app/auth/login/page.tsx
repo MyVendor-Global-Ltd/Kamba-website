@@ -9,7 +9,14 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 function safeCallback(value: string | null) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/account'
+  if (!value) return '/account'
+  try {
+    const target = new URL(value, 'https://kamba.invalid')
+    if (target.origin !== 'https://kamba.invalid') return '/account'
+    return `${target.pathname}${target.search}${target.hash}`
+  } catch {
+    return '/account'
+  }
 }
 
 export default function LoginPage() {

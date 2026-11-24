@@ -11,7 +11,8 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!state.isLoading && !state.authError && !state.isAuthenticated) {
-      const destination = pathname || '/account'
+      const requestedQuery = typeof window !== 'undefined' ? window.location.search : ''
+      const destination = `${pathname || '/account'}${requestedQuery}`
       router.replace(`/auth/login?callbackUrl=${encodeURIComponent(destination)}`)
     }
   }, [state.isLoading, state.authError, state.isAuthenticated, pathname, router])

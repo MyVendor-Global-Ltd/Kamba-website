@@ -34,7 +34,7 @@ export function middleware(request: NextRequest) {
 
   if (!token && isProtected) {
     const loginUrl = new URL('/auth/login', request.url)
-    loginUrl.searchParams.set('callbackUrl', path)
+    loginUrl.searchParams.set('callbackUrl', `${path}${request.nextUrl.search}`)
     return NextResponse.redirect(loginUrl)
   }
 

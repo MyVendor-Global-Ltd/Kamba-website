@@ -9,7 +9,14 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { requestPhoneOTP } from '@/lib/auth'
 
 function safeReturnTo(value: string | null) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/account'
+  if (!value) return '/account'
+  try {
+    const target = new URL(value, 'https://kamba.invalid')
+    if (target.origin !== 'https://kamba.invalid') return '/account'
+    return `${target.pathname}${target.search}${target.hash}`
+  } catch {
+    return '/account'
+  }
 }
 
 export default function PhonePage() {
