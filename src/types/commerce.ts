@@ -7,6 +7,7 @@ export interface Product {
   category?: string
   image_url?: string
   images?: string[]
+  videos?: string[]
   store_id: string
   store_name?: string
   store_slug?: string
