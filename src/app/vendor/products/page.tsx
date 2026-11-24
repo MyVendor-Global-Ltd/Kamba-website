@@ -92,7 +92,7 @@ export default function VendorProductsPage() {
 
       {loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="h-52 animate-pulse rounded-xl bg-surface-muted" />)}</div> :
         filteredProducts.length === 0 ? (
-          <Card variant="outlined"><CardContent className="flex flex-col items-center gap-3 p-10 text-center"><Package className="h-10 w-10 text-text-tertiary" /><h2 className="font-semibold text-text-primary">{products.length ? 'No matching products' : 'No products yet'}</h2><p className="max-w-sm text-sm text-text-secondary">{products.length ? 'Try another search term.' : 'Create your first listing to start selling through your Kamba storefront.'}</p>{!products.length && <Link href="/vendor/products/new"><Button>Add your first product</Button></Link>}</CardContent></Card>
+          <Card variant="outlined"><CardContent className="flex flex-col items-center gap-3 p-10 text-center"><Package className="h-10 w-10 text-text-tertiary" /><h2 className="font-semibold text-text-primary">{debouncedSearch || products.length ? 'No matching products' : 'No products yet'}</h2><p className="max-w-sm text-sm text-text-secondary">{debouncedSearch || products.length ? 'Try another search term or move to another page.' : 'Create your first listing to start selling through your Kamba storefront.'}</p>{!products.length && <Link href="/vendor/products/new"><Button>Add your first product</Button></Link>}</CardContent></Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((product) => {
