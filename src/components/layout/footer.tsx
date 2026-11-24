@@ -1,36 +1,51 @@
+'use client'
+
 import Link from 'next/link'
 import { KambaLogo } from '@/components/layout/kamba-logo'
-
-const linkGroups = [
-  {
-    title: 'Explore',
-    links: [
-      { label: 'Products', href: '/marketplace/products' },
-      { label: 'Services', href: '/marketplace/services' },
-      { label: 'Stores', href: '/marketplace/stores' },
-    ],
-  },
-  {
-    title: 'Your Kamba',
-    links: [
-      { label: 'My account', href: '/account' },
-      { label: 'My orders', href: '/orders' },
-    ],
-  },
-  {
-    title: 'For vendors',
-    links: [
-      { label: 'Sell on Kamba', href: '/vendor/onboard' },
-      { label: 'Vendor dashboard', href: '/vendor/dashboard' },
-    ],
-  },
-]
+import { useAuth } from '@/context/AuthContext'
 
 export function Footer() {
+  const { state } = useAuth()
+  const accountHref = state.isLoading || state.isAuthenticated ? '/account' : '/auth/login?callbackUrl=%2Faccount'
+  const ordersHref = state.isLoading || state.isAuthenticated ? '/orders' : '/auth/login?callbackUrl=%2Forders'
+  const vendorHref = state.isLoading || state.isAuthenticated ? '/vendor/onboard' : '/auth/login?callbackUrl=%2Fvendor%2Fonboard'
+  const dashboardHref = state.isLoading || state.isAuthenticated ? '/vendor/dashboard' : '/auth/login?callbackUrl=%2Fvendor%2Fdashboard'
+
+  const linkGroups = [
+    {
+      title: 'Explore',
+      links: [
+        { label: 'Products', href: '/marketplace/products' },
+        { label: 'Services', href: '/marketplace/services' },
+        { label: 'Stores', href: '/marketplace/stores' },
+      ],
+    },
+    {
+      title: 'Your Kamba',
+      links: [
+        { label: 'My account', href: accountHref },
+        { label: 'My orders', href: ordersHref },
+      ],
+    },
+    {
+      title: 'For vendors',
+      links: [
+        { label: 'Sell on Kamba', href: vendorHref },
+        { label: 'Vendor dashboard', href: dashboardHref },
+      ],
+    },
+    {
+      title: 'Mobile app',
+      links: [
+        { label: 'Get the Kamba app', href: '/download' },
+      ],
+    },
+  ]
+
   return (
     <footer className="mt-auto border-t border-border bg-surface">
       <div className="container mx-auto px-4 py-10 lg:py-12">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
           <div className="space-y-4">
             <KambaLogo iconSize={36} />
             <p className="max-w-xs text-sm leading-6 text-text-secondary">

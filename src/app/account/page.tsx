@@ -11,39 +11,20 @@ import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
-import { User, MapPin, CreditCard, Settings, Package, Bell, LogOut, Edit, Plus, Trash2, ChevronRight, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
+import { User, MapPin, CreditCard, Settings, Package, Bell, LogOut, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
 
 interface UserProfile {
   id: string
   email: string
   phone?: string
+  phone_verified?: boolean
   first_name: string
   last_name: string
   username?: string
   avatar_url?: string
-  created_at: string
-}
-
-interface Address {
-  id: string
-  label: string
-  address: string
-  city: string
-  state: string
-  postal_code?: string
-  is_default: boolean
-  latitude?: number
-  longitude?: number
-}
-
-interface PaymentMethod {
-  id: string
-  type: 'card' | 'bank_transfer' | 'ussd'
-  last4?: string
-  brand?: string
-  bank_name?: string
-  account_name?: string
-  is_default: boolean
+  created_at?: string
+  display_name?: string
+  role?: string
 }
 
 interface OrderSummary {
@@ -53,6 +34,13 @@ interface OrderSummary {
   total: number
   created_at: string
   items_count: number
+}
+
+interface NotificationPreferences {
+  push_enabled: boolean
+  email_enabled: boolean
+  sms_enabled: boolean
+  marketing_enabled: boolean
 }
 
 const tabs = [
@@ -72,31 +60,54 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<TabId>('profile')
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [addresses, setAddresses] = useState<Address[]>([])
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [editing, setEditing] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, string | number | boolean | null>>({})
-  const [showAddAddress, setShowAddAddress] = useState(false)
-  const [showAddPayment, setShowAddPayment] = useState(false)
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
+    push_enabled: false,
+    email_enabled: true,
+    sms_enabled: false,
+    marketing_enabled: false,
+  })
+  const [preferencesLoading, setPreferencesLoading] = useState(true)
+  const [preferencesSaving, setPreferencesSaving] = useState(false)
+  const [preferencesError, setPreferencesError] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [profileRes, ordersRes] = await Promise.allSettled([
-        apiJson<{ user: UserProfile }>('/auth/dashboard'),
+      setPreferencesLoading(true)
+      const [profileRes, ordersRes, preferencesRes] = await Promise.allSettled([
+        apiJson<UserProfile | { user: UserProfile } | { result: UserProfile }>('/auth/dashboard'),
         apiJson<{ orders: OrderSummary[] }>('/commerce/orders?limit=10'),
+        apiJson<NotificationPreferences>('/auth/notification-preferences'),
       ])
 
-      if (profileRes.status === 'fulfilled') setProfile(profileRes.value.user)
+      if (profileRes.status === 'fulfilled') {
+        const response = profileRes.value
+        const apiProfile = 'user' in response ? response.user : 'result' in response ? response.result : response
+        setProfile({
+          ...apiProfile,
+          first_name: apiProfile.first_name || apiProfile.display_name || apiProfile.username || 'Kamba member',
+          last_name: apiProfile.last_name || '',
+        })
+      }
       if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.orders)
-      // Saved-address and saved-payment-method APIs are not in the current backend contract.
-      setAddresses([])
-      setPaymentMethods([])
+      if (preferencesRes.status === 'fulfilled') {
+        setNotificationPreferences(preferencesRes.value)
+        setPreferencesError('')
+      } else {
+        setPreferencesError('We could not load your notification preferences. Try refreshing the account page.')
+      }
     } catch (err) {
       console.error('Failed to load account data:', err)
     } finally {
       setLoading(false)
+      setPreferencesLoading(false)
     }
   }, [])
 
@@ -111,41 +122,66 @@ export default function AccountPage() {
         body: JSON.stringify({
           displayName: [formData.first_name, formData.last_name].filter(Boolean).join(' '),
           username: formData.username,
-          phone: formData.phone,
-          email: formData.email,
+          ...(String(formData.phone || '').trim() !== (profile?.phone || '')
+            ? { phone: String(formData.phone || '').trim() || null }
+            : {}),
         }),
       })
-      updateUser({ ...user, ...formData })
+      updateUser({ display_name: [formData.first_name, formData.last_name].filter(Boolean).join(' ') })
       setEditing(null)
-      addToast({ type: 'success', title: 'Profile updated', message: 'Your profile has been saved.' })
+      await loadData()
+      addToast({
+        type: 'success',
+        title: 'Profile updated',
+        message: 'Your profile has been saved. If you changed your phone number, verify it again before vendor onboarding.',
+      })
     } catch (err) {
-      addToast({ type: 'error', title: 'Failed to update', message: 'Please try again.' })
+      addToast({ type: 'error', title: 'Failed to update', message: err instanceof Error ? err.message : 'Please try again.' })
     }
   }
 
-  const handleAddAddress = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handlePreferenceChange = async (key: keyof NotificationPreferences, value: boolean) => {
+    const previous = notificationPreferences
+    setNotificationPreferences({ ...previous, [key]: value })
+    setPreferencesSaving(true)
+    setPreferencesError('')
     try {
-      addToast({ type: 'error', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })
-    } catch (err) {
-      addToast({ type: 'error', title: 'Failed to add address', message: 'Please try again.' })
+      const saved = await apiJson<NotificationPreferences>('/auth/notification-preferences', {
+        method: 'PATCH',
+        body: JSON.stringify({ [key]: value }),
+      })
+      setNotificationPreferences(saved)
+      addToast({ type: 'success', title: 'Preference saved', message: 'Your notification preference has been updated.' })
+    } catch (error) {
+      setNotificationPreferences(previous)
+      const message = error instanceof Error ? error.message : 'Please try again.'
+      setPreferencesError(message)
+      addToast({ type: 'error', title: 'Could not save preference', message })
+    } finally {
+      setPreferencesSaving(false)
     }
   }
 
-  const handleDeleteAddress = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this address?')) return
+  const handleDeleteAccount = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (deleteConfirmation !== 'DELETE' || !deletePassword) return
+    setDeletingAccount(true)
     try {
-      addToast({ type: 'error', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })
-    } catch (err) {
-      addToast({ type: 'error', title: 'Failed to delete', message: 'Please try again.' })
-    }
-  }
-
-  const handleSetDefaultAddress = async (id: string) => {
-    try {
-      addToast({ type: 'error', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })
-    } catch (err) {
-      addToast({ type: 'error', title: 'Failed to update', message: 'Please try again.' })
+      await apiJson('/auth/account', {
+        method: 'DELETE',
+        body: JSON.stringify({ password: deletePassword, confirmation: deleteConfirmation }),
+      })
+      await logout()
+      router.replace('/')
+      router.refresh()
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Account deletion failed',
+        message: error instanceof Error ? error.message : 'Your account has not been changed. Please try again.',
+      })
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -193,7 +229,7 @@ export default function AccountPage() {
       <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">My Account</h1>
-          <p className="text-text-secondary mt-2">Manage your profile, addresses, and orders</p>
+          <p className="text-text-secondary mt-2">Manage your profile, notification preferences and orders</p>
         </div>
         <Button variant="outline" onClick={handleLogout}>
           <LogOut className="w-4 h-4 mr-2" />
@@ -239,11 +275,20 @@ export default function AccountPage() {
                   )}
                 </div>
                 <h2 className="text-xl font-bold font-display text-text-primary">
-                  {profile.first_name} {profile.last_name}
+                  {profile.display_name || [profile.first_name, profile.last_name].filter(Boolean).join(' ')}
                 </h2>
                 <p className="text-text-tertiary mt-1">{profile.email}</p>
-                {profile.phone && <p className="text-text-tertiary text-sm mt-1">{profile.phone}</p>}
-                <p className="text-text-tertiary text-sm mt-2">Member since {formatDateTime(profile.created_at)}</p>
+                {profile.phone && (
+                  <>
+                    <p className="text-text-tertiary text-sm mt-1">{profile.phone}</p>
+                    {profile.phone_verified ? (
+                      <p className="text-xs text-success mt-1">Phone verified</p>
+                    ) : (
+                      <p className="text-xs text-warning mt-1">Phone not verified · <Link className="underline" href="/auth/phone?callbackUrl=%2Faccount">Verify phone</Link></p>
+                    )}
+                  </>
+                )}
+                <p className="text-text-tertiary text-sm mt-2">Member since {profile.created_at ? formatDateTime(profile.created_at) : '—'}</p>
               </Card>
             </div>
             <div className="lg:col-span-2 space-y-6">
@@ -349,249 +394,26 @@ export default function AccountPage() {
         {/* Addresses Tab */}
         {activeTab === 'addresses' && (
           <div className="mt-6 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-text-primary">Saved Addresses</h2>
-              <Button onClick={() => addToast({ type: 'info', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Address
-              </Button>
-            </div>
-
-            {addresses.length === 0 && !showAddAddress ? (
-              <Card variant="outlined" className="p-8 text-center">
-                <MapPin className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
-                <h3 className="text-lg font-semibold text-text-primary mb-2">No addresses saved</h3>
-                <p className="text-text-secondary mb-4">Saved-address management is not connected yet. Enter delivery details during checkout.</p>
-                <Button onClick={() => addToast({ type: 'info', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Address
-                </Button>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {addresses.map((address) => (
-                  <Card key={address.id} variant="elevated" className={address.is_default ? 'ring-2 ring-coral/50' : ''}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-medium text-text-primary capitalize">{address.label}</span>
-                            {address.is_default && (
-                              <Badge variant="success" size="sm">Default</Badge>
-                            )}
-                          </div>
-                          <address className="text-text-secondary not-italic space-y-1">
-                            <p>{address.address}</p>
-                            <p>{address.city}, {address.state} {address.postal_code ? ` ${address.postal_code}` : ''}</p>
-                          </address>
-                        </div>
-                        <div className="flex flex-col gap-2 ml-4">
-                          {!address.is_default && (
-                            <Button variant="ghost" size="sm" onClick={() => handleSetDefaultAddress(address.id)}>
-                              Set Default
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteAddress(address.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                                      </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Add Address Modal */}
-            {showAddAddress && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-                <Card variant="elevated" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-                  <CardHeader>
-                    <CardTitle className="text-text-primary">Add New Address</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleAddAddress} className="space-y-4">
-                      <Input
-                        label="Label (e.g., Home, Work)"
-                        value={String(formData.label ?? '')}
-                        onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                        required
-                      />
-                      <Input
-                        label="Street Address"
-                        value={String(formData.address ?? '')}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        required
-                      />
-                      <div className="grid grid-cols-2 gap-4">
-                        <Input
-                          label="City"
-                          value={String(formData.city ?? '')}
-                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          required
-                        />
-                        <Input
-                          label="State"
-                          value={String(formData.state ?? '')}
-                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <Input
-                        label="Postal Code (Optional)"
-                        value={String(formData.postal_code ?? '')}
-                        onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                      />
-                      <label className="flex items-center gap-2 text-sm text-text-secondary">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(formData.is_default)}
-                          onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                          className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
-                        />
-                        Set as default address
-                      </label>
-                      <div className="flex gap-3 pt-4">
-                        <Button type="submit" className="flex-1">
-                          Save Address
-                        </Button>
-                        <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddAddress(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                                      </CardContent>
-                                    </Card>
-              </div>
-            )}
+            <h2 className="text-xl font-semibold text-text-primary">Saved Addresses</h2>
+            <Card variant="outlined" className="p-8 text-center">
+              <MapPin className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
+              <h3 className="text-lg font-semibold text-text-primary mb-2">Saved addresses are not available yet</h3>
+              <p className="text-text-secondary mb-4">The current backend does not expose persistent saved-address management. Add your delivery address during checkout; this page will not pretend to save it.</p>
+              <Link href="/marketplace/"><Button variant="outline">Browse marketplace</Button></Link>
+            </Card>
           </div>
         )}
 
         {/* Payment Methods Tab */}
         {activeTab === 'payment' && (
           <div className="mt-6 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-text-primary">Payment Methods</h2>
-              <Button onClick={() => addToast({ type: 'info', title: 'Saved payment methods are not connected', message: 'Checkout uses the configured payment provider. This website does not store card details or expose a saved-payment-method API.' })}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Payment Method
-              </Button>
-            </div>
-
-            {paymentMethods.length === 0 && !showAddPayment ? (
-              <Card variant="outlined" className="p-8 text-center">
-                <CreditCard className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
-                <h3 className="text-lg font-semibold text-text-primary mb-2">Kamba does not store payment details here</h3>
-                <p className="text-text-secondary mb-4">Payment is completed through the configured checkout provider. This website does not store card details.</p>
-                <Button onClick={() => addToast({ type: 'info', title: 'Saved payment methods are not connected', message: 'Checkout uses the configured payment provider. This website does not store card details or expose a saved-payment-method API.' })}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Payment Method
-                </Button>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {paymentMethods.map((method) => (
-                  <Card key={method.id} variant="elevated" className={method.is_default ? 'ring-2 ring-coral/50' : ''}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-lg bg-coral/10 flex items-center justify-center">
-                            {method.type === 'card' ? (
-                              <CreditCard className="w-6 h-6 text-coral" />
-                            ) : method.type === 'bank_transfer' ? (
-                              <MapPin className="w-6 h-6 text-coral" />
-                            ) : (
-                              <CreditCard className="w-6 h-6 text-coral" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-text-primary capitalize">{method.type.replace('_', ' ')}</p>
-                            {method.type === 'card' && method.last4 && (
-                              <p className="text-sm text-text-tertiary">Ending in {method.last4} {method.brand ? `• ${method.brand}` : ''}</p>
-                            )}
-                            {method.type === 'bank_transfer' && method.bank_name && (
-                              <p className="text-sm text-text-tertiary">{method.bank_name} • {method.account_name}</p>
-                            )}
-                            {method.is_default && (
-                              <Badge variant="success" size="sm">Default</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {!method.is_default && (
-                            <Button variant="ghost" size="sm">Set Default</Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => {}}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                                      </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Add Payment Modal */}
-            {showAddPayment && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-                <Card variant="elevated" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-                  <CardHeader>
-                    <CardTitle className="text-text-primary">Add Payment Method</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-2">Type</label>
-                        <select
-                          value={String(formData.type ?? '')}
-                          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                          className="w-full px-4 py-3 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
-                        >
-                          <option value="card">Credit/Debit Card</option>
-                          <option value="bank_transfer">Bank Transfer</option>
-                          <option value="ussd">USSD</option>
-                        </select>
-                      </div>
-                      {formData.type === 'card' && (
-                        <div className="space-y-4">
-                          <Input label="Card Number" type="text" placeholder="1234 5678 9012 3456" />
-                          <div className="grid grid-cols-2 gap-4">
-                            <Input label="Expiry" type="text" placeholder="MM/YY" />
-                            <Input label="CVV" type="text" placeholder="123" />
-                          </div>
-                        </div>
-                      )}
-                      {formData.type === 'bank_transfer' && (
-                        <div className="space-y-4">
-                          <Input label="Bank Name" placeholder="e.g., GTBank, Access Bank" />
-                          <Input label="Account Name" placeholder="John Doe" />
-                          <Input label="Account Number" type="text" placeholder="1234567890" />
-                        </div>
-                      )}
-                      {formData.type === 'ussd' && (
-                        <p className="text-sm text-text-tertiary">USSD payments are processed at checkout. No details needed now.</p>
-                      )}
-                      <label className="flex items-center gap-2 text-sm text-text-secondary">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(formData.is_default)}
-                          onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                          className="w-4 h-4 rounded border-border text-coral focus:ring-coral"
-                        />
-                        Set as default payment method
-                      </label>
-                      <div className="flex gap-3 pt-4">
-                        <Button type="submit" className="flex-1">Save</Button>
-                        <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddPayment(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                                      </CardContent>
-                                    </Card>
-              </div>
-            )}
+            <h2 className="text-xl font-semibold text-text-primary">Payment Methods</h2>
+            <Card variant="outlined" className="p-8 text-center">
+              <CreditCard className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
+              <h3 className="text-lg font-semibold text-text-primary mb-2">Payments are managed at checkout</h3>
+              <p className="text-text-secondary mb-4">Kamba does not store card numbers, CVVs or bank credentials in account settings. Choose an available payment method securely when placing an order.</p>
+              <Link href="/marketplace/"><Button variant="outline">Browse marketplace</Button></Link>
+            </Card>
           </div>
         )}
 
@@ -653,84 +475,129 @@ export default function AccountPage() {
         {activeTab === 'settings' && (
           <div className="mt-6 space-y-6">
             <h2 className="text-xl font-semibold text-text-primary">Settings</h2>
-            
+
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="text-text-primary">Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-primary">Push Notifications</p>
-                    <p className="text-sm text-text-tertiary">Receive order updates and promotions</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" />
-                    <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
-                  </label>
-                </div>
-                <div className="border-t border-ink-raised/30" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-primary">Email Notifications</p>
-                    <p className="text-sm text-text-tertiary">Receive order confirmations and receipts</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" />
-                    <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
-                  </label>
-                </div>
-                <div className="border-t border-ink-raised/30" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-primary">SMS Notifications</p>
-                    <p className="text-sm text-text-tertiary">Receive delivery updates via SMS</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
-                  </label>
-                </div>
+                <p className="text-sm text-text-tertiary">
+                  Preferences are saved to your Kamba account and follow you between the website and mobile app.
+                  Push delivery still depends on device registration and provider configuration.
+                </p>
+                {preferencesError && (
+                  <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                    {preferencesError}
+                  </p>
+                )}
+                {preferencesLoading ? (
+                  <p role="status" className="text-sm text-text-secondary">Loading notification preferences…</p>
+                ) : (
+                  <>
+                    {([
+                      ['push_enabled', 'Push notifications', 'App alerts on registered devices.'],
+                      ['email_enabled', 'Email notifications', 'Account and order updates by email.'],
+                      ['sms_enabled', 'SMS notifications', 'Delivery and account updates by SMS.'],
+                      ['marketing_enabled', 'Marketing messages', 'Optional product news and promotions.'],
+                    ] as const).map(([key, label, description]) => (
+                      <div key={key} className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-text-primary">{label}</p>
+                          <p className="text-sm text-text-tertiary">{description}</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notificationPreferences[key]}
+                          disabled={preferencesSaving || key === 'push_enabled'}
+                          onChange={(event) => void handlePreferenceChange(key, event.target.checked)}
+                          aria-label={label}
+                          className="h-5 w-5 accent-coral disabled:opacity-50"
+                        />
+                      </div>
+                    ))}
+                    {preferencesSaving && <p className="text-xs text-text-tertiary" role="status">Saving preference…</p>}
+                  </>
+                )}
               </CardContent>
-                          </Card>
+            </Card>
 
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="text-text-primary">Privacy & Security</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Link href="/account/security" className="flex items-center justify-between p-4 hover:bg-ink-raised/30 rounded-lg transition-colors">
-                  <div>
-                    <p className="font-medium text-text-primary">Password & Security</p>
-                    <p className="text-sm text-text-tertiary">Change password, enable 2FA</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-text-tertiary" />
-                </Link>
-                <div className="border-t border-ink-raised/30" />
-                <Link href="/account/privacy" className="flex items-center justify-between p-4 hover:bg-ink-raised/30 rounded-lg transition-colors">
-                  <div>
-                    <p className="font-medium text-text-primary">Privacy Settings</p>
-                    <p className="text-sm text-text-tertiary">Manage your data and visibility</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-text-tertiary" />
+              <CardContent className="space-y-3">
+                <Link href="/auth/forgot-password" className="flex items-center justify-between rounded-lg p-4 hover:bg-ink-raised/30">
+                  <span>
+                    <span className="block font-medium text-text-primary">Reset password</span>
+                    <span className="block text-sm text-text-tertiary">Request a secure password reset code.</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-text-tertiary" />
                 </Link>
               </CardContent>
-                          </Card>
+            </Card>
 
             <Card variant="elevated">
               <CardHeader>
-                <CardTitle className="text-text-primary">Danger Zone</CardTitle>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+              <CardContent className="space-y-3">
+                <div className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-destructive">Delete Account</p>
-                    <p className="text-sm text-text-tertiary">Permanently delete your account and all data</p>
+                    <p className="text-sm text-text-tertiary">
+                      Deactivates your account and removes its login/profile identifiers. Order and financial records are retained where required.
+                    </p>
                   </div>
-                  <Button variant="destructive" size="sm">Delete Account</Button>
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+                    Delete account
+                  </Button>
                 </div>
-                            </CardContent>
-                          </Card>
+              </CardContent>
+            </Card>
+
+            {deleteDialogOpen && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" role="presentation">
+                <Card variant="elevated" className="w-full max-w-md">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Confirm account deletion</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleDeleteAccount} className="space-y-4">
+                      <p className="text-sm text-text-secondary">
+                        This action cannot be undone. Enter your current password and type DELETE. Vendor listings will be hidden; required transaction records will remain. If you sign in without a password, contact Kamba support for an assisted deletion request.
+                      </p>
+                      <Input
+                        label="Current password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={deletePassword}
+                        onChange={(event) => setDeletePassword(event.target.value)}
+                        required
+                      />
+                      <Input
+                        label="Type DELETE to confirm"
+                        value={deleteConfirmation}
+                        onChange={(event) => setDeleteConfirmation(event.target.value)}
+                        autoComplete="off"
+                        required
+                      />
+                      <div className="flex gap-3">
+                        <Button type="submit" variant="destructive" className="flex-1" disabled={deletingAccount || deleteConfirmation !== 'DELETE' || !deletePassword}>
+                          {deletingAccount ? 'Deleting…' : 'Permanently delete'}
+                        </Button>
+                        <Button type="button" variant="outline" className="flex-1" disabled={deletingAccount} onClick={() => {
+                          setDeleteDialogOpen(false)
+                          setDeletePassword('')
+                          setDeleteConfirmation('')
+                        }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
       </div>

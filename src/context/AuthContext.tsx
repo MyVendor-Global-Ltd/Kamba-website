@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, AuthState } from '@/types/auth'
 import * as authApi from '@/lib/auth'
+import { ApiError } from '@/lib/api'
 
 const AuthContext = createContext<{
   state: AuthState
@@ -20,27 +21,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
     cartCount: 0,
+    authError: null,
   })
 
-  useEffect(() => {
-    authApi.getProfile()
-      .then((data: any) => {
-        setState({
-          user: data.user || data,
-          isAuthenticated: true,
-          isLoading: false,
-          cartCount: data.cartCount || 0,
-        })
+  const refreshProfile = useCallback(async () => {
+    setState((previous) => ({ ...previous, isLoading: true, authError: null }))
+    try {
+      const data = await authApi.getProfile()
+      const profile = data.user || data
+      if (!profile?.id) throw new Error('The API did not return an authenticated user.')
+
+      setState({
+        user: profile,
+        isAuthenticated: true,
+        isLoading: false,
+        cartCount: data.cartCount || profile.cartCount || 0,
+        authError: null,
       })
-      .catch(() => {
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
         setState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
           cartCount: 0,
+          authError: null,
         })
-      })
+        return
+      }
+
+      const message = error instanceof Error
+        ? error.message
+        : 'We could not verify your Kamba session. Check your connection and try again.'
+      setState((previous) => ({
+        ...previous,
+        isLoading: false,
+        authError: message,
+      }))
+      throw error
+    }
   }, [])
+
+  useEffect(() => {
+    void refreshProfile().catch(() => {})
+  }, [refreshProfile])
 
   const login = async (email: string, password: string) => {
     await authApi.login(email, password)
@@ -59,37 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: false,
       isLoading: false,
       cartCount: 0,
+      authError: null,
     })
   }
 
-  const refreshProfile = async () => {
-    try {
-      const data = await authApi.getProfile()
-      setState({
-        user: data.user || data,
-        isAuthenticated: true,
-        isLoading: false,
-        cartCount: data.cartCount || 0,
-      })
-    } catch {
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        cartCount: 0,
-      })
-    }
-  }
-
-    const updateUser = (data: Partial<User>) => {
-      setState(prev => ({
-        ...prev,
-        user: prev.user ? { ...prev.user, ...data } : null,
-      }))
-    }
+  const updateUser = useCallback((data: Partial<User>) => {
+    setState((previous) => ({
+      ...previous,
+      user: previous.user ? { ...previous.user, ...data } : null,
+    }))
+  }, [])
 
   return (
-      <AuthContext.Provider value={{ state, user: state.user, login, register, logout, refreshProfile, updateUser }}>
+    <AuthContext.Provider value={{ state, user: state.user, login, register, logout, refreshProfile, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
@@ -97,8 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }

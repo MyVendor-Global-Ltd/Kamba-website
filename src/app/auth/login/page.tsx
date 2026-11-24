@@ -1,11 +1,23 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+function safeCallback(value: string | null) {
+  if (!value) return '/account'
+  try {
+    const target = new URL(value, 'https://kamba.invalid')
+    if (target.origin !== 'https://kamba.invalid') return '/account'
+    return `${target.pathname}${target.search}${target.hash}`
+  } catch {
+    return '/account'
+  }
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -15,7 +27,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const callbackUrl = safeCallback(searchParams.get('callbackUrl'))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,7 +35,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      router.push(callbackUrl)
+      router.replace(callbackUrl)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Login failed')
@@ -39,41 +51,24 @@ export default function LoginPage() {
         <CardDescription>Enter your email and password to access your account.</CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">
-            {error}
-          </div>
-        )}
+        {error && <div role="alert" className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Email address</label>
-            <Input
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <Input type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Password</label>
-            <Input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
-          </Button>
+          <div className="text-right text-sm">
+            <Link href="/auth/forgot-password" className="font-medium text-primary">Forgot password?</Link>
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</Button>
         </form>
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Don't have an account?{' '}
-          <a href={`/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="font-medium">
-            Sign up
-          </a>
+          Don&apos;t have an account?{' '}
+          <Link href={`/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="font-medium">Sign up</Link>
         </p>
       </CardContent>
     </Card>

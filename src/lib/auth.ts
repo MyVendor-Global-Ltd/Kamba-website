@@ -1,4 +1,5 @@
 import { isMockMode } from '@/lib/mock-api'
+import { apiJson } from '@/lib/api'
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001').replace(/\/$/, '')
 const MOCK_USER_KEY = 'kamba_demo_user'
@@ -9,6 +10,7 @@ export type AuthInput = {
   confirm_password: string
   username: string
   referral_username?: string
+  referral_code?: string
 }
 
 function readMockUser() {
@@ -42,22 +44,29 @@ export async function login(email: string, password: string) {
   if (isMockMode) {
     if (!email.trim() || !password) throw new Error('Enter your email and password to continue.')
     const vendorDemo = email.toLowerCase() === 'vendor@kamba.demo'
-    const user = { id: vendorDemo ? 'demo-vendor' : 'demo-buyer', email, username: vendorDemo ? 'demovendor' : 'kambabuyer', role: vendorDemo ? 'vendor' : 'buyer', is_demo: true }
+    const user = { id: vendorDemo ? 'demo-vendor' : 'demo-buyer', email, username: vendorDemo ? 'demovendor' : 'demobuyer', role: vendorDemo ? 'vendor' : 'buyer', is_active: true, is_demo: true }
     writeMockUser(user)
     return { user, prototype: true }
   }
-  return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+  return request('/auth/login', { method: 'POST', body: JSON.stringify({ email: email.trim().toLowerCase(), password }) })
 }
 
 export async function register(data: AuthInput) {
   if (isMockMode) {
-    if (!data.email.trim() || data.password.length < 8) throw new Error('Use a valid email and a password with at least 8 characters.')
-    if (data.password !== data.confirm_password) throw new Error('Passwords do not match.')
-    const user = { id: `demo-${Date.now()}`, email: data.email, username: data.username.replace(/^@/, '').toLowerCase(), role: 'buyer', is_demo: true }
+    if (!data.email.trim() || data.password.length < 8 || data.password !== data.confirm_password) throw new Error('Enter a valid email and matching passwords of at least 8 characters.')
+    const user = { id: `demo-${Date.now()}`, email: data.email, username: data.username.trim().replace(/^@/, '').toLowerCase(), role: 'buyer', is_active: true, is_demo: true }
     writeMockUser(user)
     return { user, prototype: true }
   }
-  return request('/auth/register', { method: 'POST', body: JSON.stringify(data) })
+  const payload = {
+    email: data.email.trim().toLowerCase(),
+    password: data.password,
+    confirm_password: data.confirm_password,
+    username: data.username.trim().replace(/^@/, '').toLowerCase(),
+    ...(data.referral_username?.trim() ? { referral_username: data.referral_username.trim().replace(/^@/, '').toLowerCase() } : {}),
+    ...(data.referral_code?.trim() ? { referral_code: data.referral_code.trim() } : {}),
+  }
+  return request('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
 }
 
 export async function logout() {
@@ -74,29 +83,33 @@ export async function getProfile() {
     if (!user) throw new Error('No development session')
     return { user, cartCount: 0, prototype: true }
   }
-  const result = await request<any>('/auth/dashboard')
-  return { user: result, cartCount: 0 }
+  const payload = await apiJson<any>('/auth/dashboard')
+  const profile = payload.user || payload.result?.user || payload.result || payload
+  return { user: profile, cartCount: payload.cartCount || profile.cartCount || 0 }
 }
 
-export async function requestPhoneOTP(phone: string, method: 'sms' | 'whatsapp' = 'sms') {
-  if (isMockMode) return { userId: 'demo-phone-user', requiresVerification: true, prototype: true }
-  return request('/auth/register/phone', { method: 'POST', body: JSON.stringify({ phone, method }) })
+export async function requestPhoneOTP(phone: string) {
+  if (isMockMode) return { userId: 'demo-phone-user', phone, requiresVerification: true, prototype: true }
+  return request('/auth/phone/request', { method: 'POST', body: JSON.stringify({ phone, method: 'sms' }) })
 }
 
-export async function verifyPhoneOTP(userId: string, otpCode: string) {
+export async function verifyPhoneOTP(otp: string) {
   if (isMockMode) {
-    if (!userId || otpCode !== '000000') throw new Error('For the prototype only, enter 000000. No real phone verification is performed.')
-    return { phoneVerified: true, prototype: true }
+    if (otp !== '000000') throw new Error('For the prototype only, enter 000000. No real phone verification is performed.')
+    return { success: true, prototype: true, verified: false }
   }
-  return request('/auth/verify/phone', { method: 'POST', body: JSON.stringify({ userId, otp_code: otpCode }) })
+  return request('/auth/phone/verify', { method: 'POST', body: JSON.stringify({ otp_code: otp }) })
 }
 
 export async function forgotPassword(email: string) {
-  if (isMockMode) return { success: true, prototype: true, message: `Password reset is simulated for ${email}. No email was sent.` }
-  return request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
+  if (isMockMode) return { success: true, prototype: true, message: 'Password reset is simulated. No email was sent.' }
+  return request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: email.trim().toLowerCase() }) })
 }
 
 export async function resetPassword(email: string, otpCode: string, newPassword: string) {
   if (isMockMode) return { success: true, prototype: true, message: 'Password reset simulated. No real account was changed.' }
-  return request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, otp_code: otpCode, new_password: newPassword }) })
+  return request('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ email: email.trim().toLowerCase(), otp_code: otpCode.trim(), new_password: newPassword }),
+  })
 }
