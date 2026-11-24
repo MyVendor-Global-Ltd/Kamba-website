@@ -18,8 +18,8 @@ export function ProductCard({ product }: ProductCardProps) {
     <Card>
       <CardContent className="p-4">
         <div className="h-48 bg-ink-raised/50 rounded-lg flex items-center justify-center mb-4 flex-shrink-0">
-          {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-lg" />
+          {(product.image_url || product.images?.[0]) ? (
+            <img src={product.image_url || product.images?.[0]} alt={product.name} className="w-full h-full object-cover rounded-lg" />
           ) : (
             <span className="text-text-tertiary text-xs">Image</span>
           )}
@@ -39,7 +39,7 @@ export function ProductCard({ product }: ProductCardProps) {
               name: product.name,
               price_kobo: product.price,
               store_id: product.store_id || '',
-              image_url: product.image_url,
+              image_url: product.image_url || product.images?.[0],
             })}
             size="sm"
           >
