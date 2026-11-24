@@ -1,5 +1,29 @@
+'use client'
+
+import { useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { AuthGuard } from '@/components/auth/auth-guard'
+import { useAuth } from '@/context/AuthContext'
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
-  return <AuthGuard>{children}</AuthGuard>
+  const { state } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+  const isOnboarding = pathname === '/vendor/onboard'
+
+  useEffect(() => {
+    if (!state.isLoading && state.isAuthenticated && !isOnboarding && state.user?.role !== 'vendor') {
+      router.replace('/vendor/onboard')
+    }
+  }, [state.isLoading, state.isAuthenticated, state.user?.role, isOnboarding, router])
+
+  return (
+    <AuthGuard>
+      {isOnboarding || state.user?.role === 'vendor' ? children : (
+        <div className="flex min-h-[45vh] items-center justify-center" role="status">
+          Redirecting to vendor onboarding…
+        </div>
+      )}
+    </AuthGuard>
+  )
 }
