@@ -4,6 +4,10 @@ export interface User {
   first_name?: string
   last_name?: string
   phone?: string
+  display_name?: string
+  phone_verified?: boolean
+  is_complete?: boolean
+  is_active?: boolean
   role: 'buyer' | 'vendor' | 'admin' | 'agent'
   is_verified: boolean
   created_at: string
