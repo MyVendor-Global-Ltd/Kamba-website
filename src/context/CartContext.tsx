@@ -18,6 +18,7 @@ interface CartState {
 
 interface CartContextType {
   cart: CartState
+  isGuest: boolean
   isLoading: boolean
   error: string | null
   addItem: (item: Omit<CartItem, 'id'>) => Promise<void>
@@ -228,12 +229,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!authState.isLoading && (isMockMode || (authState.isAuthenticated && authState.user?.role === 'buyer'))) void Promise.resolve().then(refresh)
   }, [authState.isAuthenticated, authState.isLoading, refresh])
 
-  const persistGuestCart = (next: CartState) => {
+  const persistGuestCart = useCallback((next: CartState) => {
     cartRef.current = next
     setCart(next)
     setStoredGuestCart(next)
     setStoredCart(next)
-  }
+  }, [])
 
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
     try {
@@ -270,7 +271,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, refresh])
+  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
 
   const updateItem = useCallback(async (productId: string, quantity: number) => {
     try {
@@ -333,7 +334,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticatedBuyer, isGuest, refresh])
 
   return (
-    <CartContext.Provider value={{ cart, isLoading, error, addItem, updateItem, removeItem, clear, refresh }}>
+    <CartContext.Provider value={{ cart, isGuest, isLoading, error, addItem, updateItem, removeItem, clear, refresh }}>
       {children}
     </CartContext.Provider>
   )
