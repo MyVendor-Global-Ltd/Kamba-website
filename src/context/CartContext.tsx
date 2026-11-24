@@ -160,6 +160,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const isGuest = !isMockMode && !isAuthenticatedBuyer
   const [cart, setCart] = useState<CartState>(emptyCart)
   const cartRef = useRef(cart)
+  const guestMergeInProgressRef = useRef(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -195,24 +196,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (!isMockMode && isAuthenticatedBuyer) {
         const guestCart = getStoredGuestCart()
-        if (guestCart.items.length > 0) {
-          const current = normalizeCart(await apiJson<CartApiResponse>('/commerce/cart'))
-          for (const item of guestCart.items) {
-            const existing = current.items.find((candidate) => candidate.product_id === item.product_id)
-            if (!existing) {
-              await apiJson('/commerce/cart/items', {
-                method: 'POST',
-                body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
-              })
-            } else if (existing.quantity < item.quantity) {
-              await apiJson(`/commerce/cart/items/${encodeURIComponent(item.product_id)}`, {
-                method: 'PUT',
-                body: JSON.stringify({ quantity: item.quantity }),
-              })
+        if (guestCart.items.length > 0 && !guestMergeInProgressRef.current) {
+          guestMergeInProgressRef.current = true
+          try {
+            const current = normalizeCart(await apiJson<CartApiResponse>('/commerce/cart'))
+            for (const item of guestCart.items) {
+              const existing = current.items.find((candidate) => candidate.product_id === item.product_id)
+              if (!existing) {
+                await apiJson('/commerce/cart/items', {
+                  method: 'POST',
+                  body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity }),
+                })
+              } else if (existing.quantity < item.quantity) {
+                await apiJson(`/commerce/cart/items/${encodeURIComponent(item.product_id)}`, {
+                  method: 'PUT',
+                  body: JSON.stringify({ quantity: item.quantity }),
+                })
+              }
             }
+            // Remove the guest copy only after every merge request has succeeded.
+            if (typeof window !== 'undefined') window.localStorage.removeItem(GUEST_CART_STORAGE_KEY)
+          } finally {
+            guestMergeInProgressRef.current = false
           }
-          // Remove the guest copy only after every merge request has succeeded.
-          if (typeof window !== 'undefined') window.localStorage.removeItem(GUEST_CART_STORAGE_KEY)
         }
       }
 
