@@ -13,8 +13,9 @@ async function refreshAccessToken(): Promise<string | null> {
         credentials: 'include',
       })
       if (!res.ok) return null
-      const data = await res.json()
-      return data.access_token || null
+      await res.json().catch(() => ({}))
+      // The API rotates HttpOnly cookies and does not return a readable access token.
+      return 'refreshed'
     } finally {
       refreshPromise = null
     }
@@ -86,39 +87,37 @@ export async function apiFetch(
 
   const controller = new AbortController()
   const timeoutId = timeout ? setTimeout(() => controller.abort(), timeout) : null
+  const abortFromCaller = () => controller.abort()
 
-  if (signal) {
-    signal.addEventListener('abort', () => controller.abort())
+  if (signal?.aborted) controller.abort()
+  else signal?.addEventListener('abort', abortFromCaller, { once: true })
+
+  const requestInit: RequestInit = {
+    ...fetchOptions,
+    credentials: 'include',
+    signal: controller.signal,
+    headers: {
+      'Content-Type': 'application/json',
+      ...fetchOptions.headers,
+    },
   }
 
   try {
-    const res = await fetch(url, {
-      ...fetchOptions,
-      credentials: 'include',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...fetchOptions.headers,
-      },
-    })
+    const res = await fetch(url, requestInit)
 
     if (res.status === 401) {
       const newToken = await refreshAccessToken()
       if (newToken) {
-        return fetch(url, {
-          ...fetchOptions,
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...fetchOptions.headers,
-          },
-        })
+        // Retry the original request once with the rotated HttpOnly cookies.
+        // The retry shares the caller's abort signal and timeout.
+        return fetch(url, requestInit)
       }
     }
 
     return res
   } finally {
     if (timeoutId) clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', abortFromCaller)
   }
 }
 

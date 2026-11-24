@@ -30,6 +30,7 @@ export function Header() {
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
     { href: '/vendor/onboard', label: 'Sell on Kamba' },
+    { href: '/download', label: 'Get the app' },
     ...(state.user?.role === 'vendor'
       ? [
           { href: '/vendor/service-requests', label: 'Service requests' },
