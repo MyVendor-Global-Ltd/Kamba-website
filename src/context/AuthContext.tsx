@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, AuthState } from '@/types/auth'
 import * as authApi from '@/lib/auth'
+import { ApiError } from '@/lib/api'
 
 const AuthContext = createContext<{
   state: AuthState
@@ -20,9 +21,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
     cartCount: 0,
+    authError: null,
   })
 
   const refreshProfile = useCallback(async () => {
+    setState((previous) => ({ ...previous, isLoading: true, authError: null }))
     try {
       const data = await authApi.getProfile()
       const profile = data.user || data
@@ -33,19 +36,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
         isLoading: false,
         cartCount: data.cartCount || profile.cartCount || 0,
+        authError: null,
       })
-    } catch {
-      setState({
-        user: null,
-        isAuthenticated: false,
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+        setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          cartCount: 0,
+          authError: null,
+        })
+        return
+      }
+
+      const message = error instanceof Error
+        ? error.message
+        : 'We could not verify your Kamba session. Check your connection and try again.'
+      setState((previous) => ({
+        ...previous,
         isLoading: false,
-        cartCount: 0,
-      })
+        authError: message,
+      }))
+      throw error
     }
   }, [])
 
   useEffect(() => {
-    void Promise.resolve().then(refreshProfile)
+    void refreshProfile().catch(() => {})
   }, [refreshProfile])
 
   const login = async (email: string, password: string) => {
@@ -65,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: false,
       isLoading: false,
       cartCount: 0,
+      authError: null,
     })
   }
 
