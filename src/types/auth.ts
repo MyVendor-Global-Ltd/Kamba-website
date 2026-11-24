@@ -19,6 +19,7 @@ export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   cartCount: number
+  authError?: string | null
 }
 
 export interface LoginCredentials {
