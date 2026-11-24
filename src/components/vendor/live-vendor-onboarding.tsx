@@ -242,8 +242,8 @@ export function LiveVendorOnboarding() {
             <label className="block text-sm font-medium text-text-secondary">Selfie image
               <input type="file" accept="image/*" capture="user" onChange={(event) => setSelfie(event.target.files?.[0] || null)} className="mt-2 block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" required />
             </label>
-            <p className="text-xs leading-5 text-text-tertiary">Your selfie is uploaded to Kamba&apos;s configured storage for the vendor onboarding check. Submit only your own image. The backend records this step; final verification remains subject to Kamba's review.</p>
-            <Button type="submit" disabled={submitting || (!eligibility?.eligible && stage !== 'liveness_done')}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
+            <p className="text-xs leading-5 text-text-tertiary">Your selfie is uploaded to Kamba&apos;s configured storage for the vendor onboarding check. Submit only your own image. The backend records this step; final verification remains subject to Kamba&apos;s review.</p>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
           </form>
         </CardContent></Card>
       )}
