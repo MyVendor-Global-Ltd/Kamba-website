@@ -293,7 +293,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, refresh])
+  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
 
   const removeItem = useCallback(async (productId: string) => {
     try {
@@ -311,7 +311,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, refresh])
+  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
 
   const clear = useCallback(async () => {
     try {
@@ -331,7 +331,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, refresh])
+  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
 
   return (
     <CartContext.Provider value={{ cart, isGuest, isLoading, error, addItem, updateItem, removeItem, clear, refresh }}>
