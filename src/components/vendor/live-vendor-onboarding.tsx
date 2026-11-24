@@ -27,8 +27,10 @@ interface OnboardingStatus {
 }
 
 async function fileToBase64(file: File) {
-  if (!file.type.startsWith('image/')) throw new Error('Choose an image file.')
-  if (file.size > 10 * 1024 * 1024) throw new Error('Each image must be 10 MB or smaller.')
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    throw new Error('Choose a JPEG, PNG or WebP image.')
+  }
+  if (file.size > 5 * 1024 * 1024) throw new Error('Each image must be 5 MB or smaller.')
   return new Promise<{ base64: string; mime_type: string }>((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
@@ -65,6 +67,8 @@ export function LiveVendorOnboarding() {
   })
 
   const loadStatus = useCallback(async () => {
+    setLoading(true)
+    setError('')
     try {
       const [eligibilityData, statusData] = await Promise.all([
         apiJson<Eligibility>('/vendors/onboard/eligibility'),
@@ -82,9 +86,11 @@ export function LiveVendorOnboarding() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load vendor onboarding status.')
+      return false
     } finally {
       setLoading(false)
     }
+    return true
   }, [])
 
   useEffect(() => { void Promise.resolve().then(loadStatus) }, [loadStatus])
@@ -99,9 +105,15 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({ image_base64: image.base64, mime_type: image.mime_type, vendor_type: vendorType }),
       })
-      await refreshProfile()
-      await loadStatus()
-      setSuccess('Selfie submitted and vendor onboarding profile created. Continue with your storefront or service profile.')
+      const statusLoaded = await loadStatus()
+      try {
+        await refreshProfile()
+      } catch {
+        setError('Your selfie was submitted, but your session profile could not refresh. Retry the session check before leaving onboarding.')
+      }
+      setSuccess(statusLoaded
+        ? 'Selfie submitted and vendor onboarding profile created. Continue with your storefront or service profile.'
+        : 'Selfie submitted. The onboarding status could not refresh; use Retry to continue.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit the selfie.')
     } finally { setSubmitting(false) }
@@ -120,8 +132,10 @@ export function LiveVendorOnboarding() {
           description: storeForm.description.trim(),
         }),
       })
-      await loadStatus()
-      setSuccess('Store profile created. Continue with the next onboarding step.')
+      const statusLoaded = await loadStatus()
+      setSuccess(statusLoaded
+        ? 'Store profile created. Continue with the next onboarding step.'
+        : 'Store profile created, but onboarding status could not refresh. Use Retry before continuing.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the store profile.')
     } finally { setSubmitting(false) }
@@ -141,8 +155,10 @@ export function LiveVendorOnboarding() {
           price_range: serviceForm.price_range.trim(),
         }),
       })
-      await loadStatus()
-      setSuccess('Service profile created. Your vendor onboarding is complete.')
+      const statusLoaded = await loadStatus()
+      setSuccess(statusLoaded
+        ? 'Service profile created. Your vendor onboarding is complete.'
+        : 'Service profile created, but onboarding status could not refresh. Use Retry before continuing.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the service profile.')
     } finally { setSubmitting(false) }
@@ -157,12 +173,17 @@ export function LiveVendorOnboarding() {
     setSubmitting(true); setError(''); setSuccess('')
     try {
       const photos = await Promise.all(storePhotos.map(fileToBase64))
-      await apiJson('/vendors/onboard/location-photos', {
+      const result = await apiJson<{ count?: number }>('/vendors/onboard/location-photos', {
         method: 'POST',
         body: JSON.stringify({ photos }),
       })
-      await loadStatus()
-      setSuccess('Store location photos uploaded.')
+      if (!Number.isInteger(result.count) || (result.count ?? 0) < 2) {
+        throw new Error('The server did not confirm at least two uploaded location photos.')
+      }
+      const statusLoaded = await loadStatus()
+      setSuccess(statusLoaded
+        ? `${result.count} store location photos uploaded.`
+        : 'Photos uploaded, but onboarding status could not refresh. Use Retry to confirm the result.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not upload store location photos.')
     } finally { setSubmitting(false) }
@@ -180,7 +201,19 @@ export function LiveVendorOnboarding() {
 
   if (loading) return <div className="container mx-auto max-w-3xl px-4 py-16"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>
 
-  const stage = status?.stage || 'not_eligible'
+  if (!status || !eligibility) {
+    return (
+      <div className="container mx-auto max-w-3xl space-y-4 px-4 py-12">
+        <h1 className="font-display text-3xl font-bold text-text-primary">Vendor onboarding</h1>
+        <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+          {error || 'We could not verify your onboarding status.'}
+        </p>
+        <Button onClick={() => void loadStatus()}>Retry status check</Button>
+      </div>
+    )
+  }
+
+  const stage = status.stage || 'not_eligible'
   const needsStore = status?.next_step === 'create_store'
   const needsService = status?.next_step === 'create_service'
 
@@ -240,7 +273,7 @@ export function LiveVendorOnboarding() {
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
             <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => updateService('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
             {showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
-            <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="phone">Phone</option><option value="email">Email</option></select></label>
+            <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
             <Input label="Business WhatsApp number" value={serviceForm.contact_whatsapp} onChange={(event) => updateService('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
           </form>
