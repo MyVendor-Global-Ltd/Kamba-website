@@ -39,7 +39,7 @@ export function LiveVendorDashboard() {
     try {
       setError('')
       const [orderResponse, productResponse] = await Promise.all([
-        apiJson<{ orders: DashboardOrder[] }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } }),
+        apiJson<{ orders: DashboardOrder[] }>('/commerce/orders'),
         apiJson<{ products: DashboardProduct[] }>('/commerce/vendor/products', { params: { limit: 100, offset: 0 } }),
       ])
       setOrders((orderResponse.orders || []).map((order) => ({ ...order, total_amount: Number(order.total ?? order.total_amount ?? 0) })))
