@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { uploadProductMedia } from '@/lib/product-media'
 
 export interface ProductFormValues {
   name: string
@@ -13,6 +14,7 @@ export interface ProductFormValues {
   category?: string
   tags: string[]
   images: string[]
+  videos: string[]
   is_available: boolean
 }
 export interface ProductFormInitial {
@@ -24,6 +26,7 @@ export interface ProductFormInitial {
   category?: string | null
   tags?: string[]
   images?: string[]
+  videos?: string[]
   is_available?: boolean
 }
 
@@ -46,8 +49,37 @@ export function VendorProductForm({
   const [category, setCategory] = useState(initial?.category || '')
   const [tags, setTags] = useState((initial?.tags || []).join(', '))
   const [images, setImages] = useState((initial?.images || []).join('\n'))
+  const [videos, setVideos] = useState((initial?.videos || []).join('\n'))
   const [available, setAvailable] = useState(initial?.is_available ?? true)
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
+
+  const uploadFiles = async (files: File[], expectedKind: 'image' | 'video') => {
+    if (!files.length) return
+    setError('')
+    setUploading(true)
+    let completed = 0
+    try {
+      for (const file of files) {
+        setUploadProgress(`Uploading ${completed + 1} of ${files.length}…`)
+        const uploaded = await uploadProductMedia(file)
+        if (uploaded.kind !== expectedKind) throw new Error('The selected file does not match this media field.')
+        if (expectedKind === 'image') {
+          setImages((current) => [...current.split(/\n|,/).map((value) => value.trim()).filter(Boolean), uploaded.url].join('\n'))
+        } else {
+          setVideos((current) => [...current.split(/\n|,/).map((value) => value.trim()).filter(Boolean), uploaded.url].join('\n'))
+        }
+        completed += 1
+      }
+      setUploadProgress(`${completed} file${completed === 1 ? '' : 's'} uploaded.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Media upload failed.')
+      setUploadProgress('')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -62,8 +94,11 @@ export function VendorProductForm({
     const tagValues = tags.split(',').map((value) => value.trim()).filter(Boolean)
     if (tagValues.length > 20) return setError('You can add up to 20 tags.')
     const imageUrls = images.split(/\n|,/).map((value) => value.trim()).filter(Boolean)
-    if (imageUrls.some((value) => !/^https?:\/\//i.test(value))) return setError('Product images must be valid HTTP or HTTPS URLs.')
-    if (imageUrls.length > 20) return setError('You can add up to 20 image URLs.')
+    const videoUrls = videos.split(/\n|,/).map((value) => value.trim()).filter(Boolean)
+    if ([...imageUrls, ...videoUrls].some((value) => !/^https?:\/\//i.test(value))) return setError('Product media must use valid HTTP or HTTPS URLs.')
+    if (imageUrls.length > 20) return setError('You can add up to 20 product images.')
+    if (videoUrls.length > 20) return setError('You can add up to 20 product videos.')
+
     await onSubmit({
       name: name.trim(),
       description: description.trim(),
@@ -73,6 +108,7 @@ export function VendorProductForm({
       category: category.trim() || undefined,
       tags: tagValues,
       images: imageUrls,
+      videos: videoUrls,
       is_available: available,
     })
   }
@@ -91,10 +127,52 @@ export function VendorProductForm({
         <Input label="Category" value={category} onChange={(event) => setCategory(event.target.value)} maxLength={100} placeholder="e.g. Fashion" />
       </div>
       <Input label="Tags (comma-separated)" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="e.g. handmade, locally made" />
-      <label className="block text-sm font-medium text-text-secondary">Product image URLs<textarea value={images} onChange={(event) => setImages(event.target.value)} rows={3} placeholder="One image URL per line" className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-primary" /></label>
-      <p className="text-xs text-text-tertiary">Use publicly accessible HTTPS image URLs. Direct image upload is not exposed by the current product API.</p>
+
+      <section className="space-y-3 rounded-xl border border-border p-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">Product images</h3>
+          <p className="mt-1 text-xs text-text-tertiary">JPEG, PNG or WebP · maximum 5 MB per image · up to 20 images</p>
+        </div>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          disabled={uploading || submitting}
+          onChange={(event) => {
+            const files = Array.from(event.target.files || [])
+            event.target.value = ''
+            void uploadFiles(files, 'image')
+          }}
+          className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-text-primary"
+        />
+        <label className="block text-xs font-medium text-text-secondary">Image URLs<textarea value={images} onChange={(event) => setImages(event.target.value)} rows={3} placeholder="Uploaded URLs are added here automatically. You can also paste public HTTPS URLs." className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-primary" /></label>
+        <p className="text-xs text-text-tertiary">{images.split(/\n|,/).map((value) => value.trim()).filter(Boolean).length} image URL(s)</p>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-border p-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">Product videos</h3>
+          <p className="mt-1 text-xs text-text-tertiary">MP4, WebM or QuickTime · maximum 25 MB per video · up to 20 videos</p>
+        </div>
+        <input
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime"
+          multiple
+          disabled={uploading || submitting}
+          onChange={(event) => {
+            const files = Array.from(event.target.files || [])
+            event.target.value = ''
+            void uploadFiles(files, 'video')
+          }}
+          className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-text-primary"
+        />
+        <label className="block text-xs font-medium text-text-secondary">Video URLs<textarea value={videos} onChange={(event) => setVideos(event.target.value)} rows={2} placeholder="Uploaded video URLs are added here automatically." className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-primary" /></label>
+        <p className="text-xs text-text-tertiary">{videos.split(/\n|,/).map((value) => value.trim()).filter(Boolean).length} video URL(s)</p>
+      </section>
+
+      {uploadProgress && <p aria-live="polite" className="text-xs text-text-secondary">{uploadProgress}</p>}
       <label className="flex items-center gap-3 text-sm text-text-primary"><input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} className="h-4 w-4 accent-primary" /> Product is available for purchase</label>
-      <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : submitLabel}</Button>
+      <Button type="submit" disabled={submitting || uploading}>{uploading ? 'Uploading media…' : submitting ? 'Saving…' : submitLabel}</Button>
     </form>
   )
 }

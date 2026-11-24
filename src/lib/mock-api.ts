@@ -368,6 +368,7 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
       category: typeof body.category === 'string' ? body.category : '',
       tags: Array.isArray(body.tags) ? body.tags.filter((tag): tag is string => typeof tag === 'string') : [],
       images: Array.isArray(body.images) ? body.images.filter((image): image is string => typeof image === 'string') : [],
+      videos: Array.isArray(body.videos) ? body.videos.filter((video): video is string => typeof video === 'string') : [],
       is_available: body.is_available !== false,
       is_active: true,
       store_id: store.id,
