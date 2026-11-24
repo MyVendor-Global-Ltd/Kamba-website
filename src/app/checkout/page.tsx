@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { formatKobo } from '@/lib/formatting'
 import { apiJson } from '@/lib/api'
 import { useCartContext } from '@/context/CartContext'
+import { useAuth } from '@/context/AuthContext'
 
 interface University {
   id: string
@@ -25,6 +26,7 @@ interface DeliveryZone {
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, isLoading, refresh } = useCartContext()
+  const { state: authState } = useAuth()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
@@ -115,6 +117,10 @@ export default function CheckoutPage() {
     setError(null)
 
     try {
+      if (!authState.isAuthenticated || authState.user?.role !== 'buyer') {
+        router.push('/auth/login?callbackUrl=%2Fcheckout')
+        return
+      }
       if (formData.deliveryType === 'delivery') {
         if (!selectedUniversityId || !selectedZoneId || deliveryQuote === null) {
           throw new Error('Select a supported university and delivery zone so Kamba can calculate the delivery charge.')
@@ -157,7 +163,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || authState.isLoading) {
     return (
       <div className="container mx-auto space-y-8 px-4 py-8 lg:py-12">
         <div className="h-9 w-1/3 animate-pulse rounded-lg bg-surface-muted" />
@@ -165,6 +171,21 @@ export default function CheckoutPage() {
           <div className="space-y-4 md:col-span-2">{[1, 2].map((item) => <div key={item} className="h-48 animate-pulse rounded-xl bg-surface-muted" />)}</div>
           <div className="h-80 animate-pulse rounded-xl bg-surface-muted" />
         </div>
+      </div>
+    )
+  }
+
+  if (cartItems.length > 0 && (!authState.isAuthenticated || authState.user?.role !== 'buyer')) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <Card variant="outlined" className="mx-auto max-w-md p-8 text-center">
+          <CardContent className="space-y-4">
+            <h2 className="text-xl font-semibold text-text-primary">Sign in to complete checkout</h2>
+            <p className="text-sm text-text-secondary">Your cart is saved on this device. Sign in with a buyer account to sync your items and calculate the final fees.</p>
+            <Button className="w-full" onClick={() => router.push('/auth/login?callbackUrl=%2Fcheckout')}>Sign in to continue</Button>
+            <Link href="/marketplace/products" className="block text-sm text-text-secondary hover:text-primary">Continue shopping</Link>
+          </CardContent>
+        </Card>
       </div>
     )
   }
