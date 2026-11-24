@@ -6,10 +6,10 @@ import { useAuth } from '@/context/AuthContext'
 
 export function Footer() {
   const { state } = useAuth()
-  const accountHref = state.isAuthenticated ? '/account' : '/auth/login?callbackUrl=%2Faccount'
-  const ordersHref = state.isAuthenticated ? '/orders' : '/auth/login?callbackUrl=%2Forders'
-  const vendorHref = state.isAuthenticated ? '/vendor/onboard' : '/auth/login?callbackUrl=%2Fvendor%2Fonboard'
-  const dashboardHref = state.isAuthenticated ? '/vendor/dashboard' : '/auth/login?callbackUrl=%2Fvendor%2Fdashboard'
+  const accountHref = state.isLoading || state.isAuthenticated ? '/account' : '/auth/login?callbackUrl=%2Faccount'
+  const ordersHref = state.isLoading || state.isAuthenticated ? '/orders' : '/auth/login?callbackUrl=%2Forders'
+  const vendorHref = state.isLoading || state.isAuthenticated ? '/vendor/onboard' : '/auth/login?callbackUrl=%2Fvendor%2Fonboard'
+  const dashboardHref = state.isLoading || state.isAuthenticated ? '/vendor/dashboard' : '/auth/login?callbackUrl=%2Fvendor%2Fdashboard'
 
   const linkGroups = [
     {
