@@ -75,6 +75,7 @@ const statusFlow = [
 ]
 
 const statusColors: Record<string, NonNullable<React.ComponentProps<typeof Badge>['variant']>> = {
+  pending_payment: 'warning',
   paid_held: 'warning',
   confirmed: 'secondary',
   processing: 'secondary',
@@ -323,7 +324,7 @@ export default function VendorOrdersPage() {
       <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Vendor Orders</h1>
-          <p className="text-text-secondary mt-2">Manage orders for your store.</p>
+          <p className="text-text-secondary mt-2">Manage orders for your store. The current API returns the 100 most recent orders; older history is not available on this screen yet.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
@@ -341,7 +342,7 @@ export default function VendorOrdersPage() {
             className="px-4 py-2 rounded-lg bg-ink-raised/50 border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-coral"
           >
             <option value="all">All Statuses</option>
-            <option value="paid_held">Paid — awaiting confirmation</option><option value="pending">Pending payment</option>
+            <option value="paid_held">Paid — awaiting confirmation</option><option value="pending_payment">Pending payment</option>
             <option value="confirmed">Confirmed</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
