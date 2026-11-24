@@ -21,7 +21,9 @@ interface UserProfile {
   last_name: string
   username?: string
   avatar_url?: string
-  created_at: string
+  created_at?: string
+  display_name?: string
+  role?: string
 }
 
 interface Address {
@@ -88,7 +90,14 @@ export default function AccountPage() {
         apiJson<{ orders: OrderSummary[] }>('/commerce/orders?limit=10'),
       ])
 
-      if (profileRes.status === 'fulfilled') setProfile(profileRes.value.user)
+      if (profileRes.status === 'fulfilled') {
+        const apiProfile = profileRes.value.user || profileRes.value.result?.user || profileRes.value.result || profileRes.value
+        setProfile({
+          ...apiProfile,
+          first_name: apiProfile.first_name || apiProfile.display_name || apiProfile.username || 'Kamba member',
+          last_name: apiProfile.last_name || '',
+        })
+      }
       if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.orders)
       // Saved-address and saved-payment-method APIs are not in the current backend contract.
       setAddresses([])
@@ -239,11 +248,11 @@ export default function AccountPage() {
                   )}
                 </div>
                 <h2 className="text-xl font-bold font-display text-text-primary">
-                  {profile.first_name} {profile.last_name}
+                  {profile.display_name || [profile.first_name, profile.last_name].filter(Boolean).join(' ')}
                 </h2>
                 <p className="text-text-tertiary mt-1">{profile.email}</p>
                 {profile.phone && <p className="text-text-tertiary text-sm mt-1">{profile.phone}</p>}
-                <p className="text-text-tertiary text-sm mt-2">Member since {formatDateTime(profile.created_at)}</p>
+                <p className="text-text-tertiary text-sm mt-2">Member since {profile.created_at ? formatDateTime(profile.created_at) : '—'}</p>
               </Card>
             </div>
             <div className="lg:col-span-2 space-y-6">
