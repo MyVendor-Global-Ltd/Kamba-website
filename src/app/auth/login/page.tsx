@@ -71,7 +71,7 @@ export default function LoginPage() {
         </form>
         <p className="text-center text-sm text-muted-foreground mt-6">
           Don't have an account?{' '}
-          <a href="/auth/register" className="font-medium">
+          <a href={`/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="font-medium">
             Sign up
           </a>
         </p>
