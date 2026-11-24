@@ -113,7 +113,15 @@ export function LiveVendorDashboard() {
         <Card variant="outlined"><CardContent className="p-5"><p className="text-sm text-text-secondary">Customer and review analytics</p><p className="mt-2 text-lg font-semibold text-text-primary">Not available yet</p><p className="mt-1 text-xs text-text-tertiary">The current backend does not expose these dashboard metrics.</p></CardContent></Card>
       </section>
 
-      <Card variant="outlined"><CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold text-text-primary">Need to update your storefront?</h2><p className="mt-1 text-sm text-text-secondary">Manage products, stock and storefront details from your vendor tools.</p></div><Link href="/vendor/products"><Button variant="outline"><ShoppingBag className="mr-2 h-4 w-4" /> Open product management</Button></Link></CardContent></Card>
+      <Card variant="outlined">
+        <CardHeader><CardTitle>Business management</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Link href="/vendor/products"><Button variant="outline"><ShoppingBag className="mr-2 h-4 w-4" /> Products and stock</Button></Link>
+          <Link href="/vendor/store"><Button variant="outline">Manage storefront</Button></Link>
+          <Link href="/vendor/service"><Button variant="outline">Manage service page</Button></Link>
+          <Link href="/vendor/profile"><Button variant="outline">Vendor profile</Button></Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }
