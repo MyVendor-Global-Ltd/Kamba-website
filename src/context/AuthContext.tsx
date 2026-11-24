@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, AuthState } from '@/types/auth'
 import * as authApi from '@/lib/auth'
 
@@ -22,25 +22,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cartCount: 0,
   })
 
-  useEffect(() => {
-    authApi.getProfile()
-      .then((data: any) => {
-        setState({
-          user: data.user || data,
-          isAuthenticated: true,
-          isLoading: false,
-          cartCount: data.cartCount || 0,
-        })
+  const refreshProfile = useCallback(async () => {
+    try {
+      const data = await authApi.getProfile()
+      const profile = data.user || data.result?.user || data.result || data
+      if (!profile?.id) throw new Error('The API did not return an authenticated user.')
+
+      setState({
+        user: profile,
+        isAuthenticated: true,
+        isLoading: false,
+        cartCount: data.cartCount || profile.cartCount || 0,
       })
-      .catch(() => {
-        setState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          cartCount: 0,
-        })
+    } catch {
+      setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        cartCount: 0,
       })
+    }
   }, [])
+
+  useEffect(() => {
+    void refreshProfile()
+  }, [refreshProfile])
 
   const login = async (email: string, password: string) => {
     await authApi.login(email, password)
@@ -62,34 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const refreshProfile = async () => {
-    try {
-      const data = await authApi.getProfile()
-      setState({
-        user: data.user || data,
-        isAuthenticated: true,
-        isLoading: false,
-        cartCount: data.cartCount || 0,
-      })
-    } catch {
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        cartCount: 0,
-      })
-    }
-  }
-
-    const updateUser = (data: Partial<User>) => {
-      setState(prev => ({
-        ...prev,
-        user: prev.user ? { ...prev.user, ...data } : null,
-      }))
-    }
+  const updateUser = useCallback((data: Partial<User>) => {
+    setState((previous) => ({
+      ...previous,
+      user: previous.user ? { ...previous.user, ...data } : null,
+    }))
+  }, [])
 
   return (
-      <AuthContext.Provider value={{ state, user: state.user, login, register, logout, refreshProfile, updateUser }}>
+    <AuthContext.Provider value={{ state, user: state.user, login, register, logout, refreshProfile, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
@@ -97,8 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }
