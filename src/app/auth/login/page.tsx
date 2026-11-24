@@ -61,6 +61,9 @@ export default function LoginPage() {
             <label className="text-sm font-medium">Password</label>
             <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
           </div>
+          <div className="text-right text-sm">
+            <Link href="/auth/forgot-password" className="font-medium text-primary">Forgot password?</Link>
+          </div>
           <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</Button>
         </form>
         <p className="text-center text-sm text-muted-foreground mt-6">
