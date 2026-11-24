@@ -359,23 +359,14 @@ export default function AccountPage() {
         {/* Addresses Tab */}
         {activeTab === 'addresses' && (
           <div className="mt-6 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-text-primary">Saved Addresses</h2>
-              <Button onClick={() => addToast({ type: 'info', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Address
-              </Button>
-            </div>
+            <h2 className="text-xl font-semibold text-text-primary">Saved Addresses</h2>
 
             {addresses.length === 0 && !showAddAddress ? (
               <Card variant="outlined" className="p-8 text-center">
                 <MapPin className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
                 <h3 className="text-lg font-semibold text-text-primary mb-2">No addresses saved</h3>
                 <p className="text-text-secondary mb-4">Saved-address management is not connected yet. Enter delivery details during checkout.</p>
-                <Button onClick={() => addToast({ type: 'info', title: 'Saved addresses are not connected', message: 'The current backend contract does not expose saved-address management for the website yet.' })}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Address
-                </Button>
+                <p className="text-xs text-text-tertiary">Saved addresses will appear here when persistent address management is available.</p>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -480,23 +471,14 @@ export default function AccountPage() {
         {/* Payment Methods Tab */}
         {activeTab === 'payment' && (
           <div className="mt-6 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-text-primary">Payment Methods</h2>
-              <Button onClick={() => addToast({ type: 'info', title: 'Saved payment methods are not connected', message: 'Checkout uses the configured payment provider. This website does not store card details or expose a saved-payment-method API.' })}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Payment Method
-              </Button>
-            </div>
+            <h2 className="text-xl font-semibold text-text-primary">Payment Methods</h2>
 
             {paymentMethods.length === 0 && !showAddPayment ? (
               <Card variant="outlined" className="p-8 text-center">
                 <CreditCard className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
                 <h3 className="text-lg font-semibold text-text-primary mb-2">Kamba does not store payment details here</h3>
                 <p className="text-text-secondary mb-4">Payment is completed through the configured checkout provider. This website does not store card details.</p>
-                <Button onClick={() => addToast({ type: 'info', title: 'Saved payment methods are not connected', message: 'Checkout uses the configured payment provider. This website does not store card details or expose a saved-payment-method API.' })}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Payment Method
-                </Button>
+                <p className="text-xs text-text-tertiary">Payment methods are managed securely by the checkout provider when you place an order.</p>
               </Card>
             ) : (
               <div className="space-y-4">
@@ -710,21 +692,21 @@ export default function AccountPage() {
                 <CardTitle className="text-text-primary">Privacy & Security</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Link href="/account/security" className="flex items-center justify-between p-4 hover:bg-ink-raised/30 rounded-lg transition-colors">
+                <div className="flex items-center justify-between p-4 rounded-lg">
                   <div>
                     <p className="font-medium text-text-primary">Password & Security</p>
                     <p className="text-sm text-text-tertiary">Change password, enable 2FA</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-text-tertiary" />
-                </Link>
+                </div>
                 <div className="border-t border-ink-raised/30" />
-                <Link href="/account/privacy" className="flex items-center justify-between p-4 hover:bg-ink-raised/30 rounded-lg transition-colors">
+                <div className="flex items-center justify-between p-4 rounded-lg">
                   <div>
                     <p className="font-medium text-text-primary">Privacy Settings</p>
                     <p className="text-sm text-text-tertiary">Manage your data and visibility</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-text-tertiary" />
-                </Link>
+                </div>
               </CardContent>
                           </Card>
 
