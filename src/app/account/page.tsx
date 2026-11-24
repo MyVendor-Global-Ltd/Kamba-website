@@ -86,12 +86,13 @@ export default function AccountPage() {
     try {
       setLoading(true)
       const [profileRes, ordersRes] = await Promise.allSettled([
-        apiJson<{ user: UserProfile }>('/auth/dashboard'),
+        apiJson<UserProfile | { user: UserProfile } | { result: UserProfile }>('/auth/dashboard'),
         apiJson<{ orders: OrderSummary[] }>('/commerce/orders?limit=10'),
       ])
 
       if (profileRes.status === 'fulfilled') {
-        const apiProfile = profileRes.value.user || profileRes.value.result?.user || profileRes.value.result || profileRes.value
+        const response = profileRes.value
+        const apiProfile = 'user' in response ? response.user : 'result' in response ? response.result : response
         setProfile({
           ...apiProfile,
           first_name: apiProfile.first_name || apiProfile.display_name || apiProfile.username || 'Kamba member',
@@ -128,7 +129,7 @@ export default function AccountPage() {
       await loadData()
       addToast({ type: 'success', title: 'Profile updated', message: 'Your profile has been saved.' })
     } catch (err) {
-      addToast({ type: 'error', title: 'Failed to update', message: 'Please try again.' })
+      addToast({ type: 'error', title: 'Failed to update', message: err instanceof Error ? err.message : 'Please try again.' })
     }
   }
 
