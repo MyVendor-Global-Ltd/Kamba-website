@@ -80,16 +80,16 @@ export async function getProfile() {
 
 export async function requestPhoneOTP(phone: string) {
   if (isMockMode) return { success: true, prototype: true, message: 'Phone verification is simulated in this preview. No message was sent.' }
-  const res = await fetch(`${API_BASE}/api/v1/auth/register/phone`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, method: 'sms' }) })
+  const res = await fetch(`${API_BASE}/api/v1/auth/phone/request`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, method: 'sms' }) })
   return readResponse(res, 'Failed to send OTP')
 }
 
-export async function verifyPhoneOTP(phone: string, otp: string, userId: string) {
+export async function verifyPhoneOTP(otp: string) {
   if (isMockMode) {
     if (!phone.trim() || otp !== '000000') throw new Error('For the prototype only, enter 000000. No real phone verification is performed.')
     return { success: true, prototype: true, verified: false }
   }
-  const res = await fetch(`${API_BASE}/api/v1/auth/verify/phone`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, otp_code: otp }) })
+  const res = await fetch(`${API_BASE}/api/v1/auth/phone/verify`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ otp_code: otp }) })
   return readResponse(res, 'OTP verification failed')
 }
 
