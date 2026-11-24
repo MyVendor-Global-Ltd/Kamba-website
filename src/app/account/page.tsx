@@ -57,6 +57,13 @@ interface OrderSummary {
   items_count: number
 }
 
+interface NotificationPreferences {
+  push_enabled: boolean
+  email_enabled: boolean
+  sms_enabled: boolean
+  marketing_enabled: boolean
+}
+
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'addresses', label: 'Addresses', icon: MapPin },
@@ -81,13 +88,28 @@ export default function AccountPage() {
   const [formData, setFormData] = useState<Record<string, string | number | boolean | null>>({})
   const [showAddAddress, setShowAddAddress] = useState(false)
   const [showAddPayment, setShowAddPayment] = useState(false)
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
+    push_enabled: false,
+    email_enabled: true,
+    sms_enabled: false,
+    marketing_enabled: false,
+  })
+  const [preferencesLoading, setPreferencesLoading] = useState(true)
+  const [preferencesSaving, setPreferencesSaving] = useState(false)
+  const [preferencesError, setPreferencesError] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [profileRes, ordersRes] = await Promise.allSettled([
+      setPreferencesLoading(true)
+      const [profileRes, ordersRes, preferencesRes] = await Promise.allSettled([
         apiJson<UserProfile | { user: UserProfile } | { result: UserProfile }>('/auth/dashboard'),
         apiJson<{ orders: OrderSummary[] }>('/commerce/orders?limit=10'),
+        apiJson<NotificationPreferences>('/auth/notification-preferences'),
       ])
 
       if (profileRes.status === 'fulfilled') {
@@ -100,6 +122,12 @@ export default function AccountPage() {
         })
       }
       if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.orders)
+      if (preferencesRes.status === 'fulfilled') {
+        setNotificationPreferences(preferencesRes.value)
+        setPreferencesError('')
+      } else {
+        setPreferencesError('We could not load your notification preferences. Try refreshing the account page.')
+      }
       // Saved-address and saved-payment-method APIs are not in the current backend contract.
       setAddresses([])
       setPaymentMethods([])
@@ -107,6 +135,7 @@ export default function AccountPage() {
       console.error('Failed to load account data:', err)
     } finally {
       setLoading(false)
+      setPreferencesLoading(false)
     }
   }, [])
 
@@ -130,6 +159,51 @@ export default function AccountPage() {
       addToast({ type: 'success', title: 'Profile updated', message: 'Your profile has been saved.' })
     } catch (err) {
       addToast({ type: 'error', title: 'Failed to update', message: err instanceof Error ? err.message : 'Please try again.' })
+    }
+  }
+
+  const handlePreferenceChange = async (key: keyof NotificationPreferences, value: boolean) => {
+    const previous = notificationPreferences
+    setNotificationPreferences({ ...previous, [key]: value })
+    setPreferencesSaving(true)
+    setPreferencesError('')
+    try {
+      const saved = await apiJson<NotificationPreferences>('/auth/notification-preferences', {
+        method: 'PATCH',
+        body: JSON.stringify({ [key]: value }),
+      })
+      setNotificationPreferences(saved)
+      addToast({ type: 'success', title: 'Preference saved', message: 'Your notification preference has been updated.' })
+    } catch (error) {
+      setNotificationPreferences(previous)
+      const message = error instanceof Error ? error.message : 'Please try again.'
+      setPreferencesError(message)
+      addToast({ type: 'error', title: 'Could not save preference', message })
+    } finally {
+      setPreferencesSaving(false)
+    }
+  }
+
+  const handleDeleteAccount = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (deleteConfirmation !== 'DELETE' || !deletePassword) return
+    setDeletingAccount(true)
+    try {
+      await apiJson('/auth/account', {
+        method: 'DELETE',
+        body: JSON.stringify({ password: deletePassword, confirmation: deleteConfirmation }),
+      })
+      await logout()
+      router.replace('/')
+      router.refresh()
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Account deletion failed',
+        message: error instanceof Error ? error.message : 'Your account has not been changed. Please try again.',
+      })
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -645,85 +719,129 @@ export default function AccountPage() {
         {activeTab === 'settings' && (
           <div className="mt-6 space-y-6">
             <h2 className="text-xl font-semibold text-text-primary">Settings</h2>
-            
+
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="text-text-primary">Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-text-tertiary">Notification preferences are not yet connected to persistent account settings. These controls are disabled so they do not imply a change has been saved.</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-primary">Push Notifications</p>
-                    <p className="text-sm text-text-tertiary">Receive order updates and promotions</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" disabled aria-label="Push notification preference is not connected" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
-                  </label>
-                </div>
-                <div className="border-t border-ink-raised/30" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-primary">Email Notifications</p>
-                    <p className="text-sm text-text-tertiary">Receive order confirmations and receipts</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" disabled aria-label="Email notification preference is not connected" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
-                  </label>
-                </div>
-                <div className="border-t border-ink-raised/30" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-primary">SMS Notifications</p>
-                    <p className="text-sm text-text-tertiary">Receive delivery updates via SMS</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" disabled aria-label="SMS notification preference is not connected" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-ink-raised/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-coral rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coral"></div>
-                  </label>
-                </div>
+                <p className="text-sm text-text-tertiary">
+                  Preferences are saved to your Kamba account and follow you between the website and mobile app.
+                  Push delivery still depends on device registration and provider configuration.
+                </p>
+                {preferencesError && (
+                  <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                    {preferencesError}
+                  </p>
+                )}
+                {preferencesLoading ? (
+                  <p role="status" className="text-sm text-text-secondary">Loading notification preferences…</p>
+                ) : (
+                  <>
+                    {([
+                      ['push_enabled', 'Push notifications', 'App alerts on registered devices.'],
+                      ['email_enabled', 'Email notifications', 'Account and order updates by email.'],
+                      ['sms_enabled', 'SMS notifications', 'Delivery and account updates by SMS.'],
+                      ['marketing_enabled', 'Marketing messages', 'Optional product news and promotions.'],
+                    ] as const).map(([key, label, description]) => (
+                      <div key={key} className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-text-primary">{label}</p>
+                          <p className="text-sm text-text-tertiary">{description}</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notificationPreferences[key]}
+                          disabled={preferencesSaving}
+                          onChange={(event) => void handlePreferenceChange(key, event.target.checked)}
+                          aria-label={label}
+                          className="h-5 w-5 accent-coral disabled:opacity-50"
+                        />
+                      </div>
+                    ))}
+                    {preferencesSaving && <p className="text-xs text-text-tertiary" role="status">Saving preference…</p>}
+                  </>
+                )}
               </CardContent>
-                          </Card>
+            </Card>
 
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="text-text-primary">Privacy & Security</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg">
-                  <div>
-                    <p className="font-medium text-text-primary">Password & Security</p>
-                    <p className="text-sm text-text-tertiary">Change password, enable 2FA</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-text-tertiary" />
-                </div>
-                <div className="border-t border-ink-raised/30" />
-                <div className="flex items-center justify-between p-4 rounded-lg">
-                  <div>
-                    <p className="font-medium text-text-primary">Privacy Settings</p>
-                    <p className="text-sm text-text-tertiary">Manage your data and visibility</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-text-tertiary" />
-                </div>
+              <CardContent className="space-y-3">
+                <Link href="/auth/forgot-password" className="flex items-center justify-between rounded-lg p-4 hover:bg-ink-raised/30">
+                  <span>
+                    <span className="block font-medium text-text-primary">Reset password</span>
+                    <span className="block text-sm text-text-tertiary">Request a secure password reset code.</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-text-tertiary" />
+                </Link>
               </CardContent>
-                          </Card>
+            </Card>
 
             <Card variant="elevated">
               <CardHeader>
-                <CardTitle className="text-text-primary">Danger Zone</CardTitle>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+              <CardContent className="space-y-3">
+                <div className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-destructive">Delete Account</p>
-                    <p className="text-sm text-text-tertiary">Account deletion is not yet connected to the account API</p>
+                    <p className="text-sm text-text-tertiary">
+                      Deactivates your account and removes its login/profile identifiers. Order and financial records are retained where required.
+                    </p>
                   </div>
-                  <Button variant="destructive" size="sm" disabled title="Account deletion is not implemented by the backend yet">Unavailable</Button>
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+                    Delete account
+                  </Button>
                 </div>
-                            </CardContent>
-                          </Card>
+              </CardContent>
+            </Card>
+
+            {deleteDialogOpen && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" role="presentation">
+                <Card variant="elevated" className="w-full max-w-md">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Confirm account deletion</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleDeleteAccount} className="space-y-4">
+                      <p className="text-sm text-text-secondary">
+                        This action cannot be undone. Enter your current password and type DELETE. Vendor listings will be hidden; required transaction records will remain.
+                      </p>
+                      <Input
+                        label="Current password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={deletePassword}
+                        onChange={(event) => setDeletePassword(event.target.value)}
+                        required
+                      />
+                      <Input
+                        label="Type DELETE to confirm"
+                        value={deleteConfirmation}
+                        onChange={(event) => setDeleteConfirmation(event.target.value)}
+                        autoComplete="off"
+                        required
+                      />
+                      <div className="flex gap-3">
+                        <Button type="submit" variant="destructive" className="flex-1" disabled={deletingAccount || deleteConfirmation !== 'DELETE' || !deletePassword}>
+                          {deletingAccount ? 'Deleting…' : 'Permanently delete'}
+                        </Button>
+                        <Button type="button" variant="outline" className="flex-1" disabled={deletingAccount} onClick={() => {
+                          setDeleteDialogOpen(false)
+                          setDeletePassword('')
+                          setDeleteConfirmation('')
+                        }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
       </div>
