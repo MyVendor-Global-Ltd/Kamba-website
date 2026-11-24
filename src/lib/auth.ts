@@ -95,12 +95,17 @@ export async function verifyPhoneOTP(otp: string) {
 
 export async function forgotPassword(email: string) {
   if (isMockMode) return { success: true, prototype: true, message: 'Password reset is simulated. No email was sent.' }
-  const res = await fetch(`${API_BASE}/api/v1/auth/forgot-password`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
-  return readResponse(res, 'Failed to send reset link')
+  const res = await fetch(`${API_BASE}/api/v1/auth/forgot-password`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim().toLowerCase() }) })
+  return readResponse(res, 'Failed to request password reset')
 }
 
-export async function resetPassword(token: string, password: string) {
+export async function resetPassword(email: string, otpCode: string, newPassword: string) {
   if (isMockMode) return { success: true, prototype: true, message: 'Password reset simulated. No real account was changed.' }
-  const res = await fetch(`${API_BASE}/api/v1/auth/reset-password`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) })
+  const res = await fetch(`${API_BASE}/api/v1/auth/reset-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim().toLowerCase(), otp_code: otpCode.trim(), new_password: newPassword }),
+  })
   return readResponse(res, 'Password reset failed')
 }
