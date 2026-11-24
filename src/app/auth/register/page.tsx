@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [referralUsername, setReferralUsername] = useState('')
+  const [callbackUrl, setCallbackUrl] = useState('/')
   const [availability, setAvailability] = useState<Availability>('idle')
   const [availabilityMessage, setAvailabilityMessage] = useState('')
   const [error, setError] = useState('')
@@ -30,6 +31,8 @@ export default function RegisterPage() {
     const params = new URLSearchParams(window.location.search)
     const referral = params.get('ref') || params.get('r')
     if (referral) setReferralUsername(referral.replace(/^@+/, '').trim())
+    const next = params.get('callbackUrl')
+    if (next && next.startsWith('/') && !next.startsWith('//')) setCallbackUrl(next)
   }, [])
 
   useEffect(() => {
@@ -100,7 +103,7 @@ export default function RegisterPage() {
         confirm_password: confirmPassword,
         ...(referralUsername.trim() ? { referral_username: referralUsername.trim().replace(/^@+/, '').toLowerCase() } : {}),
       })
-      router.replace('/')
+      router.replace(callbackUrl)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Registration failed')
