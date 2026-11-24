@@ -5,18 +5,5 @@
       "main": true,
       "**": false
     }
-  },
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "kambastore.vercel.app"
-        }
-      ],
-      "destination": "https://kamba.ng/:path*",
-      "permanent": true
-    }
-  ]
+  }
 }
