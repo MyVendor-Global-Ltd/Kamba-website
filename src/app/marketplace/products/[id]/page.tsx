@@ -394,7 +394,7 @@ export default function ProductDetailPage() {
             <p className="mt-1 text-sm text-text-secondary">See the product in action.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {product.videos.map((videoUrl, index) => (
+            {product.videos.map((videoUrl) => (
               <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-xl bg-ink">
                 <source src={videoUrl} />
                 Your browser does not support embedded videos.
