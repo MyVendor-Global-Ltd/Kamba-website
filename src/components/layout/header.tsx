@@ -27,6 +27,10 @@ export function Header() {
 
   const navLinks = [
     { href: '/marketplace', label: 'Marketplace' },
+    ...(state.isAuthenticated ? [
+      { href: '/orders', label: 'My orders' },
+      { href: '/account', label: 'Account settings' },
+    ] : []),
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
     { href: '/vendor/onboard', label: 'Sell on Kamba' },
