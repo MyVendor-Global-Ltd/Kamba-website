@@ -3,16 +3,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiJson } from '@/lib/api'
-import { formatDateTime } from '@/lib/formatting'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Camera, CheckCircle2, Store, Wrench } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Store, Wrench } from 'lucide-react'
 
 type VendorType = 'products' | 'services' | 'both'
 type LocationMode = 'physical' | 'service_area' | 'online' | 'mobile' | 'hybrid'
+type DayHours = { closed: boolean; open: string; close: string }
+type OperatingHours = Record<string, DayHours>
+const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 interface Eligibility {
   eligible: boolean
   issues: Array<{ code: string; message: string }>
@@ -50,20 +52,33 @@ export function LiveVendorOnboarding() {
   const [eligibility, setEligibility] = useState<Eligibility | null>(null)
   const [status, setStatus] = useState<OnboardingStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [draftLoaded, setDraftLoaded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
-  const [selfie, setSelfie] = useState<File | null>(null)
+  const [homeAddress, setHomeAddress] = useState('')
+  const [operatingHours, setOperatingHours] = useState<OperatingHours>({
+    monday: { closed: false, open: '09:00', close: '17:00' },
+    tuesday: { closed: false, open: '09:00', close: '17:00' },
+    wednesday: { closed: false, open: '09:00', close: '17:00' },
+    thursday: { closed: false, open: '09:00', close: '17:00' },
+    friday: { closed: false, open: '09:00', close: '17:00' },
+    saturday: { closed: false, open: '09:00', close: '17:00' },
+    sunday: { closed: true, open: '09:00', close: '17:00' },
+  })
+  const [deliveryMethod, setDeliveryMethod] = useState<'vendor_managed' | 'kamba_managed'>('vendor_managed')
+  const [deliveryAreas, setDeliveryAreas] = useState('')
+  const [vendorDeliveryFee, setVendorDeliveryFee] = useState('0')
   const [storePhotos, setStorePhotos] = useState<File[]>([])
   const [storeForm, setStoreForm] = useState({
-    business_name: '', store_name: '', category: '', description: '',
-    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '',
+    business_name: '', store_name: '', slug: '', category: '', description: '',
+    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '', same_as_business_address: false,
   })
   const [serviceForm, setServiceForm] = useState({
-    business_name: '', service_title: '', category: '', description: '', price_range: '',
+    business_name: '', service_title: '', slug: '', category: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '',
-    contact_preference: 'whatsapp', contact_whatsapp: '',
+    contact_preference: 'whatsapp', contact_whatsapp: '', same_as_business_address: false,
   })
 
   const loadStatus = useCallback(async () => {
@@ -76,6 +91,18 @@ export function LiveVendorOnboarding() {
       ])
       setEligibility(eligibilityData)
       setStatus(statusData)
+      try {
+        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; home_address?: string; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours; deliveryMethod?: 'vendor_managed' | 'kamba_managed'; deliveryAreas?: string; vendorDeliveryFee?: string } }>('/vendors/onboard/draft')
+        if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
+        if (saved.draft?.home_address) setHomeAddress(saved.draft.home_address)
+        if (saved.draft?.storeForm) setStoreForm((previous) => ({ ...previous, ...saved.draft?.storeForm }))
+        if (saved.draft?.serviceForm) setServiceForm((previous) => ({ ...previous, ...saved.draft?.serviceForm }))
+        if (saved.draft?.operatingHours) setOperatingHours(saved.draft.operatingHours)
+        if (saved.draft?.deliveryMethod) setDeliveryMethod(saved.draft.deliveryMethod)
+        if (saved.draft?.deliveryAreas) setDeliveryAreas(saved.draft.deliveryAreas)
+        if (saved.draft?.vendorDeliveryFee) setVendorDeliveryFee(saved.draft.vendorDeliveryFee)
+      } catch { /* Existing onboarding remains usable if draft retrieval is temporarily unavailable. */ }
+      setDraftLoaded(true)
       if (statusData.vendor_type) setVendorType(statusData.vendor_type)
       else if (statusData.stage === 'complete') {
         try {
@@ -95,30 +122,29 @@ export function LiveVendorOnboarding() {
 
   useEffect(() => { void Promise.resolve().then(loadStatus) }, [loadStatus])
 
-  const submitLiveness = async (event: React.FormEvent) => {
+  useEffect(() => {
+    if (!draftLoaded) return
+    const timeout = window.setTimeout(() => {
+      void apiJson('/vendors/onboard/draft', {
+        method: 'PUT',
+        body: JSON.stringify({ draft: { vendor_type: vendorType, home_address: homeAddress, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee } }),
+      }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
+    }, 700)
+    return () => window.clearTimeout(timeout)
+  }, [draftLoaded, vendorType, homeAddress, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee])
+
+  const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!selfie) { setError('Select a selfie image before continuing.'); return }
+    if (homeAddress.trim().length < 5) { setError('Enter your residential address. This address is private and is not shown on your public store.'); return }
     setSubmitting(true); setError(''); setSuccess('')
     try {
-      const image = await fileToBase64(selfie)
-      await apiJson('/vendors/onboard/liveness', {
-        method: 'POST',
-        body: JSON.stringify({ image_base64: image.base64, mime_type: image.mime_type, vendor_type: vendorType }),
-      })
+      await apiJson('/vendors/onboard/basic', { method: 'POST', body: JSON.stringify({ vendor_type: vendorType, home_address: homeAddress.trim() }) })
       const statusLoaded = await loadStatus()
-      try {
-        await refreshProfile()
-      } catch {
-        setError('Your selfie was submitted, but your session profile could not refresh. Retry the session check before leaving onboarding.')
-      }
-      setSuccess(statusLoaded
-        ? 'Selfie submitted and vendor onboarding profile created. Continue with your storefront or service profile.'
-        : 'Selfie submitted. The onboarding status could not refresh; use Retry to continue.')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not submit the selfie.')
-    } finally { setSubmitting(false) }
+      try { await refreshProfile() } catch { /* Status is authoritative for onboarding continuation. */ }
+      setSuccess(statusLoaded ? 'Basic vendor profile created. Continue with your business details.' : 'Profile created, but status could not refresh. Retry to continue.')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not create your vendor profile.') }
+    finally { setSubmitting(false) }
   }
-
   const createStore = async (event: React.FormEvent) => {
     event.preventDefault()
     if (storeForm.location_mode === 'hybrid' && !storeForm.location_text.trim() && !storeForm.service_area_text.trim() && !storeForm.online_url.trim()) {
@@ -131,6 +157,8 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
+          operating_hours: operatingHours,
+          delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
           business_name: storeForm.business_name.trim(),
           store_name: storeForm.store_name.trim(),
           category: storeForm.category.trim(),
@@ -138,6 +166,7 @@ export function LiveVendorOnboarding() {
         }),
       })
       const statusLoaded = await loadStatus()
+      setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
         : 'Store profile created, but onboarding status could not refresh. Use Retry before continuing.')
@@ -158,6 +187,8 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
+          operating_hours: operatingHours,
+          delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
           business_name: serviceForm.business_name.trim(),
           service_title: serviceForm.service_title.trim(),
           category: serviceForm.category.trim(),
@@ -209,6 +240,39 @@ export function LiveVendorOnboarding() {
     </div>
   )
 
+  const showOperationalFields = () => (
+    <div className="space-y-4 rounded-lg border border-border p-4">
+      <div>
+        <h3 className="font-semibold text-text-primary">Operating hours</h3>
+        <p className="text-xs text-text-tertiary">Set the days and times customers can reach or visit your business.</p>
+      </div>
+      <div className="space-y-2">
+        {WEEKDAYS.map((day) => (
+          <div key={day} className="grid grid-cols-[90px_1fr_1fr_auto] items-center gap-2 text-sm">
+            <span className="capitalize text-text-secondary">{day}</span>
+            <Input aria-label={day + ' opening time'} type="time" value={operatingHours[day].open} disabled={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], open: event.target.value } }))} />
+            <Input aria-label={day + ' closing time'} type="time" value={operatingHours[day].close} disabled={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], close: event.target.value } }))} />
+            <label className="flex items-center gap-1 text-xs text-text-secondary"><input type="checkbox" checked={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], closed: event.target.checked } }))} />Closed</label>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3 border-t border-border pt-4">
+        <h3 className="font-semibold text-text-primary">Delivery arrangement</h3>
+        <label className="block text-sm text-text-secondary">Who will arrange delivery?
+          <select value={deliveryMethod} onChange={(event) => setDeliveryMethod(event.target.value as 'vendor_managed' | 'kamba_managed')} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
+            <option value="vendor_managed">I will arrange delivery</option>
+            <option value="kamba_managed">Ask Kamba to arrange delivery</option>
+          </select>
+        </label>
+        {deliveryMethod === 'vendor_managed' && <>
+          <Input label="Delivery areas (comma-separated)" value={deliveryAreas} onChange={(event) => setDeliveryAreas(event.target.value)} required placeholder="e.g. Ikeja, Yaba, Surulere" />
+          <Input label="Your delivery fee (₦)" type="number" min="0" step="1" value={vendorDeliveryFee} onChange={(event) => setVendorDeliveryFee(event.target.value)} required />
+        </>}
+        {deliveryMethod === 'kamba_managed' && <p className="text-xs text-text-tertiary">Kamba will arrange a delivery provider. The delivery quote is handled separately; no provider fee is being set here.</p>}
+      </div>
+    </div>
+  )
+
   if (loading) return <div className="container mx-auto max-w-3xl px-4 py-16"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>
 
   if (!status || !eligibility) {
@@ -241,23 +305,20 @@ export function LiveVendorOnboarding() {
         </CardContent></Card>
       )}
 
-      {stage === 'liveness_required' && eligibility.eligible && (
-        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Camera className="h-5 w-5 text-primary" /> Selfie and vendor type</CardTitle></CardHeader><CardContent>
-          <form onSubmit={submitLiveness} className="space-y-4">
+      {(stage === 'vendor_profile_required' || stage === 'liveness_required') && eligibility.eligible && (
+        <Card variant="elevated"><CardHeader><CardTitle>Start your Basic vendor profile</CardTitle></CardHeader><CardContent>
+          <form onSubmit={createBasicProfile} className="space-y-4">
             <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
               <select value={vendorType} onChange={(event) => setVendorType(event.target.value as VendorType)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                 <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
               </select>
             </label>
-            <label className="block text-sm font-medium text-text-secondary">Selfie image
-              <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(event) => setSelfie(event.target.files?.[0] || null)} className="mt-2 block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" required />
-            </label>
-            <p className="text-xs leading-5 text-text-tertiary">Your selfie is uploaded to Kamba&apos;s configured storage for the vendor onboarding check. Submit only your own image. The backend records this step; final verification remains subject to Kamba&apos;s review.</p>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Submitting…' : 'Submit selfie and continue'}</Button>
+            <Input label="Your home / residential address (private)" value={homeAddress} onChange={(event) => setHomeAddress(event.target.value)} required placeholder="Your residential address" />
+            <p className="text-xs leading-5 text-text-tertiary">This address is kept private and is not displayed on your public business profile.</p>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
           </form>
         </CardContent></Card>
       )}
-
       {stage === 'liveness_done' && (
         <Card variant="outlined"><CardHeader><CardTitle>Vendor profile needs attention</CardTitle></CardHeader><CardContent className="space-y-3">
           <p className="text-sm text-text-secondary">Your liveness check is already recorded, but the vendor profile is missing. We will not ask you to submit another selfie or pretend the profile exists. Contact Kamba support to repair this onboarding record.</p>
@@ -269,10 +330,13 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createStore} className="space-y-4">
             <Input label="Business name" value={storeForm.business_name} onChange={(event) => updateStore('business_name', event.target.value)} required />
             <Input label="Store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
+            <Input label="Store URL slug (editable)" value={storeForm.slug} onChange={(event) => updateStore('slug', event.target.value)} placeholder="Leave blank to generate from store name" />
             <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
             {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
+            {showOperationalFields()}
+            {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={storeForm.same_as_business_address} onChange={(event) => updateStore('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
             <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
           </form>
@@ -284,11 +348,14 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createService} className="space-y-4">
             <Input label="Business name" value={serviceForm.business_name} onChange={(event) => updateService('business_name', event.target.value)} required />
             <Input label="Service title" value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
+            <Input label="Service URL slug (editable)" value={serviceForm.slug} onChange={(event) => updateService('slug', event.target.value)} placeholder="Leave blank to generate from service title" />
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
             <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => updateService('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
             {showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
+            {showOperationalFields()}
+            {(serviceForm.location_mode === 'physical' || serviceForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={serviceForm.same_as_business_address} onChange={(event) => updateService('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
             <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
             <Input label="Business WhatsApp number" value={serviceForm.contact_whatsapp} onChange={(event) => updateService('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
@@ -299,8 +366,8 @@ export function LiveVendorOnboarding() {
       {stage === 'complete' && (
         <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Vendor profile submitted</CardTitle></CardHeader><CardContent className="space-y-4">
           <Badge variant="warning">Verification pending</Badge>
-          <p className="text-sm leading-6 text-text-secondary">Your vendor profile has been created. Kamba will review the submitted information. A completed onboarding step does not mean your business has been verified.</p>
-          {status?.verification_deadline_at && <p className="text-sm text-text-secondary">Location-photo deadline: {formatDateTime(status.verification_deadline_at)}</p>}
+          <p className="text-sm leading-6 text-text-secondary">Your Basic vendor profile is ready. Optional identity and business verification can be completed separately.</p>
+          
           {(status?.vendor_type || vendorType) !== 'services' && !status?.location_photos_uploaded && (
             <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
               <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
