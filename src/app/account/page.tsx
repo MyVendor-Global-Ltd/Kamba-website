@@ -40,6 +40,7 @@ interface NotificationPreferences {
   push_enabled: boolean
   email_enabled: boolean
   sms_enabled: boolean
+  whatsapp_enabled: boolean
   marketing_enabled: boolean
 }
 
@@ -75,6 +76,7 @@ export default function AccountPage() {
     push_enabled: false,
     email_enabled: true,
     sms_enabled: false,
+    whatsapp_enabled: false,
     marketing_enabled: false,
   })
   const [preferencesLoading, setPreferencesLoading] = useState(true)
@@ -506,6 +508,7 @@ export default function AccountPage() {
                       ['push_enabled', 'Push notifications', 'App alerts on registered devices.'],
                       ['email_enabled', 'Email notifications', 'Account and order updates by email.'],
                       ['sms_enabled', 'SMS notifications', 'Delivery and account updates by SMS.'],
+                      ['whatsapp_enabled', 'WhatsApp notifications', 'Order and account updates through WhatsApp.'],
                       ['marketing_enabled', 'Marketing messages', 'Optional product news and promotions.'],
                     ] as const).map(([key, label, description]) => (
                       <div key={key} className="flex items-center justify-between gap-4">
