@@ -71,7 +71,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <>
       {!isAuthRoute && !isDashboardRoute && <Header />}
       {isDashboardRoute ? (
-        <AuthGuard><DashboardShell><main key={pathname} className="app-main page-enter min-w-0 w-full">{children}</main></DashboardShell></AuthGuard>
+        <AuthGuard><DashboardShell><div key={pathname} className="app-main page-enter min-w-0 w-full">{children}</div></DashboardShell></AuthGuard>
       ) : (
         <main key={pathname} className="app-main page-enter flex-1 w-full">{children}</main>
       )}
