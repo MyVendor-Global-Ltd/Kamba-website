@@ -61,7 +61,7 @@ export function Header() {
 
             <ThemeToggle compact />
 
-            {!isVendor && (
+            {!state.isLoading && !isVendor && (
               <Link href="/vendor/onboard" className="hidden rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover md:inline-flex">
                 Sell on Kamba
               </Link>
