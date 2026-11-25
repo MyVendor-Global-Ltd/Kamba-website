@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { useAuth } from '@/context/AuthContext'
 import { DashboardShell } from '@/components/layout/dashboard-shell'
+import { AuthGuard } from '@/components/auth/auth-guard'
 
 function AuthLegalFooter() {
   return (
@@ -70,7 +71,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <>
       {!isAuthRoute && !isDashboardRoute && <Header />}
       {isDashboardRoute ? (
-        <DashboardShell><main key={pathname} className="app-main page-enter min-w-0 w-full">{children}</main></DashboardShell>
+        <AuthGuard><DashboardShell><main key={pathname} className="app-main page-enter min-w-0 w-full">{children}</main></DashboardShell></AuthGuard>
       ) : (
         <main key={pathname} className="app-main page-enter flex-1 w-full">{children}</main>
       )}
