@@ -52,6 +52,62 @@
   --font-ui: var(--font-ui-loaded, "Plus Jakarta Sans"), sans-serif;
 }
 
+.dark {
+  color-scheme: dark;
+  --background: #101914;
+  --surface: #17231B;
+  --surface-elevated: #1D2B22;
+  --foreground: #ECF2EB;
+  --text-primary: #ECF2EB;
+  --text-secondary: #B7C4B8;
+  --text-tertiary: #8D9D90;
+  --text-muted: #7C8D7F;
+  --border: #2B3A2F;
+  --border-strong: #3A4B3E;
+  --primary: #8AB99A;
+  --primary-strong: #B8D8C1;
+  --primary-soft: #22382A;
+  --primary-hover: #A0CBAE;
+  --primary-foreground: #102016;
+  --gold: #D0AD68;
+  --gold-soft: #3A3020;
+  --gold-dim: #4A3B24;
+  --success: #83C59A;
+  --success-soft: #1E3828;
+  --warning: #E0B96E;
+  --warning-soft: #3A301E;
+  --destructive: #E28B80;
+  --destructive-soft: #3B2523;
+  --card: #17231B;
+  --card-foreground: #ECF2EB;
+  --popover: #1D2B22;
+  --popover-foreground: #ECF2EB;
+  --muted: #223027;
+  --muted-foreground: #8D9D90;
+  --secondary: #26382C;
+  --secondary-foreground: #D7E6DA;
+  --accent: #26382C;
+  --accent-foreground: #B8D8C1;
+  --input: #3A4B3E;
+  --ring: #8AB99A;
+  --ink: var(--background);
+  --ink-raised: var(--surface-elevated);
+  --coral: var(--primary);
+  --coral-dim: var(--primary-soft);
+  --coral-glow: rgba(138, 185, 154, 0.18);
+  --navy: #17251C;
+  --text-tertiary-rgb: 141, 157, 144;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, #26352A 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+}
+
+.dark .glass {
+  background: rgba(23, 35, 27, 0.96);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
