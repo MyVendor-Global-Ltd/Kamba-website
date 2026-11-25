@@ -7,19 +7,28 @@ import { ArrowRight, MapPin, Package, Search, Store, Wrench } from 'lucide-react
 import { apiJson } from '@/lib/api'
 import type { Product } from '@/types/commerce'
 import { formatKobo } from '@/lib/formatting'
+import { useAuth } from '@/context/AuthContext'
 
 export default function Home() {
   const router = useRouter()
+  const { state } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!state.isLoading && state.isAuthenticated) router.replace('/marketplace')
+  }, [state.isLoading, state.isAuthenticated, router])
+
+  useEffect(() => {
+    if (state.isLoading || state.isAuthenticated) return
     apiJson<{ products: Product[] }>('/commerce/products', { params: { offset: 0, limit: 4 } })
       .then((result) => setProducts((result.products || []).map((product) => ({ ...product, image_url: product.image_url || product.images?.[0] }))))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
-  }, [])
+  }, [state.isLoading, state.isAuthenticated])
+
+  if (state.isLoading || state.isAuthenticated) return null
 
   return (
     <div className="pb-16">
