@@ -247,3 +247,60 @@ button:active:not(:disabled), a:active { transform: translateY(1px); }
 .kamba-footer-legal{display:flex;align-items:center;gap:clamp(1rem,2.5vw,2rem)}
 @media(max-width:640px){.kamba-footer{padding-top:3.5rem}.kamba-footer-groups{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:1.5rem;row-gap:2.5rem}.kamba-footer-heading{margin-bottom:1.15rem;font-size:1rem}.kamba-footer-links{gap:.85rem}.kamba-footer-links a{font-size:.95rem}.kamba-footer-wordmark{margin-top:5.25rem;margin-bottom:3.25rem;font-size:clamp(4.25rem,19vw,7.5rem)}.kamba-footer-bottom{align-items:flex-start;flex-direction:column;gap:1.25rem;padding-top:1.5rem;font-size:.82rem}.kamba-footer-legal{gap:1.5rem;flex-wrap:wrap}.kamba-footer-legal a{font-size:.88rem}}
 @media(prefers-reduced-motion:reduce){.kamba-footer-links a,.kamba-footer-legal a{transition:none}}
+
+/* Kadix-inspired footer composition, adapted to Kamba's forest-green palette. */
+.kamba-footer {
+  padding: clamp(3.25rem, 6.5vw, 5.5rem) 0 1.75rem;
+  background: var(--primary-strong);
+  color: var(--primary-foreground);
+}
+.kamba-footer-groups {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: clamp(1.5rem, 4.5vw, 4.5rem);
+  row-gap: 2.5rem;
+}
+.kamba-footer-heading {
+  margin-bottom: 1.25rem;
+  font-size: 1rem;
+}
+.kamba-footer-links { gap: .8rem; }
+.kamba-footer-links a,
+.kamba-footer-legal a {
+  font-size: .92rem;
+}
+.kamba-footer-wordmark {
+  margin-top: clamp(5rem, 10vw, 8.5rem);
+  margin-bottom: clamp(2.5rem, 5vw, 3.5rem);
+  font-size: clamp(6rem, 18vw, 14rem);
+  letter-spacing: -.105em;
+}
+.kamba-footer-bottom {
+  min-height: 3.25rem;
+  padding-top: 1.5rem;
+  font-size: .82rem;
+}
+@media (max-width: 640px) {
+  .kamba-footer { padding: 3.5rem 0 2rem; }
+  .kamba-footer-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.25rem;
+    row-gap: 2.75rem;
+  }
+  .kamba-footer-heading { margin-bottom: 1.2rem; font-size: 1.05rem; }
+  .kamba-footer-links { gap: .95rem; }
+  .kamba-footer-links a { font-size: 1rem; }
+  .kamba-footer-wordmark {
+    margin-top: 5.5rem;
+    margin-bottom: 3.5rem;
+    font-size: clamp(4.4rem, 19vw, 7.8rem);
+  }
+  .kamba-footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1.35rem;
+    padding-top: 1.6rem;
+    font-size: .86rem;
+  }
+  .kamba-footer-legal { gap: 1.5rem; }
+  .kamba-footer-legal a { font-size: .9rem; }
+}
