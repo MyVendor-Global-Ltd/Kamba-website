@@ -18,8 +18,10 @@ export default function StoreDetailPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [highlightedProductId, setHighlightedProductId] = useState('')
 
   useEffect(() => {
+    setHighlightedProductId(new URLSearchParams(window.location.search).get('product') || '')
     Promise.all([
       apiJson<{ store: Store & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } } }>(`/vendors/stores/${slug}`),
       apiJson<{ products: Product[] }>('/commerce/products', { params: { store: slug, limit: 100, stock_status: 'all' } }),
@@ -37,6 +39,11 @@ export default function StoreDetailPage() {
         setLoading(false)
       })
   }, [slug])
+
+  useEffect(() => {
+    if (loading || !highlightedProductId) return
+    document.getElementById(\`store-product-\${highlightedProductId}\`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [loading, highlightedProductId, products])
 
   if (loading) {
     return (
@@ -112,11 +119,19 @@ export default function StoreDetailPage() {
         {products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <Card key={product.id} variant="elevated" className="group">
+              <Card id={\`store-product-\${product.id}\`} key={product.id} variant="elevated" className={highlightedProductId === product.id ? 'group border-coral ring-2 ring-coral/30' : 'group'}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-text-primary group-hover:text-coral transition-colors line-clamp-1">{product.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 pb-2">
+                  {(product.images?.[0] || product.image_url) && (
+                    <Link href={\`/marketplace/products/\${product.id}\`} className="block overflow-hidden rounded-xl bg-ink-raised/30">
+                      <img src={product.images?.[0] || product.image_url} alt={product.name} className="w-full aspect-square object-cover group-hover:scale-[1.02] transition-transform duration-300" loading="lazy" />
+                    </Link>
+                  )}
+                  {highlightedProductId === product.id && (
+                    <Badge variant="secondary" size="sm">The product you searched for</Badge>
+                  )}
                   {product.description && (
                     <p className="text-sm text-text-tertiary line-clamp-2">{product.description}</p>
                   )}
