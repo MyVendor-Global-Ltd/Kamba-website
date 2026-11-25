@@ -5,6 +5,7 @@ import { useCartContext } from '@/context/CartContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatKobo } from '@/lib/formatting'
+import { LockKeyhole, ShoppingBag } from 'lucide-react'
 
 export default function CartPage() {
   const { cart, updateItem, removeItem, clear, isLoading, isGuest } = useCartContext()
@@ -45,6 +46,36 @@ export default function CartPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    )
+  }
+
+  if (isGuest && (!cart || cart.items.length === 0)) {
+    return (
+      <div className="container mx-auto flex min-h-[65vh] items-center justify-center px-4 py-12">
+        <Card variant="elevated" className="w-full max-w-xl">
+          <CardContent className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
+            <span className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <LockKeyhole className="h-8 w-8" />
+            </span>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Your shopping space</p>
+            <h1 className="mt-3 text-2xl font-bold text-text-primary sm:text-3xl">Sign in to view your cart.</h1>
+            <p className="mt-3 max-w-md text-sm leading-6 text-text-secondary">
+              Create an account or sign in to keep your cart in one place and pick up where you left off. You can still browse Kamba and add products before signing in.
+            </p>
+            <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <Link href="/auth/login?callbackUrl=%2Fcart" className="w-full sm:w-auto">
+                <Button className="w-full">Sign in</Button>
+              </Link>
+              <Link href="/auth/register?callbackUrl=%2Fcart" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full">Create account</Button>
+              </Link>
+            </div>
+            <Link href="/search" className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+              <ShoppingBag className="h-4 w-4" /> Browse products
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     )
   }
