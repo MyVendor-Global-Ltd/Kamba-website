@@ -195,33 +195,20 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
-        <div className="space-y-4 animate-pulse">
-          <div className="h-10 w-1/3 bg-ink-raised/50 rounded-lg" />
-          <div className="h-6 w-1/2 bg-ink-raised/50 rounded-lg" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="space-y-3 animate-pulse">
+          <div className="h-9 w-56 rounded-lg bg-ink-raised/60" />
+          <div className="h-5 w-72 max-w-full rounded-lg bg-ink-raised/60" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1 space-y-4">
-            <Card variant="elevated">
-              <CardContent className="p-4">
-                <div className="h-12 w-full bg-ink-raised/50 rounded" />
-              </CardContent>
-            </Card>
-          </div>
-          <div className="lg:col-span-3 space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} variant="elevated">
-                <CardContent className="p-4">
-                  <div className="h-6 w-1/3 bg-ink-raised/50 rounded mb-4" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-1/2 bg-ink-raised/50 rounded" />
-                    <div className="h-4 w-1/3 bg-ink-raised/50 rounded" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+        {[...Array(3)].map((_, index) => (
+          <Card key={index} variant="elevated">
+            <CardContent className="space-y-3 p-5">
+              <div className="h-5 w-1/3 rounded bg-ink-raised/60" />
+              <div className="h-4 w-2/3 rounded bg-ink-raised/60" />
+              <div className="h-4 w-1/2 rounded bg-ink-raised/60" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     )
   }
