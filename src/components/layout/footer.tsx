@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { KambaLogo } from '@/components/layout/kamba-logo'
 import { useAuth } from '@/context/AuthContext'
 
 export function Footer() {
@@ -13,18 +12,19 @@ export function Footer() {
 
   const linkGroups = [
     {
-      title: 'Explore',
+      title: 'Discover',
       links: [
+        { label: 'Stores', href: '/marketplace/stores' },
         { label: 'Products', href: '/marketplace/products' },
         { label: 'Services', href: '/marketplace/services' },
-        { label: 'Stores', href: '/marketplace/stores' },
       ],
     },
     {
-      title: 'Your Kamba',
+      title: 'Your account',
       links: [
         { label: 'My account', href: accountHref },
         { label: 'My orders', href: ordersHref },
+        { label: 'Get the Kamba app', href: '/download' },
       ],
     },
     {
@@ -35,41 +35,42 @@ export function Footer() {
       ],
     },
     {
-      title: 'Mobile app',
+      title: 'Information',
       links: [
-        { label: 'Get the Kamba app', href: '/download' },
+        { label: 'Terms and conditions', href: '/terms' },
+        { label: 'Privacy policy', href: '/privacy' },
       ],
     },
   ]
 
   return (
-    <footer className="mt-auto border-t border-border bg-surface">
-      <div className="container mx-auto px-4 py-10 lg:py-12">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
-          <div className="space-y-4">
-            <KambaLogo iconSize={36} />
-            <p className="max-w-xs text-sm leading-6 text-text-secondary">
-              Discover products, independent shops and useful services in your neighbourhood.
-            </p>
-          </div>
+    <footer className="kamba-footer mt-auto">
+      <div className="container mx-auto">
+        <div className="kamba-footer-groups">
           {linkGroups.map((group) => (
             <nav key={group.title} aria-label={group.title}>
-              <h2 className="mb-4 text-sm font-semibold text-text-primary">{group.title}</h2>
-              <ul className="space-y-3">
+              <h2 className="kamba-footer-heading">{group.title}</h2>
+              <ul className="kamba-footer-links">
                 {group.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="text-sm text-text-secondary transition-colors hover:text-primary">
-                      {link.label}
-                    </Link>
+                    <Link href={link.href}>{link.label}</Link>
                   </li>
                 ))}
               </ul>
             </nav>
           ))}
         </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-5 text-xs text-text-tertiary sm:flex-row sm:items-center sm:justify-between">
-          <p>© Kamba. All rights reserved.</p>
-          <p>Local discovery, made simpler.</p>
+
+        <Link href="/" className="kamba-footer-wordmark" aria-label="Kamba home">
+          KAMBA
+        </Link>
+
+        <div className="kamba-footer-bottom">
+          <p>© {new Date().getFullYear()} Kamba. All rights reserved.</p>
+          <div className="kamba-footer-legal">
+            <Link href="/terms">Terms and conditions</Link>
+            <Link href="/privacy">Privacy policy</Link>
+          </div>
         </div>
       </div>
     </footer>
