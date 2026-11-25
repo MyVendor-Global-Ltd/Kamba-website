@@ -10,7 +10,7 @@ import { apiJson } from '@/lib/api'
 import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { User, MapPin, CreditCard, Settings, Package, Bell, LogOut, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
 
 interface UserProfile {
@@ -57,8 +57,14 @@ export default function AccountPage() {
   const { user, updateUser, logout } = useAuth()
   const { addToast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabId>('profile')
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab')
+    if (requestedTab && tabs.some((tab) => tab.id === requestedTab)) setActiveTab(requestedTab as TabId)
+  }, [searchParams])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [editing, setEditing] = useState<string | null>(null)
