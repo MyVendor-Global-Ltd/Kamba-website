@@ -150,7 +150,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 flex h-[72px] items-center justify-between border-b border-border bg-surface/95 px-4 backdrop-blur sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <button type="button" onClick={() => setMobileOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary hover:bg-ink-raised lg:hidden" aria-label="Open dashboard menu">
+              <button type="button" onClick={() => { setExpanded(true); setMobileOpen(true) }} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary hover:bg-ink-raised lg:hidden" aria-label="Open dashboard menu">
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
