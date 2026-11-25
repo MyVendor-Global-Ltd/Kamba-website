@@ -113,3 +113,22 @@ export async function resetPassword(email: string, otpCode: string, newPassword:
     body: JSON.stringify({ email: email.trim().toLowerCase(), otp_code: otpCode.trim(), new_password: newPassword }),
   })
 }
+
+
+export function beginGoogleSignIn() {
+  if (typeof window === 'undefined') return
+  window.location.assign(`${API_BASE}/api/v1/auth/google`)
+}
+
+export async function setUsername(username: string) {
+  if (isMockMode) {
+    const user = readMockUser()
+    if (!user) throw new Error('Sign in before choosing a username.')
+    writeMockUser({ ...user, username: username.trim().replace(/^@+/, '').toLowerCase() })
+    return { success: true, prototype: true }
+  }
+  return request('/auth/username/set', {
+    method: 'POST',
+    body: JSON.stringify({ username: username.trim().replace(/^@+/, '').toLowerCase() }),
+  })
+}
