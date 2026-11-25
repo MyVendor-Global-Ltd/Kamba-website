@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Star } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 const rows = [
   { id: 'top', speed: 'store-showcase-track--fast', size: 'store-showcase-row--wide' },
@@ -22,7 +22,7 @@ function SkeletonSequence({ rowId, copy }: { rowId: string; copy: string }) {
           <div className="store-showcase-meta">
             <span className="store-showcase-name skeleton" />
             <span className="store-showcase-rating">
-              <Star className="store-showcase-star" />
+              <span className="store-showcase-star" />
               <span className="store-showcase-rating-line skeleton" />
             </span>
           </div>
