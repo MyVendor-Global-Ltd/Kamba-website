@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -45,7 +45,7 @@ export default function NotificationContacts() {
     void loadContacts()
   }, [loadContacts])
 
-  const requestCode = async (event: React.FormEvent) => {
+  const requestCode = async (event: FormEvent) => {
     event.preventDefault()
     if (!consent || !value.trim()) return
     setSaving(true)
