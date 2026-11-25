@@ -37,7 +37,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       label: 'Your activity',
       items: [
         { label: 'Notifications', href: '/notifications', icon: Bell },
-        { label: 'Orders', href: '/orders', icon: ShoppingBag },
+        { label: 'Orders & delivery tracking', href: '/orders', icon: ShoppingBag },
         { label: 'Service requests', href: '/service-requests', icon: Activity },
         { label: 'Shopping cart', href: '/cart', icon: Package },
       ],
