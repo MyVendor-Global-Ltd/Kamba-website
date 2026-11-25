@@ -20,7 +20,7 @@ export default function Home() {
 
   return (
     <div className="pb-16">
-      <section className="flex min-h-[115svh] items-center border-b border-border bg-surface md:min-h-[150svh]">
+      <section className="flex min-h-[100svh] items-center border-b border-border bg-surface md:min-h-[100svh]">
         <div className="container grid w-full gap-10 py-14 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-20">
           <div className="max-w-2xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">
