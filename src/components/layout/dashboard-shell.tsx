@@ -61,7 +61,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className={cn('flex h-[72px] items-center border-b border-border px-4', expanded ? 'justify-between' : 'justify-center')}>
-        {expanded && <KambaLogo iconSize={30} href="/search" />}
+        {expanded && <KambaLogo iconSize={30} href="/search" replace />}
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -156,7 +156,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="min-w-0">
                 <p className="text-xs font-medium text-text-tertiary">Kamba dashboard</p>
                 <h1 className="truncate text-base font-semibold text-text-primary sm:text-lg">
-                  {pathname === '/account' ? 'Your dashboard' : pathname.startsWith('/orders') ? 'Your orders' : pathname.startsWith('/service-requests') ? 'Service requests' : pathname.startsWith('/notifications') ? 'Notifications' : 'Your workspace'}
+                  {pathname === '/account' ? (searchParams.get('tab') === 'profile' ? 'Profile & personal details' : searchParams.get('tab') === 'addresses' ? 'Delivery addresses' : searchParams.get('tab') === 'payment' ? 'Payment preferences' : searchParams.get('tab') === 'settings' ? 'Preferences & security' : 'Your dashboard') : pathname.startsWith('/orders') ? 'Your orders' : pathname.startsWith('/service-requests') ? 'Service requests' : pathname.startsWith('/notifications') ? 'Notifications' : 'Your workspace'}
                 </h1>
               </div>
             </div>
