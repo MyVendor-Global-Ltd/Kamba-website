@@ -4,8 +4,7 @@ import { Space_Grotesk, Plus_Jakarta_Sans } from 'next/font/google'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
 import { ToastProvider } from '@/components/ui/toast'
-import { Header } from '@/components/layout/header'
-import { Footer } from '@/components/layout/footer'
+import { AppChrome } from '@/components/layout/app-chrome'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -55,10 +54,8 @@ export default function RootLayout({
           <CartProvider>
             <ToastProvider>
               <Suspense fallback={<HeaderSkeleton />}>
-                <Header />
+                <AppChrome>{children}</AppChrome>
               </Suspense>
-              <main className="flex-1 w-full">{children}</main>
-              <Footer />
             </ToastProvider>
           </CartProvider>
         </AuthProvider>
