@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 function jsString(value: string | undefined) {
   return JSON.stringify(value || '')
 }
