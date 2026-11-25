@@ -165,8 +165,8 @@ export function LiveVendorOnboarding() {
           description: storeForm.description.trim(),
         }),
       })
-      setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
       const statusLoaded = await loadStatus()
+      setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
         : 'Store profile created, but onboarding status could not refresh. Use Retry before continuing.')
