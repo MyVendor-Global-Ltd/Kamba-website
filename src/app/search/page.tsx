@@ -12,7 +12,7 @@ import type { Product } from '@/types/commerce'
 import type { StoreProfile, ServiceProfile } from '@/types/vendor'
 import { isMockMode } from '@/lib/mock-api'
 import { formatKobo } from '@/lib/formatting'
-import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
+import { StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
