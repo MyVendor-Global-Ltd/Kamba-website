@@ -3,6 +3,7 @@
 type FirebaseMessagingCompat = {
   getToken(options: { vapidKey: string; serviceWorkerRegistration: ServiceWorkerRegistration }): Promise<string>
   deleteToken(): Promise<boolean>
+  onMessage(callback: (payload: { notification?: { title?: string; body?: string }; data?: Record<string, string> }) => void): () => void
 }
 
 type FirebaseMessagingFactory = (() => FirebaseMessagingCompat) & { isSupported(): Promise<boolean> }
@@ -108,4 +109,12 @@ export async function disableWebPush() {
   const token = await messaging.getToken({ vapidKey, serviceWorkerRegistration: registration }).catch(() => '')
   if (token) await messaging.deleteToken()
   return token || null
+}
+
+export async function listenToForegroundMessages(
+  callback: (payload: { notification?: { title?: string; body?: string }; data?: Record<string, string> }) => void,
+) {
+  const firebase = await getFirebase()
+  if (!(await firebase.messaging.isSupported())) return () => {}
+  return firebase.messaging().onMessage(callback)
 }
