@@ -12,6 +12,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       type="button"
       onClick={toggleTheme}
       aria-label={label}
+      aria-pressed={theme === 'dark'}
       title={label}
       className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 text-text-secondary transition-colors hover:bg-ink-raised/70 hover:text-text-primary ${compact ? 'w-10 px-0' : ''}`}
     >
