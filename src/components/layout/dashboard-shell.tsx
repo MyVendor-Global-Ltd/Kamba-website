@@ -27,7 +27,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     {
       label: 'Workspace',
       items: [
-        { label: 'Dashboard', href: '/account', icon: LayoutDashboard },
+        { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
         ...(isVendor
           ? [{ label: 'Vendor workspace', href: '/vendor/dashboard', icon: Store }]
           : [{ label: 'Become a vendor', href: '/vendor/onboard', icon: Store }]),
