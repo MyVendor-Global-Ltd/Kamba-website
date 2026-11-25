@@ -11,7 +11,7 @@ import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, MapPin, CreditCard, Settings, Package, Bell, LogOut, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
+import { User, MapPin, CreditCard, Settings, Package, Bell, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X, LayoutDashboard, ShoppingBag, Activity } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -44,6 +44,7 @@ interface NotificationPreferences {
 }
 
 const tabs = [
+  { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, group: 'Dashboard' },
   { id: 'profile', label: 'Profile & personal details', icon: User, group: 'Account' },
   { id: 'addresses', label: 'Delivery addresses', icon: MapPin, group: 'Account' },
   { id: 'orders', label: 'Order history', icon: Package, group: 'Activity' },
@@ -64,7 +65,7 @@ export default function AccountPage() {
   useEffect(() => {
     const requestedTab = searchParams.get('tab')
     if (requestedTab && tabs.some((tab) => tab.id === requestedTab)) setActiveTab(requestedTab as TabId)
-    else setActiveTab('profile')
+    else setActiveTab('overview')
   }, [searchParams])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [orders, setOrders] = useState<OrderSummary[]>([])
@@ -192,11 +193,6 @@ export default function AccountPage() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    router.push('/')
-  }
-
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
@@ -231,22 +227,62 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+    <div className="space-y-8">
       {/* Header */}
-      <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">My Account</h1>
-          <p className="text-text-secondary mt-2">Manage your profile, notification preferences and orders</p>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+      <header className="animate-fade-in">
+        <h2 className="text-2xl font-bold font-display text-text-primary lg:text-3xl">{activeTab === 'overview' ? 'Your dashboard' : tabs.find((tab) => tab.id === activeTab)?.label}</h2>
+        <p className="mt-2 text-text-secondary">{activeTab === 'overview' ? 'Your Kamba activity and account shortcuts.' : 'Manage your Kamba account and preferences.'}</p>
       </header>
 
       <div className="min-w-0">
       {/* Tab Content */}
-      <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+      <div className="animate-slide-up">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <Link href="/orders" className="group">
+                <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><ShoppingBag className="h-5 w-5" /></span>
+                    <span><span className="block text-sm text-text-secondary">Recent orders loaded</span><strong className="text-2xl text-text-primary">{orders.length}</strong></span>
+                    <ChevronRight className="ml-auto h-5 w-5 text-text-tertiary" />
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link href="/service-requests" className="group">
+                <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Activity className="h-5 w-5" /></span>
+                    <span><span className="block text-sm text-text-secondary">Service requests</span><strong className="text-base text-text-primary">View requests</strong></span>
+                    <ChevronRight className="ml-auto h-5 w-5 text-text-tertiary" />
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link href="/notifications" className="group">
+                <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Bell className="h-5 w-5" /></span>
+                    <span><span className="block text-sm text-text-secondary">Notifications</span><strong className="text-base text-text-primary">Open inbox</strong></span>
+                    <ChevronRight className="ml-auto h-5 w-5 text-text-tertiary" />
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+            <Card variant="elevated">
+              <CardHeader><CardTitle className="text-text-primary">Account shortcuts</CardTitle></CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <Link href="/account?tab=profile" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Profile details <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link href="/account?tab=addresses" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Delivery addresses <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link href="/account?tab=payment" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Payment preferences <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link href="/account?tab=settings" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Notification preferences & security <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+              </CardContent>
+            </Card>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/search"><Button>Discover products and services</Button></Link>
+              <Link href="/cart"><Button variant="outline">View shopping cart</Button></Link>
+            </div>
+          </div>
+        )}
         {/* Profile Tab */}
         {activeTab === 'profile' && profile && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
