@@ -5,25 +5,31 @@ import Link from 'next/link'
 import { ArrowRight, BriefcaseBusiness, Package, Store as StoreIcon } from 'lucide-react'
 import { apiJson } from '@/lib/api'
 import type { Product } from '@/types/commerce'
-import type { ServiceProfile, StoreProfile } from '@/types/vendor'
 import { formatKobo } from '@/lib/formatting'
 
-type RatedStore = StoreProfile & {
-  store_name?: string
+type PublicStore = {
+  id: string
+  store_name: string
+  slug: string
+  category?: string
   location_text?: string
-  average_rating?: number
-  rating?: number
-  review_count?: number
+  users?: { username?: string; profile_picture_url?: string | null }
 }
-type ShowcaseService = ServiceProfile & {
-  service_title?: string
+type PublicService = {
+  id: string
+  service_title: string
+  slug: string
+  category?: string
+  price_range?: string
   location_text?: string
-  service_area_text?: string
+  business_profiles?: { business_name?: string; location_text?: string; service_area_text?: string }
+  users?: { username?: string; profile_picture_url?: string | null }
 }
-type ShowcaseProduct = Product & { original_price?: number }
+type PublicCategory = { category: string; product_count: number }
+type ShowcaseProduct = Product & { images?: string[] }
 
 type ShowcaseCard =
-  | { id: string; type: 'store'; title: string; href: string; image?: string; rating?: number; reviewCount?: number; detail?: string }
+  | { id: string; type: 'store'; title: string; href: string; image?: string; detail?: string }
   | { id: string; type: 'category'; title: string; href: string; images: string[]; count: number }
   | { id: string; type: 'product'; title: string; href: string; image?: string; price: number }
   | { id: string; type: 'service'; title: string; href: string; image?: string; detail?: string }
@@ -65,12 +71,7 @@ function ShowcaseCardView({ item, rowId, interactive }: { item: ShowcaseCard; ro
       </div>
       <div className="store-showcase-meta">
         <span className="store-showcase-name">{item.title}</span>
-        {item.type === 'store' && item.rating && item.rating > 0 ? (
-          <span className="store-showcase-rating">
-            <span className="store-showcase-star" />
-            <span>{item.rating.toFixed(1)}{item.reviewCount ? ' · ' + item.reviewCount : ''}</span>
-          </span>
-        ) : item.type === 'product' ? (
+        {item.type === 'product' ? (
           <span className="store-showcase-card-detail">{formatKobo(item.price)}</span>
         ) : item.type === 'category' ? (
           <span className="store-showcase-card-detail">{item.count} {item.count === 1 ? 'product' : 'products'}</span>
@@ -101,10 +102,10 @@ export function StoreShowcase() {
 
     async function loadShowcase() {
       const [storesResult, servicesResult, productsResult, categoriesResult] = await Promise.allSettled([
-        apiJson<{ stores: RatedStore[] }>('/vendors/stores', { params: { page: 1, limit: 60 } }),
-        apiJson<{ services: ShowcaseService[] }>('/vendors/services', { params: { page: 1, limit: 60 } }),
+        apiJson<{ stores: PublicStore[] }>('/vendors/stores', { params: { page: 1, limit: 60 } }),
+        apiJson<{ services: PublicService[] }>('/vendors/services', { params: { page: 1, limit: 60 } }),
         apiJson<{ products: ShowcaseProduct[] }>('/commerce/products', { params: { limit: 100, offset: 0, stock_status: 'in_stock' } }),
-        apiJson<{ categories: Array<string | { category?: string; product_count?: number }> }>('/marketplace/categories'),
+        apiJson<{ categories: PublicCategory[] }>('/marketplace/categories'),
       ])
 
       if (cancelled) return
@@ -115,28 +116,25 @@ export function StoreShowcase() {
       const categories = categoriesResult.status === 'fulfilled' ? (categoriesResult.value.categories || []) : []
 
       const normalizedProducts = products
-        .filter((product) => product.is_active !== false && product.deleted_at == null)
-        .map((product) => ({ ...product, image_url: product.image_url || product.images?.[0] }))
+        .filter((product) => product.is_available !== false && product.stock_quantity > 0)
+        .map((product) => ({ ...product, image_url: product.images?.[0] || product.image_url }))
       const nextCards: ShowcaseCard[] = []
 
       stores
         .filter((store) => store.is_active !== false && Boolean(store.slug))
         .forEach((store) => {
-          const rating = Number(store.average_rating ?? store.rating ?? 0)
           nextCards.push({
             id: store.id,
             type: 'store',
-            title: store.name || store.store_name || 'Local store',
+            title: store.store_name || 'Local store',
             href: '/marketplace/stores/' + store.slug,
-            image: store.logo_url,
-            rating: rating > 0 ? rating : undefined,
-            reviewCount: store.review_count,
-            detail: store.city || store.location_text || undefined,
+            image: store.users?.profile_picture_url || undefined,
+            detail: store.location_text || undefined,
           })
         })
 
       categories.forEach((entry) => {
-        const name = typeof entry === 'string' ? entry : entry.category || ''
+        const name = entry.category || ''
         if (!name.trim()) return
         const matching = normalizedProducts.filter((product) => product.category?.toLowerCase() === name.toLowerCase())
         const seenStores = new Set<string>()
@@ -150,9 +148,7 @@ export function StoreShowcase() {
           })
           .slice(0, 3)
           .map((product) => product.image_url as string)
-        const count = typeof entry === 'string'
-          ? matching.length
-          : Number(entry.product_count ?? matching.length)
+        const count = Number(entry.product_count ?? matching.length)
         nextCards.push({
           id: slugify(name),
           type: 'category',
@@ -181,10 +177,10 @@ export function StoreShowcase() {
           nextCards.push({
             id: service.id,
             type: 'service',
-            title: service.name || service.service_title || 'Local service',
+            title: service.service_title || 'Local service',
             href: '/marketplace/services/' + service.slug,
-            image: service.logo_url,
-            detail: service.city || service.location_text || service.service_area_text || service.category || undefined,
+            image: service.users?.profile_picture_url || undefined,
+            detail: service.location_text || service.business_profiles?.service_area_text || service.category || service.price_range || undefined,
           })
         })
 
