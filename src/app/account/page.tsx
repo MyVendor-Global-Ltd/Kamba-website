@@ -59,7 +59,7 @@ export default function AccountPage() {
   const { addToast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<TabId>('profile')
+  const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -240,7 +240,7 @@ export default function AccountPage() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <Link href="/orders" className="group">
+              <Link replace href="/orders" className="group">
                 <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
                   <CardContent className="flex items-center gap-4 p-5">
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><ShoppingBag className="h-5 w-5" /></span>
@@ -249,7 +249,7 @@ export default function AccountPage() {
                   </CardContent>
                 </Card>
               </Link>
-              <Link href="/service-requests" className="group">
+              <Link replace href="/service-requests" className="group">
                 <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
                   <CardContent className="flex items-center gap-4 p-5">
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Activity className="h-5 w-5" /></span>
@@ -258,7 +258,7 @@ export default function AccountPage() {
                   </CardContent>
                 </Card>
               </Link>
-              <Link href="/notifications" className="group">
+              <Link replace href="/notifications" className="group">
                 <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
                   <CardContent className="flex items-center gap-4 p-5">
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Bell className="h-5 w-5" /></span>
@@ -271,15 +271,15 @@ export default function AccountPage() {
             <Card variant="elevated">
               <CardHeader><CardTitle className="text-text-primary">Account shortcuts</CardTitle></CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2">
-                <Link href="/account?tab=profile" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Profile details <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
-                <Link href="/account?tab=addresses" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Delivery addresses <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
-                <Link href="/account?tab=payment" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Payment preferences <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
-                <Link href="/account?tab=settings" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Notification preferences & security <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=profile" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Profile details <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=addresses" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Delivery addresses <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=payment" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Payment preferences <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=settings" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Notification preferences & security <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
               </CardContent>
             </Card>
             <div className="flex flex-wrap gap-3">
-              <Link href="/search"><Button>Discover products and services</Button></Link>
-              <Link href="/cart"><Button variant="outline">View shopping cart</Button></Link>
+              <Link replace href="/search"><Button>Discover products and services</Button></Link>
+              <Link replace href="/cart"><Button variant="outline">View shopping cart</Button></Link>
             </div>
           </div>
         )}
