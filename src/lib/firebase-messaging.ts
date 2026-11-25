@@ -5,10 +5,12 @@ type FirebaseMessagingCompat = {
   deleteToken(): Promise<boolean>
 }
 
+type FirebaseMessagingFactory = (() => FirebaseMessagingCompat) & { isSupported(): Promise<boolean> }
+
 type FirebaseCompat = {
   apps: unknown[]
   initializeApp(config: Record<string, string>): unknown
-  messaging(): FirebaseMessagingCompat
+  messaging: FirebaseMessagingFactory
 }
 
 declare global {
