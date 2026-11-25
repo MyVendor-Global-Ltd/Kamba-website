@@ -21,6 +21,7 @@ export default function VerifyOTPPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { refreshProfile } = useAuth()
+  const phonePageHref = `/auth/phone?callbackUrl=${encodeURIComponent(returnTo)}`
 
   useEffect(() => {
     const savedPhone = sessionStorage.getItem('kamba_phone_verification_phone') || ''
@@ -51,11 +52,11 @@ export default function VerifyOTPPage() {
 
   return (
     <AuthGuard>
-      <section className="mx-auto flex min-h-full w-full max-w-7xl flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
+      <section className="mx-auto flex min-h-[100svh] w-full max-w-7xl flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
         <div className="w-full max-w-md">
           <div className="mb-7 flex items-center justify-between">
             <Link
-              href="/auth/phone"
+              href={phonePageHref}
               aria-label="Back to phone number"
               className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-text-secondary shadow-sm transition-colors hover:border-primary/40 hover:bg-primary-soft hover:text-primary"
             >
