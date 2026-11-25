@@ -60,9 +60,9 @@ export default function StoresPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+      <div className="marketplace-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" style={{ animationDelay: '100ms' }}>
         {stores.map((store) => (
-          <Card key={store.id} variant="elevated" className="h-full group">
+          <Card data-scroll-reveal key={store.id} variant="elevated" className="h-full group">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between gap-2">
                 <CardTitle className="text-text-primary group-hover:text-coral transition-colors">{store.name}</CardTitle>
