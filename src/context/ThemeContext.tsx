@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useLayoutEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -9,7 +9,7 @@ const ThemeContext = createContext<{ theme: Theme; toggleTheme: () => void } | n
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light')
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const stored = window.localStorage.getItem('kamba-theme')
     const initial: Theme = stored === 'dark' ? 'dark' : 'light'
     setTheme(initial)
