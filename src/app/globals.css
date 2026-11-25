@@ -336,7 +336,7 @@ button:active:not(:disabled), a:active { transform: translateY(1px); }
   will-change: transform;
 }
 .store-showcase-track--fast { animation: store-marquee-right 23s linear infinite; }
-.store-showcase-track--medium { animation: store-marquee-right 29s linear infinite; }
+.store-showcase-track--medium { animation: store-marquee-left 29s linear infinite; }
 .store-showcase-track--slow { animation: store-marquee-right 37s linear infinite; }
 .store-showcase-sequence {
   display: flex;
@@ -501,4 +501,20 @@ button:active:not(:disabled), a:active { transform: translateY(1px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .store-showcase-perspective { transform: none; }
+}
+
+/* Showcase rhythm refinement: middle lane flows against the outer lanes. */
+@keyframes store-marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.store-showcase-cta {
+  margin-top: -88px;
+  padding-top: 3.5rem;
+}
+@media (max-width: 640px) {
+  .store-showcase-cta {
+    margin-top: -62px;
+    padding-top: 3rem;
+  }
 }

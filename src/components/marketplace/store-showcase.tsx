@@ -67,7 +67,7 @@ export function StoreShowcase() {
             From everyday essentials to the spots you have not discovered yet, there is plenty waiting nearby.
           </p>
         </div>
-        <Link href="/marketplace/stores" className="mt-5 inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover sm:mt-0">
+        <Link href="/marketplace/stores" className="mt-5 inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gold px-5 text-sm font-bold text-primary-strong shadow-md transition-all hover:-translate-y-0.5 hover:brightness-95 sm:mt-0">
           Explore stores <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
