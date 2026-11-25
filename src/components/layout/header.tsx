@@ -59,7 +59,6 @@ export function Header() {
               </Link>
             )}
 
-            <ThemeToggle compact />
 
             {!state.isLoading && !isVendor && (
               <Link href="/vendor/onboard" className="hidden rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover md:inline-flex">
@@ -105,6 +104,10 @@ export function Header() {
               </button>
             )}
           </nav>
+          <div className="mt-2 flex items-center justify-between border-t border-border px-3 pt-3">
+            <span className="text-sm font-medium text-text-secondary">Appearance</span>
+            <ThemeToggle />
+          </div>
         </div>
       )}
     </header>
