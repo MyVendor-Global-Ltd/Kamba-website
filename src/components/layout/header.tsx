@@ -1,235 +1,112 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useCartContext } from '@/context/CartContext'
-import { usePathname } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { usePathname, useRouter } from 'next/navigation'
+import { Bell, ChevronDown, LogOut, Menu, Search, ShoppingCart, UserRound, X } from 'lucide-react'
 import { KambaLogo } from '@/components/layout/kamba-logo'
-import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { isMockMode } from '@/lib/mock-api'
 
 export function Header() {
   const { state, logout } = useAuth()
   const { cart } = useCartContext()
   const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const isVendor = state.user?.role === 'vendor'
+  const closeMenu = () => setMenuOpen(false)
 
-  useEffect(() => {
-    if (searchOpen && searchRef.current) {
-      searchRef.current.focus()
-    }
-  }, [searchOpen])
-
-  const navLinks = [
-    { href: '/marketplace', label: 'Marketplace' },
-    { href: '/marketplace/stores', label: 'Stores' },
-    { href: '/marketplace/services', label: 'Services' },
-    ...(!state.isAuthenticated ? [{ href: '/vendor/onboard', label: 'Sell on Kamba' }] : []),
-    { href: '/download', label: 'Get the app' },
-  ]
+  const menuLinkClass = (href: string) =>
+    `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
+      pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
+        ? 'bg-primary-soft text-primary'
+        : 'text-text-secondary hover:bg-ink-raised/70 hover:text-text-primary'
+    }`
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-surface">
+    <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur">
       <div className="container mx-auto">
-        <div className="flex h-16 items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <KambaLogo iconSize={34} href={state.isAuthenticated ? '/marketplace' : '/'} />
-            <span className="hidden sm:inline-block w-px h-6 bg-border mx-2" />
-            <span className="hidden sm:inline text-sm font-medium text-text-secondary">Marketplace</span>
-            {isMockMode && <span className="hidden md:inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary">Prototype</span>}
+        <div className="flex h-[68px] items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <KambaLogo iconSize={34} href={state.isAuthenticated ? '/search' : '/'} />
+            <span className="hidden h-6 w-px bg-border sm:block" />
+            <span className="hidden text-sm font-medium text-text-secondary sm:block">Marketplace</span>
+            {isMockMode && <span className="hidden rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary md:inline-flex">Prototype</span>}
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1" role="navigation" aria-label="Main navigation">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-                  pathname === link.href || pathname.startsWith(link.href + '/')
-                    ? 'bg-coral-dim text-coral'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-ink-raised/50'
-                )}
-                aria-current={pathname === link.href || pathname.startsWith(link.href + '/') ? 'page' : undefined}
-              >
-                {link.label}
+          <Link href="/search" className="hidden max-w-xl flex-1 items-center gap-3 rounded-xl border border-border bg-ink-raised/50 px-4 py-2.5 text-sm text-text-tertiary transition-colors hover:border-primary/40 hover:text-text-secondary lg:flex">
+            <Search className="h-4 w-4" />
+            <span>Search products, services and stores</span>
+            <span className="ml-auto text-xs text-text-tertiary">Discover</span>
+          </Link>
+
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Link href="/cart" aria-label={`Shopping cart${cart.itemCount ? `, ${cart.itemCount} items` : ''}`} title="Shopping cart" className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary">
+              <ShoppingCart className="h-5 w-5" />
+              {cart.itemCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">{cart.itemCount > 99 ? '99+' : cart.itemCount}</span>}
+            </Link>
+
+            <Link href={state.isAuthenticated ? '/notifications' : '/auth/login'} aria-label="Notifications" title="Notifications" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary">
+              <Bell className="h-5 w-5" />
+            </Link>
+
+            {state.isAuthenticated && (
+              <Link href="/account" aria-label="Dashboard" title="Dashboard" className="hidden h-10 w-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary sm:inline-flex">
+                <UserRound className="h-5 w-5" />
               </Link>
-            ))}
-          </nav>
-
-          {/* Search - Desktop */}
-          <div className="hidden lg:flex-1 max-w-xl">
-            <Link href="/search" className="block">
-              <div className="relative group">
-                <Input
-                  ref={searchRef}
-                  placeholder="Search products, services, stores..."
-                  className="bg-ink-raised/50 border-border/50 placeholder:text-text-tertiary h-11 pr-12"
-                  readOnly
-                  aria-label="Search marketplace"
-                />
-                <svg
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary group-hover:text-coral transition-colors"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </Link>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 lg:gap-3">
-            {/* Cart */}
-            <Link href="/cart" className="relative p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200" aria-label="Shopping cart">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a2 2 0 00-2-2H6a2 2 0 00-2 2v18a2 2 0 002 2h12a2 2 0 002-2v-4" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11l2 2m0 0l2-2m-2 2l-2-2" />
-              </svg>
-              {cart.itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-coral text-ink text-[10px] font-bold">
-                                {cart.itemCount > 99 ? '99+' : cart.itemCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth */}
-            {state.isAuthenticated ? (
-              <>
-                <details className="relative hidden sm:block">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">Settings <span aria-hidden="true">⌄</span></summary>
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-xl">
-                    <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">Account</p>
-                    <Link href="/account?tab=profile" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Profile & personal details</Link>
-                    <Link href="/account?tab=addresses" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Addresses & delivery</Link>
-                    <Link href="/account?tab=payment" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payment preferences</Link>
-                    <Link href="/account?tab=settings" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Notifications & security</Link>
-                    <div className="my-2 border-t border-border" />
-                    <Link href="/orders" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My orders</Link>
-                    {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Vendor workspace</Link><Link href="/vendor/payments" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payouts</Link><Link href="/vendor/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Service requests</Link><Link href="/vendor/pickup" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Pickup desk</Link></> : <><Link href="/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My service requests</Link><Link href="/vendor/onboard" className="block rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:bg-coral-dim">Become a vendor</Link></>}
-                  </div>
-                </details>
-                <button
-                  onClick={() => logout()}
-                  className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login" className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200">
-                  Sign in
-                </Link>
-                <Link href="/auth/register" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-coral text-ink hover:bg-coral/90 shadow-lg shadow-coral/25 transition-all duration-200">
-                  Sign up
-                </Link>
-              </>
             )}
 
-            {/* Mobile menu button */}
+            <ThemeToggle compact />
+
+            {!isVendor && (
+              <Link href="/vendor/onboard" className="hidden rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover md:inline-flex">
+                Sell on Kamba
+              </Link>
+            )}
+
             <button
-              className="lg:hidden p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-menu"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-expanded={menuOpen}
+              aria-controls="public-navigation-menu"
+              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary"
             >
-              {mobileMenuOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div id="mobile-menu" className="lg:hidden animate-slide-up border-t border-border/50 py-4">
-            <div className="flex flex-col gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'px-4 py-3 rounded-lg text-base font-medium transition-all duration-200',
-                    pathname === link.href || pathname.startsWith(link.href + '/')
-                      ? 'bg-coral-dim text-coral'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-ink-raised/50'
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="pt-2 border-t border-border/50" />
-              <Link
-                href="/search"
-                className="px-4 py-3 rounded-lg text-base font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Search marketplace
-              </Link>
-              {state.isAuthenticated ? (
-                <>
-                  <details className="rounded-lg border border-border/70">
-                    <summary className="cursor-pointer px-4 py-3 text-base font-medium text-text-primary">Account & settings</summary>
-                    <div className="flex flex-col gap-1 border-t border-border/60 p-2">
-                      <Link href="/account?tab=profile" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Profile & personal details</Link>
-                      <Link href="/account?tab=addresses" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Addresses & delivery</Link>
-                      <Link href="/account?tab=payment" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payment preferences</Link>
-                      <Link href="/account?tab=settings" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Notifications & security</Link>
-                      <Link href="/orders" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My orders</Link>
-                      {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Vendor workspace</Link><Link href="/vendor/payments" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payouts</Link><Link href="/vendor/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Service requests</Link><Link href="/vendor/pickup" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Pickup desk</Link></> : <><Link href="/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My service requests</Link><Link href="/vendor/onboard" className="rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:bg-coral-dim" onClick={() => setMobileMenuOpen(false)}>Become a vendor</Link></>}
-                    </div>
-                  </details>
-                  <button
-                    onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="px-4 py-3 rounded-lg text-base font-medium text-destructive hover:bg-destructive/10 transition-all duration-200 text-left"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <Link
-                    href="/auth/login"
-                    className="px-4 py-3 rounded-lg text-base font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200 text-center"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="px-4 py-3 rounded-lg text-base font-medium bg-coral text-ink hover:bg-coral/90 shadow-lg shadow-coral/25 transition-all duration-200 text-center"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign up
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {menuOpen && (
+        <div id="public-navigation-menu" className="absolute right-4 top-[calc(100%+8px)] z-50 w-[min(92vw,320px)] rounded-2xl border border-border bg-surface p-3 shadow-2xl sm:right-6">
+          <div className="mb-2 flex items-center justify-between px-3 py-2">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-tertiary">Menu</p>
+            <ChevronDown className="h-4 w-4 text-text-tertiary" />
+          </div>
+          <nav className="space-y-1" aria-label="Public navigation">
+            <Link href="/search" onClick={closeMenu} className={menuLinkClass('/search')}><Search className="h-[18px] w-[18px]" />Discover</Link>
+            <Link href={state.isAuthenticated ? '/notifications' : '/auth/login'} onClick={closeMenu} className={menuLinkClass('/notifications')}><Bell className="h-[18px] w-[18px]" />Notifications</Link>
+            {state.isAuthenticated ? (
+              <Link href="/account" onClick={closeMenu} className={menuLinkClass('/account')}><UserRound className="h-[18px] w-[18px]" />Dashboard</Link>
+            ) : (
+              <>
+                <Link href="/auth/login" onClick={closeMenu} className={menuLinkClass('/auth/login')}><UserRound className="h-[18px] w-[18px]" />Sign in</Link>
+                <Link href="/auth/register" onClick={closeMenu} className={menuLinkClass('/auth/register')}>Create account</Link>
+              </>
+            )}
+            {!isVendor && <Link href="/vendor/onboard" onClick={closeMenu} className="mt-2 flex items-center justify-between rounded-xl bg-primary-soft px-3 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"><span>Become a vendor</span><span aria-hidden="true">→</span></Link>}
+            {state.isAuthenticated && (
+              <button type="button" onClick={() => { closeMenu(); void logout().then(() => router.replace('/')) }} className="mt-2 flex w-full items-center gap-3 rounded-xl border-t border-border px-3 py-3 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+                <LogOut className="h-[18px] w-[18px]" />Logout
+              </button>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }
