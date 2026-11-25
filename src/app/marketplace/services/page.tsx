@@ -138,9 +138,9 @@ export default function ServicesPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <div className="marketplace-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" style={{ animationDelay: '100ms' }}>
             {visibleServices.map((service) => (
-              <Card key={service.id} variant="elevated" className="h-full group">
+              <Card data-scroll-reveal key={service.id} variant="elevated" className="h-full group">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-text-primary group-hover:text-coral transition-colors">{service.name}</CardTitle>
