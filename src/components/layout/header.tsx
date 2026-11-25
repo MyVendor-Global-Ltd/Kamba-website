@@ -118,20 +118,19 @@ export function Header() {
             {/* Auth */}
             {state.isAuthenticated ? (
               <>
-                <Link href="/account" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Account
-                </Link>
-                {state.user?.role === 'vendor' && (
-                  <Link href="/vendor/dashboard" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-coral hover:bg-coral-dim transition-all duration-200">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    Vendor
-                  </Link>
-                )}
+                <details className="relative hidden sm:block">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">Settings <span aria-hidden="true">⌄</span></summary>
+                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-xl">
+                    <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">Account</p>
+                    <Link href="/account" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Profile & personal details</Link>
+                    <Link href="/account" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Addresses & delivery</Link>
+                    <Link href="/account" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payment preferences</Link>
+                    <Link href="/account" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Notifications & security</Link>
+                    <div className="my-2 border-t border-border" />
+                    <Link href="/orders" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My orders</Link>
+                    {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Vendor workspace</Link><Link href="/vendor/payments" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payouts</Link><Link href="/vendor/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Service requests</Link><Link href="/vendor/pickup" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Pickup desk</Link></> : <Link href="/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My service requests</Link>}
+                  </div>
+                </details>
                 <button
                   onClick={() => logout()}
                   className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
