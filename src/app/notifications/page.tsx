@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { Bell, ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { AuthGuard } from '@/components/auth/auth-guard'
 
-export default function NotificationsPage() {
+function NotificationsContent() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
@@ -27,4 +28,8 @@ export default function NotificationsPage() {
       </Card>
     </div>
   )
+}
+
+export default function NotificationsPage() {
+  return <AuthGuard><NotificationsContent /></AuthGuard>
 }
