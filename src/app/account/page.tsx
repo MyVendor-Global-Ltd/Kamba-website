@@ -44,11 +44,11 @@ interface NotificationPreferences {
 }
 
 const tabs = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'addresses', label: 'Addresses', icon: MapPin },
-  { id: 'payment', label: 'Payment Methods', icon: CreditCard },
-  { id: 'orders', label: 'Order History', icon: Package },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'profile', label: 'Profile & personal details', icon: User, group: 'Account' },
+  { id: 'addresses', label: 'Delivery addresses', icon: MapPin, group: 'Account' },
+  { id: 'orders', label: 'Order history', icon: Package, group: 'Activity' },
+  { id: 'payment', label: 'Payment preferences', icon: CreditCard, group: 'Preferences' },
+  { id: 'settings', label: 'Notifications & security', icon: Settings, group: 'Preferences' },
 ] as const
 
 type TabId = typeof tabs[number]['id']
@@ -237,29 +237,41 @@ export default function AccountPage() {
         </Button>
       </header>
 
-      {/* Tab Navigation */}
-      <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
-        <div className="flex flex-wrap gap-2 border-b border-ink-raised/30">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-coral text-coral'
-                    : 'border-transparent text-text-tertiary hover:text-text-secondary'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
+      {/* Grouped account navigation */}
+      <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
+        <aside className="h-fit rounded-xl border border-border bg-surface p-3" aria-label="Account navigation">
+          {(['Account', 'Activity', 'Preferences'] as const).map((group) => (
+            <section key={group} className="mb-3 last:mb-0">
+              <h2 className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-text-tertiary">{group}</h2>
+              <div className="space-y-1">
+                {tabs.filter((tab) => tab.group === group).map((tab) => {
+                  const Icon = tab.icon
+                  return (
+                    <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                      aria-current={activeTab === tab.id ? 'page' : undefined}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                        activeTab === tab.id ? 'bg-coral-dim text-coral' : 'text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary'
+                      }`}>
+                      <Icon className="h-4 w-4 shrink-0" />{tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+          {user?.role === 'vendor' && (
+            <section className="mt-3 border-t border-border pt-3">
+              <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">Vendor workspace</h2>
+              <Link href="/vendor/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">
+                <Package className="h-4 w-4" /> Vendor dashboard
+              </Link>
+              <Link href="/vendor/payments" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">
+                <CreditCard className="h-4 w-4" /> Payouts
+              </Link>
+            </section>
+          )}
+        </aside>
+        <div className="min-w-0">
       {/* Tab Content */}
       <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
         {/* Profile Tab */}
@@ -600,6 +612,7 @@ export default function AccountPage() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   )
