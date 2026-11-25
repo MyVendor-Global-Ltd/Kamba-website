@@ -13,6 +13,7 @@ type PublicStore = {
   slug: string
   category?: string
   location_text?: string
+  store_image_url?: string | null
   users?: { username?: string; profile_picture_url?: string | null }
 }
 type PublicService = {
@@ -21,6 +22,7 @@ type PublicService = {
   slug: string
   category?: string
   price_range?: string
+  service_images?: string[] | null
   location_text?: string
   business_profiles?: { business_name?: string; location_text?: string; service_area_text?: string }
   users?: { username?: string; profile_picture_url?: string | null }
@@ -128,7 +130,7 @@ export function StoreShowcase() {
             type: 'store',
             title: store.store_name || 'Local store',
             href: '/marketplace/stores/' + store.slug,
-            image: store.users?.profile_picture_url || undefined,
+            image: store.store_image_url || undefined,
             detail: store.location_text || undefined,
           })
         })
@@ -179,7 +181,7 @@ export function StoreShowcase() {
             type: 'service',
             title: service.service_title || 'Local service',
             href: '/marketplace/services/' + service.slug,
-            image: service.users?.profile_picture_url || undefined,
+            image: service.service_images?.[0] || undefined,
             detail: service.location_text || service.business_profiles?.service_area_text || service.category || service.price_range || undefined,
           })
         })
