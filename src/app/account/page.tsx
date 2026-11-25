@@ -10,8 +10,8 @@ import { apiJson } from '@/lib/api'
 import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
-import { useRouter } from 'next/navigation'
-import { User, MapPin, CreditCard, Settings, Package, Bell, LogOut, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { User, MapPin, CreditCard, Settings, Package, Bell, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X, LayoutDashboard, ShoppingBag, Activity } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -44,6 +44,7 @@ interface NotificationPreferences {
 }
 
 const tabs = [
+  { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, group: 'Dashboard' },
   { id: 'profile', label: 'Profile & personal details', icon: User, group: 'Account' },
   { id: 'addresses', label: 'Delivery addresses', icon: MapPin, group: 'Account' },
   { id: 'orders', label: 'Order history', icon: Package, group: 'Activity' },
@@ -54,16 +55,18 @@ const tabs = [
 type TabId = typeof tabs[number]['id']
 
 export default function AccountPage() {
-  const { user, updateUser, logout } = useAuth()
+  const { updateUser, logout } = useAuth()
   const { addToast } = useToast()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<TabId>('profile')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const requestedTab = new URLSearchParams(window.location.search).get('tab')
+    const requestedTab = searchParams.get('tab')
     if (requestedTab && tabs.some((tab) => tab.id === requestedTab)) setActiveTab(requestedTab as TabId)
-  }, [])
+    else setActiveTab('overview')
+  }, [searchParams])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [editing, setEditing] = useState<string | null>(null)
@@ -190,95 +193,83 @@ export default function AccountPage() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    router.push('/')
-  }
-
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
-        <div className="space-y-4 animate-pulse">
-          <div className="h-10 w-1/3 bg-ink-raised/50 rounded-lg" />
-          <div className="h-6 w-1/2 bg-ink-raised/50 rounded-lg" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="space-y-3 animate-pulse">
+          <div className="h-9 w-56 rounded-lg bg-ink-raised/60" />
+          <div className="h-5 w-72 max-w-full rounded-lg bg-ink-raised/60" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1 space-y-4">
-            <Card variant="elevated">
-              <CardContent className="p-4">
-                <div className="h-12 w-full bg-ink-raised/50 rounded" />
-              </CardContent>
-            </Card>
-          </div>
-          <div className="lg:col-span-3 space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} variant="elevated">
-                <CardContent className="p-4">
-                  <div className="h-6 w-1/3 bg-ink-raised/50 rounded mb-4" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-1/2 bg-ink-raised/50 rounded" />
-                    <div className="h-4 w-1/3 bg-ink-raised/50 rounded" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+        {[...Array(3)].map((_, index) => (
+          <Card key={index} variant="elevated">
+            <CardContent className="space-y-3 p-5">
+              <div className="h-5 w-1/3 rounded bg-ink-raised/60" />
+              <div className="h-4 w-2/3 rounded bg-ink-raised/60" />
+              <div className="h-4 w-1/2 rounded bg-ink-raised/60" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+    <div className="space-y-8">
       {/* Header */}
-      <header className="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">My Account</h1>
-          <p className="text-text-secondary mt-2">Manage your profile, notification preferences and orders</p>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+      <header className="animate-fade-in">
+        <h2 className="text-2xl font-bold font-display text-text-primary lg:text-3xl">{activeTab === 'overview' ? 'Your dashboard' : tabs.find((tab) => tab.id === activeTab)?.label}</h2>
+        <p className="mt-2 text-text-secondary">{activeTab === 'overview' ? 'Your Kamba activity and account shortcuts.' : 'Manage your Kamba account and preferences.'}</p>
       </header>
 
-      {/* Grouped account navigation */}
-      <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-xl border border-border bg-surface p-3" aria-label="Account navigation">
-          {(['Account', 'Activity', 'Preferences'] as const).map((group) => (
-            <section key={group} className="mb-3 last:mb-0">
-              <h2 className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-text-tertiary">{group}</h2>
-              <div className="space-y-1">
-                {tabs.filter((tab) => tab.group === group).map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                      aria-current={activeTab === tab.id ? 'page' : undefined}
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                        activeTab === tab.id ? 'bg-coral-dim text-coral' : 'text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary'
-                      }`}>
-                      <Icon className="h-4 w-4 shrink-0" />{tab.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
-          {user?.role === 'vendor' && (
-            <section className="mt-3 border-t border-border pt-3">
-              <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">Vendor workspace</h2>
-              <Link href="/vendor/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">
-                <Package className="h-4 w-4" /> Vendor dashboard
-              </Link>
-              <Link href="/vendor/payments" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">
-                <CreditCard className="h-4 w-4" /> Payouts
-              </Link>
-            </section>
-          )}
-        </aside>
-        <div className="min-w-0">
+      <div className="min-w-0">
       {/* Tab Content */}
-      <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+      <div className="animate-slide-up">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <Link replace href="/orders" className="group">
+                <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><ShoppingBag className="h-5 w-5" /></span>
+                    <span><span className="block text-sm text-text-secondary">Recent orders loaded</span><strong className="text-2xl text-text-primary">{orders.length}</strong></span>
+                    <ChevronRight className="ml-auto h-5 w-5 text-text-tertiary" />
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link replace href="/service-requests" className="group">
+                <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Activity className="h-5 w-5" /></span>
+                    <span><span className="block text-sm text-text-secondary">Service requests</span><strong className="text-base text-text-primary">View requests</strong></span>
+                    <ChevronRight className="ml-auto h-5 w-5 text-text-tertiary" />
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link replace href="/notifications" className="group">
+                <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Bell className="h-5 w-5" /></span>
+                    <span><span className="block text-sm text-text-secondary">Notifications</span><strong className="text-base text-text-primary">Open inbox</strong></span>
+                    <ChevronRight className="ml-auto h-5 w-5 text-text-tertiary" />
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+            <Card variant="elevated">
+              <CardHeader><CardTitle className="text-text-primary">Account shortcuts</CardTitle></CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <Link replace href="/account?tab=profile" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Profile details <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=addresses" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Delivery addresses <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=payment" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Payment preferences <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+                <Link replace href="/account?tab=settings" className="flex items-center justify-between rounded-xl border border-border p-4 text-sm font-medium text-text-primary transition-colors hover:bg-ink-raised/60">Notification preferences & security <ChevronRight className="h-4 w-4 text-text-tertiary" /></Link>
+              </CardContent>
+            </Card>
+            <div className="flex flex-wrap gap-3">
+              <Link replace href="/search"><Button>Discover products and services</Button></Link>
+              <Link replace href="/cart"><Button variant="outline">View shopping cart</Button></Link>
+            </div>
+          </div>
+        )}
         {/* Profile Tab */}
         {activeTab === 'profile' && profile && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
@@ -619,7 +610,6 @@ export default function AccountPage() {
         )}
         </div>
       </div>
-    </div>
     </div>
   )
 }
