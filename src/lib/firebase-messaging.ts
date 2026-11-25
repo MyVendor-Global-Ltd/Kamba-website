@@ -97,7 +97,7 @@ export async function enableWebPush() {
 }
 
 export async function disableWebPush() {
-  if (typeof window === 'undefined' || !window.firebase || !('serviceWorker' in navigator)) return null
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
   if (!vapidKey) return null
   const firebase = await getFirebase()
