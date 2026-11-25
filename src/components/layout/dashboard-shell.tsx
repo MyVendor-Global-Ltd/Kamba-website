@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Activity, Bell, ChevronLeft, ChevronRight, CreditCard, LayoutDashboard, LogOut,
   MapPin, Menu, Package, Search, Settings, ShoppingBag, Store, UserRound, X
@@ -16,6 +15,7 @@ type NavItem = { label: string; href: string; icon: typeof Search }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { state, logout } = useAuth()
   const [expanded, setExpanded] = useState(true)
@@ -26,9 +26,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     { label: 'Discover', items: [{ label: 'Search Kamba', href: '/search', icon: Search }] },
     {
       label: 'Workspace',
-      items: isVendor
-        ? [{ label: 'Vendor workspace', href: '/vendor/dashboard', icon: Store }]
-        : [{ label: 'Become a vendor', href: '/vendor/onboard', icon: Store }],
+      items: [
+        { label: 'Dashboard', href: '/account', icon: LayoutDashboard },
+        ...(isVendor
+          ? [{ label: 'Vendor workspace', href: '/vendor/dashboard', icon: Store }]
+          : [{ label: 'Become a vendor', href: '/vendor/onboard', icon: Store }]),
+      ],
     },
     {
       label: 'Your activity',
@@ -58,7 +61,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className={cn('flex h-[72px] items-center border-b border-border px-4', expanded ? 'justify-between' : 'justify-center')}>
-        {expanded && <Link href="/search" aria-label="Kamba search"><KambaLogo iconSize={30} href="/search" /></Link>}
+        {expanded && <KambaLogo iconSize={30} href="/search" />}
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -81,7 +84,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               {group.items.map((item) => {
                 const Icon = item.icon
                 const targetPath = item.href.split('?')[0]
-                const isActive = pathname === targetPath || (targetPath !== '/account' && pathname.startsWith(targetPath + '/'))
+                const isAccountItem = targetPath === '/account'
+                const requestedTab = item.href.split('tab=')[1] || 'profile'
+                const isActive = isAccountItem
+                  ? pathname === '/account' && (searchParams.get('tab') || 'profile') === requestedTab
+                  : pathname === targetPath || pathname.startsWith(targetPath + '/')
                 return (
                   <button
                     key={item.href}
