@@ -10,6 +10,8 @@ import { apiJson } from '@/lib/api'
 import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
+import { enableWebPush, disableWebPush } from '@/lib/firebase-messaging'
+import NotificationContacts from '@/components/account/NotificationContacts'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { User, MapPin, CreditCard, Settings, Package, Bell, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X, LayoutDashboard, ShoppingBag, Activity } from 'lucide-react'
 
@@ -156,6 +158,18 @@ export default function AccountPage() {
     setPreferencesSaving(true)
     setPreferencesError('')
     try {
+      if (key === 'push_enabled' && value) {
+        const token = await enableWebPush()
+        await apiJson('/notifications/devices', {
+          method: 'POST',
+          body: JSON.stringify({ token, platform: 'web', device_label: navigator.userAgent.slice(0, 100) }),
+        })
+      } else if (key === 'push_enabled' && !value) {
+        const token = await disableWebPush()
+        if (token) {
+          await apiJson('/notifications/devices', { method: 'DELETE', body: JSON.stringify({ token }) })
+        }
+      }
       const saved = await apiJson<NotificationPreferences>('/auth/notification-preferences', {
         method: 'PATCH',
         body: JSON.stringify({ [key]: value }),
@@ -493,7 +507,7 @@ export default function AccountPage() {
               <CardContent className="space-y-4">
                 <p className="text-sm text-text-tertiary">
                   Preferences are saved to your Kamba account and follow you between the website and mobile app.
-                  Push delivery still depends on device registration and provider configuration.
+                  Push alerts are delivered to browsers and devices you have registered. You can turn them off here at any time.
                 </p>
                 {preferencesError && (
                   <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
@@ -519,7 +533,7 @@ export default function AccountPage() {
                         <input
                           type="checkbox"
                           checked={notificationPreferences[key]}
-                          disabled={preferencesSaving || key === 'push_enabled'}
+                          disabled={preferencesSaving}
                           onChange={(event) => void handlePreferenceChange(key, event.target.checked)}
                           aria-label={label}
                           className="h-5 w-5 accent-coral disabled:opacity-50"
@@ -531,6 +545,8 @@ export default function AccountPage() {
                 )}
               </CardContent>
             </Card>
+
+            <NotificationContacts />
 
             <Card variant="elevated">
               <CardHeader>
