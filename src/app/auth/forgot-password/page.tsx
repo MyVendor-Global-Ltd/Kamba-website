@@ -48,6 +48,11 @@ export default function ForgotPasswordPage() {
 
   return (
     <Card className="w-full max-w-md mx-auto mt-10">
+      <div className="px-6 pt-5">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary transition-colors hover:text-primary">
+          <ArrowLeft className="h-4 w-4" /> Back to Kamba
+        </Link>
+      </div>
       <CardHeader>
         <CardTitle>{resetDone ? 'Password updated' : 'Forgot password'}</CardTitle>
         <CardDescription>
