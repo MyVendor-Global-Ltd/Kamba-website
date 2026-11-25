@@ -25,6 +25,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { state } = useAuth()
   const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/')
+  const isOtpVerificationRoute = pathname === '/auth/otp/verify'
   const isDashboardRoute = pathname === '/account' || pathname.startsWith('/account/') || pathname === '/orders' || (pathname.startsWith('/orders/') && pathname !== '/orders/confirmation') || pathname === '/service-requests' || pathname.startsWith('/service-requests/') || (pathname === '/notifications' && state.isAuthenticated)
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         <main key={pathname} className="app-main page-enter flex-1 w-full">{children}</main>
       )}
       {isAuthRoute
-        ? <AuthLegalFooter />
+        ? !isOtpVerificationRoute && <AuthLegalFooter />
         : !isDashboardRoute
           ? <Footer />
           : null}
