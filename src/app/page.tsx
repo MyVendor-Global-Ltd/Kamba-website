@@ -4,29 +4,17 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, MapPin, Package, Search, Store, Wrench } from 'lucide-react'
-import { apiJson } from '@/lib/api'
-import type { Product } from '@/types/commerce'
-import { formatKobo } from '@/lib/formatting'
 import { useAuth } from '@/context/AuthContext'
+import { StoreShowcase } from '@/components/marketplace/store-showcase'
 
 export default function Home() {
   const router = useRouter()
   const { state } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!state.isLoading && state.isAuthenticated) router.replace('/marketplace')
   }, [state.isLoading, state.isAuthenticated, router])
-
-  useEffect(() => {
-    if (state.isLoading || state.isAuthenticated) return
-    apiJson<{ products: Product[] }>('/commerce/products', { params: { offset: 0, limit: 4 } })
-      .then((result) => setProducts((result.products || []).map((product) => ({ ...product, image_url: product.image_url || product.images?.[0] }))))
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false))
-  }, [state.isLoading, state.isAuthenticated])
 
   if (state.isLoading || state.isAuthenticated) return null
 
@@ -51,7 +39,7 @@ export default function Home() {
               onSubmit={(event) => {
                 event.preventDefault()
                 const query = searchTerm.trim()
-                if (query) router.push(`/search?q=${encodeURIComponent(query)}`)
+                if (query) router.push('/search?q=' + encodeURIComponent(query))
               }}
             >
               <label className="sr-only" htmlFor="home-search">Search products, stores and services</label>
@@ -92,24 +80,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="container pt-12 md:pt-16">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">A place to start</p><h2 className="mt-2 text-2xl font-semibold text-text-primary md:text-3xl">Find something useful</h2><p className="mt-2 text-sm text-text-secondary">A small selection from the marketplace.</p></div>
-          <Link href="/marketplace/products" className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">See all products <ArrowRight className="h-4 w-4" /></Link>
-        </div>
-        {loading ? <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{[1,2,3,4].map(n => <div key={n} className="h-64 animate-pulse rounded-xl bg-muted" />)}</div> : products.length ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {products.map(product => <Link key={product.id} href={`/marketplace/products/${product.id}`} className="group min-w-0">
-              <div className="aspect-square overflow-hidden rounded-xl bg-muted">
-                {product.image_url ? <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" /> : <div className="flex h-full items-center justify-center text-text-tertiary"><Package className="h-8 w-8" /></div>}
-              </div>
-              <p className="mt-3 line-clamp-1 text-sm font-semibold text-text-primary group-hover:text-primary">{product.name}</p>
-              <p className="mt-1 text-sm font-semibold text-primary">{formatKobo(product.price)}</p>
-              <p className="mt-1 text-xs text-text-secondary">{product.store_name || 'Local vendor'}</p>
-            </Link>)}
-          </div>
-        ) : <div className="rounded-xl border border-dashed border-border p-8 text-center"><p className="font-medium text-text-primary">Products will appear here</p><p className="mt-1 text-sm text-text-secondary">Explore stores and services while the catalogue loads.</p><Link href="/marketplace/stores" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">Browse stores</Link></div>}
-      </section>
+      <StoreShowcase />
     </div>
   )
 }
