@@ -15,16 +15,17 @@ export function Footer() {
     {
       title: 'Explore',
       links: [
+        { label: 'Stores', href: '/marketplace/stores' },
         { label: 'Products', href: '/marketplace/products' },
         { label: 'Services', href: '/marketplace/services' },
-        { label: 'Stores', href: '/marketplace/stores' },
       ],
     },
     {
-      title: 'Your Kamba',
+      title: 'Your account',
       links: [
         { label: 'My account', href: accountHref },
         { label: 'My orders', href: ordersHref },
+        { label: 'Get the Kamba app', href: '/download' },
       ],
     },
     {
@@ -35,30 +36,31 @@ export function Footer() {
       ],
     },
     {
-      title: 'Mobile app',
+      title: 'Legal',
       links: [
-        { label: 'Get the Kamba app', href: '/download' },
+        { label: 'Terms and conditions', href: '/terms' },
+        { label: 'Privacy policy', href: '/privacy' },
       ],
     },
   ]
 
   return (
     <footer className="mt-auto border-t border-border bg-surface">
-      <div className="container mx-auto px-4 py-10 lg:py-12">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
-          <div className="space-y-4">
-            <KambaLogo iconSize={36} />
-            <p className="max-w-xs text-sm leading-6 text-text-secondary">
+      <div className="container mx-auto py-7 sm:py-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-3 lg:grid-cols-[1.45fr_repeat(4,minmax(0,1fr))] lg:gap-8">
+          <div className="col-span-2 space-y-2 sm:col-span-1">
+            <KambaLogo iconSize={30} />
+            <p className="max-w-xs text-xs leading-5 text-text-secondary">
               Discover products, independent shops and useful services in your neighbourhood.
             </p>
           </div>
           {linkGroups.map((group) => (
             <nav key={group.title} aria-label={group.title}>
-              <h2 className="mb-4 text-sm font-semibold text-text-primary">{group.title}</h2>
-              <ul className="space-y-3">
+              <h2 className="mb-2 text-xs font-semibold text-text-primary">{group.title}</h2>
+              <ul className="space-y-1.5">
                 {group.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="text-sm text-text-secondary transition-colors hover:text-primary">
+                    <Link href={link.href} className="text-xs text-text-secondary transition-colors hover:text-primary">
                       {link.label}
                     </Link>
                   </li>
@@ -67,8 +69,8 @@ export function Footer() {
             </nav>
           ))}
         </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-5 text-xs text-text-tertiary sm:flex-row sm:items-center sm:justify-between">
-          <p>© Kamba. All rights reserved.</p>
+        <div className="mt-6 flex flex-col gap-1.5 border-t border-border pt-4 text-[11px] text-text-tertiary sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Kamba. All rights reserved.</p>
           <p>Local discovery, made simpler.</p>
         </div>
       </div>
