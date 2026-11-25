@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { DashboardShell } from '@/components/layout/dashboard-shell'
 import { AuthGuard } from '@/components/auth/auth-guard'
+import { useAuth } from '@/context/AuthContext'
 
 function AuthLegalFooter() {
   return (
@@ -22,8 +23,9 @@ function AuthLegalFooter() {
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { state } = useAuth()
   const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/')
-  const isDashboardRoute = pathname === '/account' || pathname.startsWith('/account/') || pathname === '/orders' || (pathname.startsWith('/orders/') && pathname !== '/orders/confirmation') || pathname === '/service-requests' || pathname.startsWith('/service-requests/') || pathname === '/notifications'
+  const isDashboardRoute = pathname === '/account' || pathname.startsWith('/account/') || pathname === '/orders' || (pathname.startsWith('/orders/') && pathname !== '/orders/confirmation') || pathname === '/service-requests' || pathname.startsWith('/service-requests/') || (pathname === '/notifications' && state.isAuthenticated)
 
   useEffect(() => {
     const revealSelector = '[data-scroll-reveal], .app-main section, .app-main article'

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { checkUsernameAvailability } from '@/lib/auth'
@@ -126,6 +127,11 @@ export default function RegisterPage() {
 
   return (
     <Card className="w-full max-w-md mx-auto mt-10">
+      <div className="px-6 pt-5">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary transition-colors hover:text-primary">
+          <ArrowLeft className="h-4 w-4" /> Back to Kamba
+        </Link>
+      </div>
       <CardHeader>
         <CardTitle>Create your Kamba account</CardTitle>
         <CardDescription>Choose your username, add your email and create a password. You can add a phone number later when it is needed for delivery.</CardDescription>
