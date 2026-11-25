@@ -40,6 +40,11 @@ export async function checkUsernameAvailability(username: string) {
   return request<{ isAvailable: boolean; message?: string }>(`/auth/username-availability?username=${encodeURIComponent(username)}`)
 }
 
+export async function checkMyUsernameAvailability(username: string) {
+  if (isMockMode) return { isAvailable: true }
+  return request<{ isAvailable: boolean; message?: string }>(`/auth/username-availability/me?username=${encodeURIComponent(username)}`)
+}
+
 export async function login(email: string, password: string) {
   if (isMockMode) {
     if (!email.trim() || !password) throw new Error('Enter your email and password to continue.')
