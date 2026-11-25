@@ -27,22 +27,12 @@ export function Header() {
 
   const navLinks = [
     { href: '/marketplace', label: 'Marketplace' },
-    ...(state.isAuthenticated ? [
-      { href: '/orders', label: 'My orders' },
-      { href: '/account', label: 'Account settings' },
-    ] : []),
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
-    { href: '/vendor/onboard', label: 'Sell on Kamba' },
+    ...(!state.isAuthenticated || state.user?.role !== 'vendor'
+      ? [{ href: '/vendor/onboard', label: state.isAuthenticated ? 'Become a vendor' : 'Sell on Kamba' }]
+      : []),
     { href: '/download', label: 'Get the app' },
-    ...(state.user?.role === 'vendor'
-      ? [
-          { href: '/vendor/service-requests', label: 'Service requests' },
-          { href: '/vendor/pickup', label: 'Pickup desk' },
-        ]
-      : state.isAuthenticated
-        ? [{ href: '/service-requests', label: 'My requests' }]
-        : []),
   ]
 
   return (
@@ -202,22 +192,17 @@ export function Header() {
               </Link>
               {state.isAuthenticated ? (
                 <>
-                  <Link
-                    href="/account"
-                    className="px-4 py-3 rounded-lg text-base font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  {state.user?.role === 'vendor' && (
-                    <Link
-                      href="/vendor/dashboard"
-                      className="px-4 py-3 rounded-lg text-base font-medium text-coral hover:bg-coral-dim transition-all duration-200"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Vendor Dashboard
-                    </Link>
-                  )}
+                  <details className="rounded-lg border border-border/70">
+                    <summary className="cursor-pointer px-4 py-3 text-base font-medium text-text-primary">Account & settings</summary>
+                    <div className="flex flex-col gap-1 border-t border-border/60 p-2">
+                      <Link href="/account" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Profile & personal details</Link>
+                      <Link href="/account" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Addresses & delivery</Link>
+                      <Link href="/account" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payment preferences</Link>
+                      <Link href="/account" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Notifications & security</Link>
+                      <Link href="/orders" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My orders</Link>
+                      {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Vendor workspace</Link><Link href="/vendor/payments" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payouts</Link><Link href="/vendor/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Service requests</Link><Link href="/vendor/pickup" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Pickup desk</Link></> : <Link href="/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My service requests</Link>}
+                    </div>
+                  </details>
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
                     className="px-4 py-3 rounded-lg text-base font-medium text-destructive hover:bg-destructive/10 transition-all duration-200 text-left"
