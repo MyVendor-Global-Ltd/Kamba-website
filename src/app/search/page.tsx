@@ -16,7 +16,7 @@ import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/c
 import { useToast } from '@/components/ui/toast'
 import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
-type SearchStore = StoreProfile & { has_matching_products?: boolean }
+type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[] }
 
 interface SearchResult {
   products: Product[]
