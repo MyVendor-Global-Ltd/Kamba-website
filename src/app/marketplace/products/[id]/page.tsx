@@ -3,23 +3,30 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { apiJson } from '@/lib/api'
 import type { Product } from '@/types/commerce'
 import { formatKobo } from '@/lib/formatting'
 import { useCart } from '@/hooks/useCart'
 import { useToast } from '@/components/ui/toast'
-import { ChevronLeft, ChevronRight, Heart, Share2, Star } from 'lucide-react'
+import {
+  ArrowLeft, ChevronLeft, ChevronRight, Heart, Share2, ShoppingBag,
+  Star, Plus, Minus, Store, Play, PackageCheck,
+} from 'lucide-react'
+
+type ProductResponse = Product & {
+  product?: Product
+  original_price?: number
+  store_slug?: string
+  average_rating?: number
+  review_count?: number
+}
 
 export default function ProductDetailPage() {
   const params = useParams()
   const id = params.id as string
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [error, setError] = useState('')
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [addingToCart, setAddingToCart] = useState(false)
@@ -28,19 +35,31 @@ export default function ProductDetailPage() {
   const { addToast } = useToast()
 
   useEffect(() => {
-    apiJson<Product & { product?: Product; original_price?: number; store_slug?: string; average_rating?: number; review_count?: number }>(`/commerce/products/${id}`)
+    let active = true
+    setLoading(true)
+    apiJson<ProductResponse>(`/commerce/products/${id}`)
       .then((data) => {
+        if (!active) return
         const item = data.product || data
-        setProduct({ ...item, image_url: item.image_url || item.images?.[0], compare_at_price: item.compare_at_price ?? item.original_price, store_slug: item.store_slug })
+        setProduct({
+          ...item,
+          image_url: item.image_url || item.images?.[0],
+          compare_at_price: item.compare_at_price ?? data.original_price,
+          store_slug: item.store_slug || data.store_slug,
+        })
         setLoading(false)
         apiJson<{ items: Array<{ product_id: string }> }>('/marketplace/wishlist')
-          .then((wishlist) => setIsSaved(wishlist.items.some((item) => item.product_id === id)))
+          .then((wishlist) => {
+            if (active) setIsSaved(wishlist.items.some((item) => item.product_id === id))
+          })
           .catch(() => undefined)
       })
       .catch((err) => {
-        setError(err.message || "Failed to load product")
+        if (!active) return
+        setError(err instanceof Error ? err.message : 'Failed to load product')
         setLoading(false)
       })
+    return () => { active = false }
   }, [id])
 
   const handleToggleWishlist = async () => {
@@ -48,9 +67,17 @@ export default function ProductDetailPage() {
     try {
       await apiJson(`/marketplace/wishlist/${product.id}`, { method: isSaved ? 'DELETE' : 'POST' })
       setIsSaved(!isSaved)
-      addToast({ type: 'success', title: isSaved ? 'Removed from saved items' : 'Saved for later', message: isSaved ? 'This product was removed from your wishlist.' : 'This product is now in your wishlist.' })
+      addToast({
+        type: 'success',
+        title: isSaved ? 'Removed from saved items' : 'Saved for later',
+        message: isSaved ? 'This product was removed from your wishlist.' : 'This product is now in your wishlist.',
+      })
     } catch (err) {
-      addToast({ type: 'error', title: 'Could not update wishlist', message: err instanceof Error ? err.message : 'Sign in to save products.' })
+      addToast({
+        type: 'error',
+        title: 'Could not update wishlist',
+        message: err instanceof Error ? err.message : 'Sign in to save products.',
+      })
     }
   }
 
@@ -58,35 +85,36 @@ export default function ProductDetailPage() {
     const url = window.location.href
     try {
       if (navigator.share) await navigator.share({ title: product?.name || 'Kamba product', url })
-      else { await navigator.clipboard.writeText(url); addToast({ type: 'success', title: 'Link copied', message: 'Product link copied to clipboard.' }) }
+      else {
+        await navigator.clipboard.writeText(url)
+        addToast({ type: 'success', title: 'Link copied', message: 'Product link copied to clipboard.' })
+      }
     } catch (err) {
-      if (err instanceof Error && err.name !== 'AbortError') addToast({ type: 'error', title: 'Could not share product', message: 'Copy the page link from your browser instead.' })
+      if (err instanceof Error && err.name !== 'AbortError') {
+        addToast({ type: 'error', title: 'Could not share product', message: 'Copy the page link from your browser instead.' })
+      }
     }
   }
 
   const handleAddToCart = async () => {
-    if (!product) return
+    if (!product || !product.is_active || product.stock_quantity <= 0) return
     setAddingToCart(true)
     try {
       await addItem({
         product_id: product.id,
         quantity,
-          name: product.name,
-          price_kobo: product.price,
-          store_id: product.store_id || '',
-          image_url: product.image_url,
+        name: product.name,
+        price_kobo: product.price,
+        store_id: product.store_id || '',
+        image_url: product.image_url,
       })
       addToast({
         type: 'success',
         title: 'Added to cart',
         message: `${product.name} (x${quantity}) has been added to your cart.`,
       })
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to add to cart',
-        message: 'Please try again.',
-      })
+    } catch {
+      addToast({ type: 'error', title: 'Failed to add to cart', message: 'Please try again.' })
     } finally {
       setAddingToCart(false)
     }
@@ -94,321 +122,299 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8 animate-fade-in">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-pulse">
-          <Card variant="elevated">
-            <CardContent>
-              <div className="w-full h-64 bg-ink-raised/50 rounded-xl" />
-            </CardContent>
-          </Card>
-          <div className="space-y-6">
-            <div className="h-10 w-1/2 bg-ink-raised/50 rounded-lg" />
-            <div className="h-8 w-1/4 bg-ink-raised/50 rounded-lg" />
-            <div className="h-20 bg-ink-raised/50 rounded-xl" />
-            <div className="h-12 w-1/3 bg-ink-raised/50 rounded-lg" />
-          </div>
+      <main className="min-h-[80vh] bg-[#0D0D0D] px-4 py-6 text-white">
+        <div className="mx-auto max-w-7xl animate-pulse">
+          <div className="h-8 w-28 rounded-full bg-white/10" />
+          <div className="mt-6 h-[68vh] rounded-[2rem] bg-white/[0.06]" />
+          <div className="mt-8 h-8 w-1/3 rounded bg-white/10" />
+          <div className="mt-3 h-5 w-1/4 rounded bg-white/10" />
         </div>
-      </div>
+      </main>
     )
   }
 
   if (!product) {
     return (
-      <div className="container mx-auto px-4 py-8 lg:py-12 flex h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-4 text-text-tertiary">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
+      <main className="flex min-h-[70vh] items-center justify-center bg-[#0D0D0D] px-6 text-center text-white">
+        <div className="max-w-md">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
+            <ShoppingBag className="h-7 w-7 text-white/60" />
           </div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">Product not found</h2>
-          <p className="text-text-tertiary">The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
-          <Button variant="outline" className="mt-4" onClick={() => window.history.back()}>
-            Back to products
-          </Button>
+          <h1 className="text-2xl font-semibold">Product unavailable</h1>
+          <p className="mt-3 text-sm leading-6 text-white/55">{error || "The product you're looking for doesn't exist or has been removed."}</p>
+          <Link href="/marketplace/products" className="mt-7 inline-flex h-12 items-center rounded-full bg-white px-6 text-sm font-semibold text-[#111] transition hover:bg-white/85">
+            Browse products
+          </Link>
         </div>
-      </div>
+      </main>
     )
   }
 
   const images = product.images?.length ? product.images : product.image_url ? [product.image_url] : []
-  const hasDiscount = product.compare_at_price && product.compare_at_price > product.price
-  const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100) : 0
+  const hasDiscount = Boolean(product.compare_at_price && product.compare_at_price > product.price)
+  const discountPercent = hasDiscount
+    ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)
+    : 0
+  const inStock = Boolean(product.is_active && (product.in_stock ?? product.stock_quantity > 0))
+  const maxQuantity = Math.max(1, product.stock_quantity || 1)
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-text-tertiary animate-fade-in">
-        <Link href="/" className="hover:text-text-secondary">Home</Link>
-        <ChevronRight className="w-4 h-4" />
-        <Link href="/marketplace/products" className="hover:text-text-secondary">Products</Link>
-        <ChevronRight className="w-4 h-4" />
-        <span className="text-text-primary truncate max-w-[200px]">{product.name}</span>
-      </nav>
+    <main className="min-h-screen overflow-hidden bg-[#0D0D0D] text-white">
+      {/* Editorial image stage. The image and gradient are one continuous surface. */}
+      <section className="relative isolate min-h-[790px] h-[min(94svh,1040px)] bg-[#0D0D0D] sm:min-h-[850px]">
+        {images.length > 0 ? (
+          <img
+            src={images[Math.min(selectedImage, images.length - 1)]}
+            alt={product.name}
+            fetchPriority="high"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_50%_35%,#344238_0%,#17221b_42%,#0D0D0D_78%)]">
+            <ShoppingBag className="h-16 w-16 text-white/20" />
+          </div>
+        )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
-        {/* Image Gallery */}
-        <Card variant="elevated" className="overflow-hidden">
-          <CardContent className="p-0">
-            <div className="relative aspect-[4/3] md:aspect-[3/4]">
-              {images.length > 0 ? (
-                <img
-                  src={images[selectedImage]}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-opacity duration-300"
-                />
-              ) : (
-                <div className="w-full h-full bg-ink-raised/50 flex items-center justify-center">
-                  <svg className="w-16 h-16 text-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              )}
-              
-              {/* Discount Badge */}
-              {hasDiscount && (
-                <div className="absolute top-4 left-4">
-                  <Badge variant="destructive" size="md">
-                    -{discountPercent}%
-                  </Badge>
-                </div>
-              )}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(13,13,13,.22) 0%, transparent 24%, rgba(13,13,13,.08) 42%, rgba(13,13,13,.78) 68%, #0D0D0D 94%)',
+          }}
+        />
 
-              {/* Wishlist Button */}
-              <Button
+        {/* Floating image controls */}
+        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8 lg:px-12">
+          <Link
+            href="/marketplace/products"
+            aria-label="Back to products"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label="Share product"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
+            >
+              <Share2 className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleWishlist}
+              aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
+              aria-pressed={isSaved}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
+            >
+              <Heart className={`h-[18px] w-[18px] ${isSaved ? 'fill-current text-rose-300' : ''}`} />
+            </button>
+            <Link
+              href="/cart"
+              aria-label="Open cart"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
+            >
+              <ShoppingBag className="h-[18px] w-[18px]" />
+            </Link>
+          </div>
+        </div>
+
+        {hasDiscount && (
+          <div className="absolute left-5 top-24 z-10 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-white backdrop-blur-xl sm:left-9">
+            Save {discountPercent}%
+          </div>
+        )}
+
+        {/* Product card floats across the gradient boundary */}
+        <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-[1440px] px-4 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-12">
+          <div className="max-w-2xl rounded-[1.75rem] border border-white/[0.14] bg-[rgba(255,255,255,0.085)] p-5 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-2xl sm:p-7 lg:p-8">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {product.category && (
+                <span className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/65">{product.category}</span>
+              )}
+              {product.category && <span className="h-1 w-1 rounded-full bg-white/35" />}
+              <span className={`text-[10px] font-semibold uppercase tracking-[.18em] ${inStock ? 'text-[#B8D8C1]' : 'text-white/45'}`}>
+                {inStock ? 'Available now' : 'Currently unavailable'}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <h1 className="max-w-xl text-[clamp(2rem,6vw,4.15rem)] font-bold uppercase leading-[.94] tracking-[-.055em] text-white [font-family:var(--font-display)]">
+                {product.name}
+              </h1>
+              <div className="shrink-0 pb-1 text-right">
+                <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{formatKobo(product.price)}</p>
+                {hasDiscount && <p className="mt-0.5 text-xs text-white/45 line-through">{formatKobo(product.compare_at_price!)}</p>}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex h-12 w-fit items-center rounded-full border border-white/15 bg-black/15 px-1">
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                  disabled={quantity <= 1}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/10 disabled:opacity-30"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{quantity}</span>
+                <button
+                  type="button"
+                  aria-label="Increase quantity"
+                  onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}
+                  disabled={quantity >= maxQuantity || !inStock}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/10 disabled:opacity-30"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute top-4 right-4 bg-surface/90 text-primary hover:bg-surface"
-                aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
-                aria-pressed={isSaved}
-                onClick={handleToggleWishlist}
-              >
-                <Heart className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
-              </Button>
-
-              {/* Image Navigation */}
-              {images.length > 1 && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-ink/50 backdrop-blur-sm hover:bg-ink/70"
-                    onClick={() => setSelectedImage((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
-                    aria-label="Previous image"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-ink/50 backdrop-blur-sm hover:bg-ink/70"
-                    onClick={() => setSelectedImage((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
-                    aria-label="Next image"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
-                </>
-              )}
-            </div>
-
-            {/* Thumbnail Strip */}
-            {images.length > 1 && (
-              <div className="flex gap-2 p-4 overflow-x-auto">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                      idx === selectedImage ? 'border-coral' : 'border-transparent hover:border-border/50'
-                    }`}
-                    aria-label={`View image ${idx + 1}`}
-                    aria-current={idx === selectedImage ? 'true' : 'false'}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Product Info */}
-        <div className="space-y-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-          {/* Store & Category Badges */}
-          <div className="flex flex-wrap items-center gap-3">
-            {product.store_name && (
-              <Link href={`/marketplace/stores/${product.store_slug || product.store_id}`}>
-                <Badge variant="secondary" size="sm" className="cursor-pointer hover:bg-coral-dim hover:text-coral transition-colors">
-                  {product.store_name}
-                </Badge>
-              </Link>
-            )}
-            {product.category && (
-              <Badge variant="outline" size="sm">
-                {product.category}
-              </Badge>
-            )}
-            {product.is_active && (product.in_stock ?? product.stock_quantity > 0) ? (
-              <Badge variant="success" size="sm">In stock</Badge>
-            ) : (
-              <Badge variant="outline" size="sm">Out of stock</Badge>
-            )}
-          </div>
-
-          {/* Title & Rating */}
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">{product.name}</h1>
-            <div className="flex items-center gap-4 mt-3">
-              {(product.review_count || 0) > 0 ? (
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-gold text-gold" />
-                  <span className="text-sm font-medium text-text-secondary">{Number(product.average_rating || 0).toFixed(1)}</span>
-                  <span className="text-sm text-text-tertiary">({product.review_count} verified reviews)</span>
-                </div>
-              ) : <span className="text-sm text-text-tertiary">No reviews yet</span>}
-              <Button type="button" variant="ghost" size="sm" className="text-text-tertiary hover:text-primary" onClick={handleShare}>
-                <Share2 className="mr-1 h-4 w-4" /> Share
-              </Button>
-            </div>
-          </div>
-
-          {/* Price */}
-          <div className="flex items-baseline gap-4 flex-wrap">
-            <span className="text-3xl lg:text-4xl font-bold text-text-primary">{formatKobo(product.price)}</span>
-            {hasDiscount && (
-              <span className="text-xl text-text-tertiary line-through">{formatKobo(product.compare_at_price!)}</span>
-            )}
-            {hasDiscount && (
-              <Badge variant="gold" size="md">
-                Save {formatKobo(product.compare_at_price! - product.price)}
-              </Badge>
-            )}
-          </div>
-
-          {/* Description */}
-          {product.description && (
-            <Card variant="outlined">
-              <CardHeader>
-                <CardTitle className="text-lg">Description</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-text-secondary whitespace-pre-wrap">{product.description}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          <p className="text-sm leading-6 text-text-secondary">Delivery options, pickup availability and any applicable fees are confirmed at checkout before you pay.</p>
-
-          {/* Quantity Selector & Add to Cart */}
-          <div className="space-y-4 pt-4 border-t border-ink-raised/30">
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">Quantity</label>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center border border-border/50 rounded-lg overflow-hidden">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-11 w-11"
-                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                    disabled={quantity <= 1}
-                    aria-label="Decrease quantity"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                    </svg>
-                  </Button>
-                  <Input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 text-center border-0 bg-transparent focus:ring-0 h-11"
-                    min={1}
-                    max={product.stock_quantity || 99}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-11 w-11"
-                    onClick={() => setQuantity((prev) => Math.min(product.stock_quantity || 99, prev + 1))}
-                    disabled={quantity >= (product.stock_quantity || 99)}
-                    aria-label="Increase quantity"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </Button>
-                </div>
-                <span className="text-sm text-text-tertiary">
-                  Available: {product.stock_quantity}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant="default"
-                size="lg"
-                className="flex-1"
                 onClick={handleAddToCart}
-                disabled={addingToCart || product.stock_quantity <= 0 || !product.is_active}
+                disabled={addingToCart || !inStock}
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#F5F2E9] px-7 text-xs font-extrabold uppercase tracking-[.16em] text-[#17251C] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-w-[220px]"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                {addingToCart ? 'Adding...' : 'Add to cart'}
-              </Button>
-              <Button type="button" variant="outline" size="lg" className="flex-1" onClick={handleToggleWishlist} aria-pressed={isSaved}>
-                <Heart className={`mr-2 h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
-                {isSaved ? 'Saved' : 'Save'}
-              </Button>
+                <ShoppingBag className="h-4 w-4" />
+                {addingToCart ? 'Adding to cart…' : inStock ? 'Add to cart' : 'Out of stock'}
+              </button>
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-4 text-[10px] uppercase tracking-[.14em] text-white/45">
+              <span>{product.stock_quantity > 0 ? `${product.stock_quantity} available` : 'Limited availability'}</span>
+              <span className="flex items-center gap-1.5"><PackageCheck className="h-3.5 w-3.5" /> Delivery options at checkout</span>
             </div>
           </div>
+        </div>
 
-          {/* Store Info */}
-          {product.store_name && (
-            <Card variant="outlined">
-              <CardContent className="pt-0">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-coral-dim flex items-center justify-center">
-                    <span className="text-xl font-bold font-display text-coral">
-                      {product.store_name.charAt(0).toUpperCase()}
-                    </span>
+        {/* Gallery position indicator */}
+        {images.length > 1 && (
+          <div className="absolute bottom-7 right-5 z-20 hidden items-center gap-2 sm:flex lg:right-12">
+            <button
+              type="button"
+              onClick={() => setSelectedImage((value) => value === 0 ? images.length - 1 : value - 1)}
+              aria-label="Previous product image"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-xl hover:bg-black/50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="min-w-12 text-center text-xs tabular-nums text-white/75">{selectedImage + 1} / {images.length}</span>
+            <button
+              type="button"
+              onClick={() => setSelectedImage((value) => value === images.length - 1 ? 0 : value + 1)}
+              aria-label="Next product image"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-xl hover:bg-black/50"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* The page continues in the same dark canvas; no hard image-to-content edge. */}
+      <div className="mx-auto max-w-[1440px] px-4 pb-20 sm:px-8 lg:px-12">
+        {images.length > 1 && (
+          <section aria-label="More product photos" className="-mt-1 flex gap-3 overflow-x-auto pb-8 pt-2">
+            {images.map((image, index) => (
+              <button
+                key={image + index}
+                type="button"
+                onClick={() => setSelectedImage(index)}
+                aria-label={`View product image ${index + 1}`}
+                aria-current={selectedImage === index ? 'true' : undefined}
+                className={`h-20 w-16 shrink-0 overflow-hidden rounded-xl border transition sm:h-24 sm:w-20 ${selectedImage === index ? 'border-white/80 opacity-100' : 'border-white/10 opacity-55 hover:opacity-90'}`}
+              >
+                <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </section>
+        )}
+
+        <div className="grid gap-12 border-t border-white/10 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.62fr)] lg:gap-24 lg:py-16">
+          <section>
+            <p className="text-[10px] font-bold uppercase tracking-[.24em] text-[#A8C6AE]">The details</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight tracking-[-.04em] text-white sm:text-4xl">
+              Made to stand out. Chosen to fit your life.
+            </h2>
+            {product.description ? (
+              <p className="mt-6 max-w-2xl whitespace-pre-wrap text-sm leading-8 text-white/60 sm:text-base">{product.description}</p>
+            ) : (
+              <p className="mt-6 text-sm leading-7 text-white/45">More information about this product has not been provided by the seller yet.</p>
+            )}
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-white/45">
+              {product.review_count ? (
+                <span className="flex items-center gap-2">
+                  <Star className="h-4 w-4 fill-[#D0AD68] text-[#D0AD68]" />
+                  <strong className="font-semibold text-white">{Number(product.average_rating || 0).toFixed(1)}</strong>
+                  {product.review_count} reviews
+                </span>
+              ) : <span>No reviews yet</span>}
+              {product.tags?.length ? product.tags.slice(0, 4).map((tag) => (
+                <span key={tag} className="rounded-full border border-white/10 px-3 py-1.5">{tag}</span>
+              )) : null}
+            </div>
+          </section>
+
+          <aside className="space-y-5">
+            <div className="border-t border-white/15 pt-5">
+              <p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/40">Availability</p>
+              <p className="mt-2 text-lg font-medium text-white">{inStock ? 'Ready to order' : 'Currently unavailable'}</p>
+              <p className="mt-1 text-sm leading-6 text-white/45">Delivery options, pickup availability and applicable fees are confirmed at checkout before payment.</p>
+            </div>
+            {product.store_name && (
+              <div className="border-t border-white/15 pt-5">
+                <p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/40">Sold by</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#26382C] text-lg font-semibold text-[#B8D8C1]">
+                    {product.store_name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-medium text-text-primary">{product.store_name}</p>
-                    <p className="text-sm text-text-tertiary">Local Kamba storefront</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-white">{product.store_name}</p>
+                    <p className="mt-0.5 text-xs text-white/40">Kamba storefront</p>
                   </div>
-                  <Link href={`/marketplace/stores/${product.store_slug || product.store_id}`} className="ml-auto"><Button variant="ghost" size="sm">View store</Button></Link>
+                  <Link
+                    href={`/marketplace/stores/${product.store_slug || product.store_id}`}
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-semibold text-white transition hover:bg-white/10"
+                  >
+                    <Store className="h-3.5 w-3.5" /> Visit
+                  </Link>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
+          </aside>
+        </div>
+
+        {product.videos && product.videos.length > 0 && (
+          <section className="border-t border-white/10 py-10 sm:py-14">
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#A8C6AE]">Watch it</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Product in motion</h2>
+              </div>
+              <Play className="mb-1 h-5 w-5 text-white/40" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {product.videos.map((videoUrl) => (
+                <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-2xl border border-white/10 bg-black">
+                  <source src={videoUrl} />
+                  Your browser does not support embedded videos.
+                </video>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="flex flex-col items-start justify-between gap-4 border-t border-white/10 py-8 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-semibold text-white">Still looking?</p>
+            <p className="mt-1 text-xs text-white/45">Explore more finds from Kamba sellers.</p>
+          </div>
+          <Link href="/marketplace/products" className="inline-flex h-11 items-center rounded-full border border-white/20 px-5 text-xs font-semibold uppercase tracking-[.12em] text-white transition hover:bg-white/10">
+            Explore products <ChevronRight className="ml-2 h-4 w-4" />
+          </Link>
         </div>
       </div>
-
-      {product.videos && product.videos.length > 0 && (
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold text-text-primary">Product videos</h2>
-            <p className="mt-1 text-sm text-text-secondary">See the product in action.</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {product.videos.map((videoUrl) => (
-              <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-xl bg-ink">
-                <source src={videoUrl} />
-                Your browser does not support embedded videos.
-              </video>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {error && (
-        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up">
-          {error}
-        </div>
-      )}
-    </div>
+    </main>
   )
 }
