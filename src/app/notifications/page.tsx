@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { Bell, ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { AuthGuard } from '@/components/auth/auth-guard'
 
 function NotificationsContent() {
   return (
@@ -31,5 +30,5 @@ function NotificationsContent() {
 }
 
 export default function NotificationsPage() {
-  return <AuthGuard><NotificationsContent /></AuthGuard>
+  return <NotificationsContent />
 }
