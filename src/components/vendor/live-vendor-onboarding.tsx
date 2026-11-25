@@ -58,6 +58,7 @@ export function LiveVendorOnboarding() {
   const [success, setSuccess] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
   const [homeAddress, setHomeAddress] = useState('')
+  const [privateAddressSameAsBusiness, setPrivateAddressSameAsBusiness] = useState(false)
   const [operatingHours, setOperatingHours] = useState<OperatingHours>({
     monday: { closed: false, open: '09:00', close: '17:00' },
     tuesday: { closed: false, open: '09:00', close: '17:00' },
@@ -78,7 +79,7 @@ export function LiveVendorOnboarding() {
   const [serviceForm, setServiceForm] = useState({
     business_name: '', service_title: '', slug: '', category: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '',
-    contact_preference: 'whatsapp', contact_whatsapp: '', same_as_business_address: false,
+    contact_preference: 'whatsapp', contact_whatsapp: '', same_as_business_address: false, fulfilment_options: ['customer_visit'] as string[],
   })
 
   const loadStatus = useCallback(async () => {
@@ -145,6 +146,27 @@ export function LiveVendorOnboarding() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not create your vendor profile.') }
     finally { setSubmitting(false) }
   }
+  const savePrivateAddress = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!privateAddressSameAsBusiness && homeAddress.trim().length < 5) {
+      setError('Enter a valid private residential address.')
+      return
+    }
+    setSubmitting(true); setError(''); setSuccess('')
+    try {
+      await apiJson('/vendors/profile/private-address', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          home_address: homeAddress.trim(),
+          same_as_business_address: privateAddressSameAsBusiness,
+        }),
+      })
+      setSuccess('Private residential address updated.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the private address.')
+    } finally { setSubmitting(false) }
+  }
+
   const createStore = async (event: React.FormEvent) => {
     event.preventDefault()
     if (storeForm.location_mode === 'hybrid' && !storeForm.location_text.trim() && !storeForm.service_area_text.trim() && !storeForm.online_url.trim()) {
@@ -157,6 +179,7 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
+          home_address: homeAddress.trim(),
           operating_hours: operatingHours,
           delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
           business_name: storeForm.business_name.trim(),
@@ -187,8 +210,8 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
+          home_address: homeAddress.trim(),
           operating_hours: operatingHours,
-          delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
           business_name: serviceForm.business_name.trim(),
           service_title: serviceForm.service_title.trim(),
           category: serviceForm.category.trim(),
@@ -352,13 +375,38 @@ export function LiveVendorOnboarding() {
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
-            <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => updateService('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
+            <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => { const mode = event.target.value as LocationMode; updateService('location_mode', mode); updateService('fulfilment_options', mode === 'physical' ? ['on_site'] : mode === 'online' ? ['online'] : mode === 'hybrid' ? ['on_site', 'customer_visit', 'online'] : ['customer_visit']); }} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
             {showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
             {showOperationalFields()}
+            <fieldset className="space-y-2 rounded-lg border border-border p-3">
+              <legend className="px-1 text-sm font-medium text-text-secondary">How will customers receive this service?</legend>
+              {[
+                ['on_site', 'At your business location'],
+                ['customer_visit', 'You visit the customer'],
+                ['online', 'Online'],
+                ['automated', 'Automated / digital fulfilment'],
+              ].map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 text-sm text-text-secondary">
+                  <input type="checkbox" checked={serviceForm.fulfilment_options.includes(value)} onChange={(event) => updateService('fulfilment_options', event.target.checked ? [...serviceForm.fulfilment_options, value] : serviceForm.fulfilment_options.filter((item) => item !== value))} />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
             {(serviceForm.location_mode === 'physical' || serviceForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={serviceForm.same_as_business_address} onChange={(event) => updateService('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
             <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
             <Input label="Business WhatsApp number" value={serviceForm.contact_whatsapp} onChange={(event) => updateService('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
+          </form>
+        </CardContent></Card>
+      )}
+
+      {(stage === 'profile_setup' || stage === 'complete') && (
+        <Card variant="outlined"><CardHeader><CardTitle>Private residential address</CardTitle></CardHeader><CardContent>
+          <form onSubmit={savePrivateAddress} className="space-y-3">
+            <Input label="Home address" value={homeAddress} onChange={(event) => setHomeAddress(event.target.value)} required={!privateAddressSameAsBusiness} placeholder="Your private residential address" />
+            <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={privateAddressSameAsBusiness} onChange={(event) => setPrivateAddressSameAsBusiness(event.target.checked)} /> My home address is the same as my business address</label>
+            <p className="text-xs text-text-tertiary">This information is private and is never shown on your public store or service profile.</p>
+            <Button type="submit" variant="outline" disabled={submitting || (!privateAddressSameAsBusiness && homeAddress.trim().length < 5)}>{submitting ? 'Saving…' : 'Save private address'}</Button>
           </form>
         </CardContent></Card>
       )}
