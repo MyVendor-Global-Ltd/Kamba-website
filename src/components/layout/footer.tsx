@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { KambaLogo } from '@/components/layout/kamba-logo'
 import { useAuth } from '@/context/AuthContext'
 
 export function Footer() {
@@ -13,7 +12,7 @@ export function Footer() {
 
   const linkGroups = [
     {
-      title: 'Explore',
+      title: 'Discover',
       links: [
         { label: 'Stores', href: '/marketplace/stores' },
         { label: 'Products', href: '/marketplace/products' },
@@ -36,7 +35,7 @@ export function Footer() {
       ],
     },
     {
-      title: 'Legal',
+      title: 'Information',
       links: [
         { label: 'Terms and conditions', href: '/terms' },
         { label: 'Privacy policy', href: '/privacy' },
@@ -45,33 +44,33 @@ export function Footer() {
   ]
 
   return (
-    <footer className="mt-auto border-t border-border bg-surface">
-      <div className="container mx-auto py-7 sm:py-8">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-3 lg:grid-cols-[1.45fr_repeat(4,minmax(0,1fr))] lg:gap-8">
-          <div className="col-span-2 space-y-2 sm:col-span-1">
-            <KambaLogo iconSize={30} />
-            <p className="max-w-xs text-xs leading-5 text-text-secondary">
-              Discover products, independent shops and useful services in your neighbourhood.
-            </p>
-          </div>
+    <footer className="kamba-footer mt-auto">
+      <div className="container mx-auto">
+        <div className="kamba-footer-groups">
           {linkGroups.map((group) => (
             <nav key={group.title} aria-label={group.title}>
-              <h2 className="mb-2 text-xs font-semibold text-text-primary">{group.title}</h2>
-              <ul className="space-y-1.5">
+              <h2 className="kamba-footer-heading">{group.title}</h2>
+              <ul className="kamba-footer-links">
                 {group.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="text-xs text-text-secondary transition-colors hover:text-primary">
-                      {link.label}
-                    </Link>
+                    <Link href={link.href}>{link.label}</Link>
                   </li>
                 ))}
               </ul>
             </nav>
           ))}
         </div>
-        <div className="mt-6 flex flex-col gap-1.5 border-t border-border pt-4 text-[11px] text-text-tertiary sm:flex-row sm:items-center sm:justify-between">
+
+        <Link href="/" className="kamba-footer-wordmark" aria-label="Kamba home">
+          KAMBA
+        </Link>
+
+        <div className="kamba-footer-bottom">
           <p>© {new Date().getFullYear()} Kamba. All rights reserved.</p>
-          <p>Local discovery, made simpler.</p>
+          <div className="kamba-footer-legal">
+            <Link href="/terms">Terms and conditions</Link>
+            <Link href="/privacy">Privacy policy</Link>
+          </div>
         </div>
       </div>
     </footer>
