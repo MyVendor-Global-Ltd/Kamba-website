@@ -233,3 +233,17 @@ button:active:not(:disabled), a:active { transform: translateY(1px); }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   [data-scroll-reveal].is-visible { animation: none !important; }
 }
+
+/* Spacious, brand-led public footer */
+.kamba-footer{overflow:hidden;padding:clamp(2.75rem,6vw,5rem) 0 1.5rem;background:var(--primary-strong);color:var(--primary-foreground)}
+.kamba-footer-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1.5rem,4vw,3.5rem)}
+.kamba-footer-heading{margin:0 0 1.1rem;color:var(--primary-foreground);font-family:var(--font-ui);font-size:.95rem;font-weight:700;letter-spacing:-.02em}
+.kamba-footer-links{display:grid;gap:.7rem;margin:0;padding:0;list-style:none}
+.kamba-footer-links a,.kamba-footer-legal a{color:color-mix(in srgb,var(--primary-foreground) 70%,transparent);font-size:.9rem;line-height:1.55;text-decoration:none;transition:color 160ms ease}
+.kamba-footer-links a:hover,.kamba-footer-legal a:hover{color:var(--primary-foreground)}
+.kamba-footer-wordmark{display:block;width:fit-content;margin:clamp(4.5rem,10vw,8rem) auto clamp(2rem,5vw,3.25rem);color:var(--primary-foreground);font-family:var(--font-display);font-size:clamp(5rem,17.5vw,12.5rem);font-weight:700;letter-spacing:-.095em;line-height:.78;text-decoration:none;white-space:nowrap}
+.kamba-footer-bottom{display:flex;align-items:center;justify-content:space-between;gap:1.25rem;border-top:1px solid color-mix(in srgb,var(--primary-foreground) 18%,transparent);padding-top:1.45rem;color:color-mix(in srgb,var(--primary-foreground) 68%,transparent);font-size:.8rem}
+.kamba-footer-bottom p{margin:0}
+.kamba-footer-legal{display:flex;align-items:center;gap:clamp(1rem,2.5vw,2rem)}
+@media(max-width:640px){.kamba-footer{padding-top:3.5rem}.kamba-footer-groups{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:1.5rem;row-gap:2.5rem}.kamba-footer-heading{margin-bottom:1.15rem;font-size:1rem}.kamba-footer-links{gap:.85rem}.kamba-footer-links a{font-size:.95rem}.kamba-footer-wordmark{margin-top:5.25rem;margin-bottom:3.25rem;font-size:clamp(4.25rem,19vw,7.5rem)}.kamba-footer-bottom{align-items:flex-start;flex-direction:column;gap:1.25rem;padding-top:1.5rem;font-size:.82rem}.kamba-footer-legal{gap:1.5rem;flex-wrap:wrap}.kamba-footer-legal a{font-size:.88rem}}
+@media(prefers-reduced-motion:reduce){.kamba-footer-links a,.kamba-footer-legal a{transition:none}}
