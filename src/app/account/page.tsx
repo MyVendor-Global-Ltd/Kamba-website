@@ -10,7 +10,7 @@ import { apiJson } from '@/lib/api'
 import { formatKobo, formatDateTime, formatOrderStatus } from '@/lib/formatting'
 import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/context/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { User, MapPin, CreditCard, Settings, Package, Bell, LogOut, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
 
 interface UserProfile {
@@ -54,16 +54,18 @@ const tabs = [
 type TabId = typeof tabs[number]['id']
 
 export default function AccountPage() {
-  const { user, updateUser, logout } = useAuth()
+  const { updateUser, logout } = useAuth()
   const { addToast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabId>('profile')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const requestedTab = new URLSearchParams(window.location.search).get('tab')
+    const requestedTab = searchParams.get('tab')
     if (requestedTab && tabs.some((tab) => tab.id === requestedTab)) setActiveTab(requestedTab as TabId)
-  }, [])
+    else setActiveTab('profile')
+  }, [searchParams])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [editing, setEditing] = useState<string | null>(null)
@@ -242,41 +244,7 @@ export default function AccountPage() {
         </Button>
       </header>
 
-      {/* Grouped account navigation */}
-      <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-xl border border-border bg-surface p-3" aria-label="Account navigation">
-          {(['Account', 'Activity', 'Preferences'] as const).map((group) => (
-            <section key={group} className="mb-3 last:mb-0">
-              <h2 className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-text-tertiary">{group}</h2>
-              <div className="space-y-1">
-                {tabs.filter((tab) => tab.group === group).map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                      aria-current={activeTab === tab.id ? 'page' : undefined}
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                        activeTab === tab.id ? 'bg-coral-dim text-coral' : 'text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary'
-                      }`}>
-                      <Icon className="h-4 w-4 shrink-0" />{tab.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
-          {user?.role === 'vendor' && (
-            <section className="mt-3 border-t border-border pt-3">
-              <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">Vendor workspace</h2>
-              <Link href="/vendor/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">
-                <Package className="h-4 w-4" /> Vendor dashboard
-              </Link>
-              <Link href="/vendor/payments" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">
-                <CreditCard className="h-4 w-4" /> Payouts
-              </Link>
-            </section>
-          )}
-        </aside>
-        <div className="min-w-0">
+      <div className="min-w-0">
       {/* Tab Content */}
       <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
         {/* Profile Tab */}
@@ -619,7 +587,6 @@ export default function AccountPage() {
         )}
         </div>
       </div>
-    </div>
     </div>
   )
 }
