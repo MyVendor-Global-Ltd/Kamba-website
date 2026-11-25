@@ -109,7 +109,11 @@ function SearchPageContent() {
 
         const matchingProductStoreIds = new Set(products.map((product) => product.store_id).filter(Boolean))
         const matchingStores = stores
-          .map((store) => ({ ...store, has_matching_products: matchingProductStoreIds.has(store.id) }))
+          .map((store) => ({
+            ...store,
+            has_matching_products: matchingProductStoreIds.has(store.id),
+            matching_products: products.filter((product) => product.store_id === store.id),
+          }))
           .filter((store) => store.has_matching_products || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
 
         nextResults = { products, stores: matchingStores, services, total: products.length + matchingStores.length + services.length }
