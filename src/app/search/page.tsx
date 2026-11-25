@@ -14,7 +14,7 @@ import { isMockMode } from '@/lib/mock-api'
 import { formatKobo } from '@/lib/formatting'
 import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Search, X, Package, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
 type SearchStore = StoreProfile & { has_matching_products?: boolean }
 
@@ -288,7 +288,7 @@ function SearchPageContent() {
         {loading && results.total === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(9)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
+              <StoreCardSkeleton key={i} />
             ))}
           </div>
         ) : activeTab === 'all' ? (
@@ -335,8 +335,6 @@ function SearchPageContent() {
               </div>
             )}
           </>
-        ) : activeTab === 'products' ? (
-          <StoreResults stores={results.stores.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         ) : activeTab === 'stores' ? (
           <StoreResults stores={results.stores.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         ) : (
