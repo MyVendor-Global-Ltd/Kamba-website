@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, AuthState } from '@/types/auth'
 import * as authApi from '@/lib/auth'
-import { ApiError } from '@/lib/api'
+import { ApiError, apiJson } from '@/lib/api'
+import { disableWebPush } from '@/lib/firebase-messaging'
 
 const AuthContext = createContext<{
   state: AuthState
@@ -77,6 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
+    try {
+      const token = await disableWebPush()
+      if (token) await apiJson('/notifications/devices', { method: 'DELETE', body: JSON.stringify({ token }) })
+    } catch {
+      // Logout must remain available even if Firebase or the API is temporarily unreachable.
+    }
     await authApi.logout()
     setState({
       user: null,

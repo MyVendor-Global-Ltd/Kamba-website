@@ -6,6 +6,7 @@ import { CartProvider } from '@/context/CartContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { ToastProvider } from '@/components/ui/toast'
 import { AppChrome } from '@/components/layout/app-chrome'
+import { FirebaseForegroundNotifications } from '@/components/notifications/FirebaseForegroundNotifications'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -55,6 +56,7 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <ToastProvider>
+                <FirebaseForegroundNotifications />
                 <Suspense fallback={<HeaderSkeleton />}>
                   <AppChrome>{children}</AppChrome>
                 </Suspense>
