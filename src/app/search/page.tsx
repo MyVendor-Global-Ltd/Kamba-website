@@ -16,9 +16,11 @@ import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/c
 import { useToast } from '@/components/ui/toast'
 import { Search, X, Package, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
+type SearchStore = StoreProfile & { has_matching_products?: boolean }
+
 interface SearchResult {
   products: Product[]
-  stores: StoreProfile[]
+  stores: SearchStore[]
   services: ServiceProfile[]
   total: number
 }
@@ -106,7 +108,22 @@ function SearchPageContent() {
           })
           .filter((service) => `${service.name} ${service.description || ''} ${service.city || ''} ${service.category || ''}`.toLowerCase().includes(term.toLowerCase()))
 
-        nextResults = { products, stores, services, total: products.length + stores.length + services.length }
+        const matchingProductStoreIds = new Set(products.map((product) => product.store_id).filter(Boolean))
+        const matchingStores = stores
+          .map((store) => ({ ...store, has_matching_products: matchingProductStoreIds.has(store.id) }))
+          .filter((store) => store.has_matching_products || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
+
+        nextResults = { products, stores: matchingStores, services, total: products.length + matchingStores.length + services.length }
+      }
+      if (isMockMode) {
+        const matchingProductStoreIds = new Set(nextResults.products.map((product) => product.store_id).filter(Boolean))
+        nextResults = {
+          ...nextResults,
+          stores: nextResults.stores
+            .map((store) => ({ ...store, has_matching_products: matchingProductStoreIds.has(store.id) }))
+            .filter((store) => store.has_matching_products || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase())),
+        }
+        nextResults.total = nextResults.products.length + nextResults.stores.length + nextResults.services.length
       }
       setResults(nextResults)
       setPagination((previous) => ({ ...previous, page: 1 }))
@@ -395,7 +412,7 @@ function ProductSearchCard({ product }: { product: Product }) {
 }
 
 // Store Search Card
-function StoreSearchCard({ store }: { store: StoreProfile }) {
+function StoreSearchCard({ store }: { store: SearchStore }) {
   const imageUrl = store.logo_url || '/placeholder-store.jpg'
   
   return (
@@ -416,6 +433,9 @@ function StoreSearchCard({ store }: { store: StoreProfile }) {
         </div>
         <CardContent className="p-4 pt-3 space-y-2">
           <h3 className="font-semibold text-text-primary line-clamp-1 group-hover:text-coral transition-colors">{store.name}</h3>
+          {store.has_matching_products && (
+            <Badge variant="secondary" size="sm">Has matching products</Badge>
+          )}
           {store.category && (
             <Badge variant="secondary" size="sm">{store.category}</Badge>
           )}
