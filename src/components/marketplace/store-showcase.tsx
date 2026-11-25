@@ -121,7 +121,7 @@ export function StoreShowcase() {
       const nextCards: ShowcaseCard[] = []
 
       stores
-        .filter((store) => store.is_active !== false && Boolean(store.slug))
+        .filter((store) => Boolean(store.slug))
         .forEach((store) => {
           nextCards.push({
             id: store.id,
@@ -172,7 +172,7 @@ export function StoreShowcase() {
       })
 
       services
-        .filter((service) => service.is_active !== false && Boolean(service.slug))
+        .filter((service) => Boolean(service.slug))
         .forEach((service) => {
           nextCards.push({
             id: service.id,
