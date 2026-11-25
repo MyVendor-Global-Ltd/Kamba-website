@@ -55,9 +55,9 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <ToastProvider>
-              <Suspense fallback={<HeaderSkeleton />}>
-                <AppChrome>{children}</AppChrome>
-              </Suspense>
+                <Suspense fallback={<HeaderSkeleton />}>
+                  <AppChrome>{children}</AppChrome>
+                </Suspense>
               </ToastProvider>
             </CartProvider>
           </AuthProvider>
