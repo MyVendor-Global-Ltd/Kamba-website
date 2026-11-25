@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BriefcaseBusiness, Image as ImageIcon, Package, Store as StoreIcon } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, Package, Store as StoreIcon } from 'lucide-react'
 import { apiJson } from '@/lib/api'
 import type { Product } from '@/types/commerce'
 import type { ServiceProfile, StoreProfile } from '@/types/vendor'
@@ -38,13 +38,14 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-function ShowcaseCardView({ item, rowId }: { item: ShowcaseCard; rowId: string }) {
+function ShowcaseCardView({ item, rowId, interactive }: { item: ShowcaseCard; rowId: string; interactive: boolean }) {
   const image = 'image' in item ? item.image : undefined
   return (
     <Link
       href={item.href}
       className={'store-showcase-card store-showcase-card--' + rowId + ' store-showcase-card--' + item.type}
       aria-label={item.type === 'product' ? item.title + ', ' + formatKobo(item.price) : item.title}
+      tabIndex={interactive ? 0 : -1}
     >
       <div className="store-showcase-image">
         {item.type === 'category' ? (
@@ -86,7 +87,7 @@ function ShowcaseCardView({ item, rowId }: { item: ShowcaseCard; rowId: string }
 function ShowcaseSequence({ items, rowId, copy }: { items: ShowcaseCard[]; rowId: string; copy: string }) {
   return (
     <div className="store-showcase-sequence" aria-hidden={copy === 'second'}>
-      {items.map((item) => <ShowcaseCardView key={copy + '-' + item.type + '-' + item.id} item={item} rowId={rowId} />)}
+      {items.map((item, index) => <ShowcaseCardView key={copy + '-' + index + '-' + item.type + '-' + item.id} item={item} rowId={rowId} interactive={copy === 'first'} />)}
     </div>
   )
 }
