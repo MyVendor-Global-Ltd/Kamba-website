@@ -90,7 +90,7 @@ export default function VerifyOTPPage() {
                 <div className="space-y-4 text-sm text-text-secondary">
                   <p>Your phone verification session is missing or has expired. Go back and request a new code.</p>
                   <Button asChild className="w-full">
-                    <Link href="/auth/phone">Request a new code</Link>
+                    <Link href={phonePageHref}>Request a new code</Link>
                   </Button>
                 </div>
               ) : (
@@ -119,7 +119,7 @@ export default function VerifyOTPPage() {
               <div className="border-t border-border pt-4 text-center">
                 <p className="text-sm text-text-secondary">
                   Wrong number?{' '}
-                  <Link href="/auth/phone" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href={phonePageHref} className="font-semibold text-primary underline-offset-4 hover:underline">
                     Change phone number
                   </Link>
                 </p>
