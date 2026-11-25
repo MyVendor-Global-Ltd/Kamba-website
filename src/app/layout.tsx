@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { Space_Grotesk, Plus_Jakarta_Sans } from 'next/font/google'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
+import { ThemeProvider } from '@/context/ThemeContext'
 import { ToastProvider } from '@/components/ui/toast'
 import { AppChrome } from '@/components/layout/app-chrome'
 import './globals.css'
@@ -50,15 +51,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col antialiased bg-background text-foreground font-ui">
-        <AuthProvider>
-          <CartProvider>
-            <ToastProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <ToastProvider>
               <Suspense fallback={<HeaderSkeleton />}>
                 <AppChrome>{children}</AppChrome>
               </Suspense>
-            </ToastProvider>
-          </CartProvider>
-        </AuthProvider>
+              </ToastProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
