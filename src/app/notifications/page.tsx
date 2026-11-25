@@ -70,7 +70,7 @@ function NotificationsContent() {
     setError('')
     try {
       const result = await apiJson<InboxResult>('/notifications', {
-        params: { limit: 20, before: cursor },
+        params: { limit: 20, before: cursor || undefined },
       })
       setItems((current) => append ? [...current, ...result.notifications] : result.notifications)
       setUnreadCount(result.unread_count)
