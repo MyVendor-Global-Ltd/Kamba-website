@@ -48,7 +48,7 @@ function ShowcaseCardView({ item, rowId, interactive }: { item: ShowcaseCard; ro
       tabIndex={interactive ? 0 : -1}
     >
       <div className="store-showcase-image">
-        {item.type === 'category' ? (
+        {item.type === 'category' && item.images.length > 0 ? (
           <div className="store-showcase-category-images" aria-hidden="true">
             {item.images.slice(0, 3).map((src, index) => (
               <img key={src + index} src={src} alt="" loading="lazy" />
