@@ -88,7 +88,6 @@ function SearchPageContent() {
               verification_status,
             }
           })
-          .filter((store) => `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
         const services = serviceResponse.services
           .map((service) => {
             const tier = service.vendor_profiles?.verification_tier
