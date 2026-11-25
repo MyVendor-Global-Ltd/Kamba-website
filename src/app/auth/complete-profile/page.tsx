@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/context/AuthContext'
-import { checkUsernameAvailability, setUsername } from '@/lib/auth'
+import { checkMyUsernameAvailability, setUsername } from '@/lib/auth'
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'
 
@@ -43,7 +43,7 @@ export default function CompleteGoogleProfilePage() {
     setMessage('Checking username availability…')
     const timer = window.setTimeout(async () => {
       try {
-        const result = await checkUsernameAvailability(normalizedUsername)
+        const result = await checkMyUsernameAvailability(normalizedUsername)
         if (cancelled) return
         setAvailability(result.isAvailable ? 'available' : 'taken')
         setMessage(result.isAvailable ? 'This username is available.' : 'That username is already taken.')
