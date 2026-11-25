@@ -82,10 +82,11 @@ export async function enableWebPush() {
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
   if (!vapidKey) throw new Error('Firebase VAPID key is missing. Add NEXT_PUBLIC_FIREBASE_VAPID_KEY to the website environment.')
 
+  const permissionRequest = Notification.requestPermission()
   const firebase = await getFirebase()
   const supported = await firebase.messaging.isSupported()
   if (!supported) throw new Error('This browser or device does not support Firebase web push.')
-  const permission = await Notification.requestPermission()
+  const permission = await permissionRequest
   if (permission !== 'granted') throw new Error('Notification permission was not granted.')
 
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
