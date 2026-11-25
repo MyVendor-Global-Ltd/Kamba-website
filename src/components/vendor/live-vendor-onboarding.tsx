@@ -49,6 +49,7 @@ export function LiveVendorOnboarding() {
   const [eligibility, setEligibility] = useState<Eligibility | null>(null)
   const [status, setStatus] = useState<OnboardingStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [draftLoaded, setDraftLoaded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -75,6 +76,14 @@ export function LiveVendorOnboarding() {
       ])
       setEligibility(eligibilityData)
       setStatus(statusData)
+      try {
+        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; home_address?: string; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm> } }>('/vendors/onboard/draft')
+        if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
+        if (saved.draft?.home_address) setHomeAddress(saved.draft.home_address)
+        if (saved.draft?.storeForm) setStoreForm((previous) => ({ ...previous, ...saved.draft?.storeForm }))
+        if (saved.draft?.serviceForm) setServiceForm((previous) => ({ ...previous, ...saved.draft?.serviceForm }))
+      } catch { /* Existing onboarding remains usable if draft retrieval is temporarily unavailable. */ }
+      setDraftLoaded(true)
       if (statusData.vendor_type) setVendorType(statusData.vendor_type)
       else if (statusData.stage === 'complete') {
         try {
@@ -93,6 +102,17 @@ export function LiveVendorOnboarding() {
   }, [])
 
   useEffect(() => { void Promise.resolve().then(loadStatus) }, [loadStatus])
+
+  useEffect(() => {
+    if (!draftLoaded) return
+    const timeout = window.setTimeout(() => {
+      void apiJson('/vendors/onboard/draft', {
+        method: 'PUT',
+        body: JSON.stringify({ draft: { vendor_type: vendorType, home_address: homeAddress, storeForm, serviceForm } }),
+      }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
+    }, 700)
+    return () => window.clearTimeout(timeout)
+  }, [draftLoaded, vendorType, homeAddress, storeForm, serviceForm])
 
   const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
