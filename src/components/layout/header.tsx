@@ -29,9 +29,7 @@ export function Header() {
     { href: '/marketplace', label: 'Marketplace' },
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
-    ...(!state.isAuthenticated || state.user?.role !== 'vendor'
-      ? [{ href: '/vendor/onboard', label: state.isAuthenticated ? 'Become a vendor' : 'Sell on Kamba' }]
-      : []),
+    ...(!state.isAuthenticated ? [{ href: '/vendor/onboard', label: 'Sell on Kamba' }] : []),
     { href: '/download', label: 'Get the app' },
   ]
 
@@ -118,7 +116,7 @@ export function Header() {
                     <Link href="/account?tab=settings" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Notifications & security</Link>
                     <div className="my-2 border-t border-border" />
                     <Link href="/orders" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My orders</Link>
-                    {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Vendor workspace</Link><Link href="/vendor/payments" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payouts</Link><Link href="/vendor/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Service requests</Link><Link href="/vendor/pickup" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Pickup desk</Link></> : <Link href="/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My service requests</Link>}
+                    {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Vendor workspace</Link><Link href="/vendor/payments" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payouts</Link><Link href="/vendor/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Service requests</Link><Link href="/vendor/pickup" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Pickup desk</Link></> : <><Link href="/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My service requests</Link><Link href="/vendor/onboard" className="block rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:bg-coral-dim">Become a vendor</Link></>}
                   </div>
                 </details>
                 <button
@@ -200,7 +198,7 @@ export function Header() {
                       <Link href="/account?tab=payment" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payment preferences</Link>
                       <Link href="/account?tab=settings" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Notifications & security</Link>
                       <Link href="/orders" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My orders</Link>
-                      {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Vendor workspace</Link><Link href="/vendor/payments" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payouts</Link><Link href="/vendor/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Service requests</Link><Link href="/vendor/pickup" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Pickup desk</Link></> : <Link href="/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My service requests</Link>}
+                      {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Vendor workspace</Link><Link href="/vendor/payments" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payouts</Link><Link href="/vendor/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Service requests</Link><Link href="/vendor/pickup" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Pickup desk</Link></> : <><Link href="/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My service requests</Link><Link href="/vendor/onboard" className="rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:bg-coral-dim" onClick={() => setMobileMenuOpen(false)}>Become a vendor</Link></>}
                     </div>
                   </details>
                   <button
