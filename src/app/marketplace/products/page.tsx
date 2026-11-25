@@ -137,9 +137,9 @@ export default function ProductsPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <div className="marketplace-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" style={{ animationDelay: '100ms' }}>
             {products.map((product) => (
-              <Card key={product.id} variant="elevated" className="h-full group">
+              <Card data-scroll-reveal key={product.id} variant="elevated" className="h-full group">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-text-primary group-hover:text-coral transition-colors line-clamp-1">{product.name}</CardTitle>
                 </CardHeader>

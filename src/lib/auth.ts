@@ -40,6 +40,11 @@ export async function checkUsernameAvailability(username: string) {
   return request<{ isAvailable: boolean; message?: string }>(`/auth/username-availability?username=${encodeURIComponent(username)}`)
 }
 
+export async function checkMyUsernameAvailability(username: string) {
+  if (isMockMode) return { isAvailable: true }
+  return request<{ isAvailable: boolean; message?: string }>(`/auth/username-availability/me?username=${encodeURIComponent(username)}`)
+}
+
 export async function login(email: string, password: string) {
   if (isMockMode) {
     if (!email.trim() || !password) throw new Error('Enter your email and password to continue.')
@@ -111,5 +116,24 @@ export async function resetPassword(email: string, otpCode: string, newPassword:
   return request('/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify({ email: email.trim().toLowerCase(), otp_code: otpCode.trim(), new_password: newPassword }),
+  })
+}
+
+
+export function beginGoogleSignIn() {
+  if (typeof window === 'undefined') return
+  window.location.assign(`${API_BASE}/api/v1/auth/google`)
+}
+
+export async function setUsername(username: string) {
+  if (isMockMode) {
+    const user = readMockUser()
+    if (!user) throw new Error('Sign in before choosing a username.')
+    writeMockUser({ ...user, username: username.trim().replace(/^@+/, '').toLowerCase() })
+    return { success: true, prototype: true }
+  }
+  return request('/auth/username/set', {
+    method: 'POST',
+    body: JSON.stringify({ username: username.trim().replace(/^@+/, '').toLowerCase() }),
   })
 }

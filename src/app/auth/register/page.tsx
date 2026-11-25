@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { checkUsernameAvailability } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -131,6 +132,14 @@ export default function RegisterPage() {
       </CardHeader>
       <CardContent>
         {error && <div role="alert" className="mb-4 p-3 rounded bg-destructive/10 text-destructive text-sm border border-destructive/20">{error}</div>}
+        <div className="mb-5 space-y-3">
+          <GoogleSignInButton />
+          <div className="flex items-center gap-3 text-xs text-text-tertiary">
+            <span className="h-px flex-1 bg-border" />
+            <span>or continue with email</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="username" className="text-sm font-medium">Username</label>
