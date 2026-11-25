@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,11 @@ export default function LoginPage() {
 
   return (
     <Card className="w-full max-w-md mx-auto mt-10">
+      <div className="px-6 pt-5">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary transition-colors hover:text-primary">
+          <ArrowLeft className="h-4 w-4" /> Back to Kamba
+        </Link>
+      </div>
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Enter your email and password to access your account.</CardDescription>
