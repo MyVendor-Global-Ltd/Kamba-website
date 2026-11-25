@@ -27,22 +27,10 @@ export function Header() {
 
   const navLinks = [
     { href: '/marketplace', label: 'Marketplace' },
-    ...(state.isAuthenticated ? [
-      { href: '/orders', label: 'My orders' },
-      { href: '/account', label: 'Account settings' },
-    ] : []),
     { href: '/marketplace/stores', label: 'Stores' },
     { href: '/marketplace/services', label: 'Services' },
-    { href: '/vendor/onboard', label: 'Sell on Kamba' },
+    ...(!state.isAuthenticated ? [{ href: '/vendor/onboard', label: 'Sell on Kamba' }] : []),
     { href: '/download', label: 'Get the app' },
-    ...(state.user?.role === 'vendor'
-      ? [
-          { href: '/vendor/service-requests', label: 'Service requests' },
-          { href: '/vendor/pickup', label: 'Pickup desk' },
-        ]
-      : state.isAuthenticated
-        ? [{ href: '/service-requests', label: 'My requests' }]
-        : []),
   ]
 
   return (
@@ -51,7 +39,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <KambaLogo iconSize={34} />
+            <KambaLogo iconSize={34} href={state.isAuthenticated ? '/marketplace' : '/'} />
             <span className="hidden sm:inline-block w-px h-6 bg-border mx-2" />
             <span className="hidden sm:inline text-sm font-medium text-text-secondary">Marketplace</span>
             {isMockMode && <span className="hidden md:inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary">Prototype</span>}
@@ -118,20 +106,19 @@ export function Header() {
             {/* Auth */}
             {state.isAuthenticated ? (
               <>
-                <Link href="/account" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Account
-                </Link>
-                {state.user?.role === 'vendor' && (
-                  <Link href="/vendor/dashboard" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-coral hover:bg-coral-dim transition-all duration-200">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    Vendor
-                  </Link>
-                )}
+                <details className="relative hidden sm:block">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-ink-raised/50 hover:text-text-primary">Settings <span aria-hidden="true">⌄</span></summary>
+                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-xl">
+                    <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">Account</p>
+                    <Link href="/account?tab=profile" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Profile & personal details</Link>
+                    <Link href="/account?tab=addresses" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Addresses & delivery</Link>
+                    <Link href="/account?tab=payment" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payment preferences</Link>
+                    <Link href="/account?tab=settings" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Notifications & security</Link>
+                    <div className="my-2 border-t border-border" />
+                    <Link href="/orders" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My orders</Link>
+                    {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Vendor workspace</Link><Link href="/vendor/payments" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Payouts</Link><Link href="/vendor/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Service requests</Link><Link href="/vendor/pickup" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">Pickup desk</Link></> : <><Link href="/service-requests" className="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-ink-raised/50">My service requests</Link><Link href="/vendor/onboard" className="block rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:bg-coral-dim">Become a vendor</Link></>}
+                  </div>
+                </details>
                 <button
                   onClick={() => logout()}
                   className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
@@ -203,22 +190,17 @@ export function Header() {
               </Link>
               {state.isAuthenticated ? (
                 <>
-                  <Link
-                    href="/account"
-                    className="px-4 py-3 rounded-lg text-base font-medium text-text-secondary hover:text-text-primary hover:bg-ink-raised/50 transition-all duration-200"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  {state.user?.role === 'vendor' && (
-                    <Link
-                      href="/vendor/dashboard"
-                      className="px-4 py-3 rounded-lg text-base font-medium text-coral hover:bg-coral-dim transition-all duration-200"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Vendor Dashboard
-                    </Link>
-                  )}
+                  <details className="rounded-lg border border-border/70">
+                    <summary className="cursor-pointer px-4 py-3 text-base font-medium text-text-primary">Account & settings</summary>
+                    <div className="flex flex-col gap-1 border-t border-border/60 p-2">
+                      <Link href="/account?tab=profile" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Profile & personal details</Link>
+                      <Link href="/account?tab=addresses" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Addresses & delivery</Link>
+                      <Link href="/account?tab=payment" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payment preferences</Link>
+                      <Link href="/account?tab=settings" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Notifications & security</Link>
+                      <Link href="/orders" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My orders</Link>
+                      {state.user?.role === 'vendor' ? <><Link href="/vendor/dashboard" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Vendor workspace</Link><Link href="/vendor/payments" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Payouts</Link><Link href="/vendor/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Service requests</Link><Link href="/vendor/pickup" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>Pickup desk</Link></> : <><Link href="/service-requests" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-ink-raised/50" onClick={() => setMobileMenuOpen(false)}>My service requests</Link><Link href="/vendor/onboard" className="rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:bg-coral-dim" onClick={() => setMobileMenuOpen(false)}>Become a vendor</Link></>}
+                    </div>
+                  </details>
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
                     className="px-4 py-3 rounded-lg text-base font-medium text-destructive hover:bg-destructive/10 transition-all duration-200 text-left"
