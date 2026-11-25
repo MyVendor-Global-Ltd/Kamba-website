@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
-import { useAuth } from '@/context/AuthContext'
 import { DashboardShell } from '@/components/layout/dashboard-shell'
 import { AuthGuard } from '@/components/auth/auth-guard'
 
@@ -23,47 +22,52 @@ function AuthLegalFooter() {
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { state } = useAuth()
   const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/')
   const isDashboardRoute = pathname === '/account' || pathname.startsWith('/account/') || pathname === '/orders' || (pathname.startsWith('/orders/') && pathname !== '/orders/confirmation') || pathname === '/service-requests' || pathname.startsWith('/service-requests/') || pathname === '/notifications'
 
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.add('reveal-ready')
-
-    if (!('IntersectionObserver' in window)) {
-      document.querySelectorAll('[data-scroll-reveal]').forEach((element) => element.classList.add('is-visible'))
-      return () => root.classList.remove('reveal-ready')
-    }
-
-    const revealObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible')
-          observer.unobserve(entry.target)
-        }
-      })
-    }, { rootMargin: '0px 0px 120px 0px', threshold: 0.05 })
+    const revealSelector = '[data-scroll-reveal], .app-main section, .app-main article'
 
     const observeRevealElements = (scope: ParentNode) => {
-      scope.querySelectorAll('[data-scroll-reveal]:not(.is-visible)').forEach((element) => revealObserver.observe(element))
+      const candidates: Element[] = []
+      if (scope instanceof Element && scope.matches('.app-main section, .app-main article')) {
+        candidates.push(scope)
+      }
+      scope.querySelectorAll(revealSelector).forEach((element) => candidates.push(element))
+
+      candidates.forEach((element) => {
+        if (!element.hasAttribute('data-scroll-reveal')) {
+          element.setAttribute('data-scroll-reveal', '')
+        }
+        if (element.classList.contains('is-visible')) return
+        if (revealObserver) revealObserver.observe(element)
+        else element.classList.add('is-visible')
+      })
+    }
+
+    let revealObserver: IntersectionObserver | null = null
+    if ('IntersectionObserver' in window) {
+      revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+            observer.unobserve(entry.target)
+          }
+        })
+      }, { rootMargin: '0px 0px 120px 0px', threshold: 0.05 })
     }
 
     observeRevealElements(document)
     const mutationObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement) {
-          if (node.matches('[data-scroll-reveal]:not(.is-visible)')) revealObserver.observe(node)
-          observeRevealElements(node)
-        }
+        if (node instanceof HTMLElement) observeRevealElements(node)
       }))
     })
     mutationObserver.observe(document.body, { childList: true, subtree: true })
 
     return () => {
       mutationObserver.disconnect()
-      revealObserver.disconnect()
-      root.classList.remove('reveal-ready')
+      revealObserver?.disconnect()
     }
   }, [])
 
@@ -77,7 +81,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       )}
       {isAuthRoute
         ? <AuthLegalFooter />
-        : !isDashboardRoute && !state.isLoading && !state.isAuthenticated
+        : !isDashboardRoute
           ? <Footer />
           : null}
     </>
