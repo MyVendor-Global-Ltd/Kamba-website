@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { useAuth } from '@/context/AuthContext'
+import { DashboardShell } from '@/components/layout/dashboard-shell'
 
 function AuthLegalFooter() {
   return (
@@ -23,6 +24,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { state } = useAuth()
   const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/')
+  const isDashboardRoute = pathname === '/account' || pathname.startsWith('/account/') || pathname === '/orders' || (pathname.startsWith('/orders/') && pathname !== '/orders/confirmation') || pathname === '/service-requests' || pathname.startsWith('/service-requests/') || pathname === '/notifications'
 
   useEffect(() => {
     const root = document.documentElement
@@ -66,11 +68,15 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!isAuthRoute && <Header />}
-      <main key={pathname} className="app-main page-enter flex-1 w-full">{children}</main>
+      {!isAuthRoute && !isDashboardRoute && <Header />}
+      {isDashboardRoute ? (
+        <DashboardShell><main key={pathname} className="app-main page-enter min-w-0 w-full">{children}</main></DashboardShell>
+      ) : (
+        <main key={pathname} className="app-main page-enter flex-1 w-full">{children}</main>
+      )}
       {isAuthRoute
         ? <AuthLegalFooter />
-        : !state.isLoading && !state.isAuthenticated
+        : !isDashboardRoute && !state.isLoading && !state.isAuthenticated
           ? <Footer />
           : null}
     </>
