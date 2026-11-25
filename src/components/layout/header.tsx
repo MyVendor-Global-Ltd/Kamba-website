@@ -41,7 +41,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <KambaLogo iconSize={34} />
+            <KambaLogo iconSize={34} href={state.isAuthenticated ? '/marketplace' : '/'} />
             <span className="hidden sm:inline-block w-px h-6 bg-border mx-2" />
             <span className="hidden sm:inline text-sm font-medium text-text-secondary">Marketplace</span>
             {isMockMode && <span className="hidden md:inline-flex rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-text-primary">Prototype</span>}
