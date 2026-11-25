@@ -72,11 +72,11 @@ export function LiveVendorOnboarding() {
   const [vendorDeliveryFee, setVendorDeliveryFee] = useState('0')
   const [storePhotos, setStorePhotos] = useState<File[]>([])
   const [storeForm, setStoreForm] = useState({
-    business_name: '', store_name: '', category: '', description: '',
+    business_name: '', store_name: '', slug: '', category: '', description: '',
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '', same_as_business_address: false,
   })
   const [serviceForm, setServiceForm] = useState({
-    business_name: '', service_title: '', category: '', description: '', price_range: '',
+    business_name: '', service_title: '', slug: '', category: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '',
     contact_preference: 'whatsapp', contact_whatsapp: '', same_as_business_address: false,
   })
@@ -330,6 +330,7 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createStore} className="space-y-4">
             <Input label="Business name" value={storeForm.business_name} onChange={(event) => updateStore('business_name', event.target.value)} required />
             <Input label="Store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
+            <Input label="Store URL slug (editable)" value={storeForm.slug} onChange={(event) => updateStore('slug', event.target.value)} placeholder="Leave blank to generate from store name" />
             <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
@@ -347,6 +348,7 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createService} className="space-y-4">
             <Input label="Business name" value={serviceForm.business_name} onChange={(event) => updateService('business_name', event.target.value)} required />
             <Input label="Service title" value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
+            <Input label="Service URL slug (editable)" value={serviceForm.slug} onChange={(event) => updateService('slug', event.target.value)} placeholder="Leave blank to generate from service title" />
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
