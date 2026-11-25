@@ -1,8 +1,8 @@
 import Link from 'next/link'
 
-export function KambaLogo({ className = '', iconSize = 34 }: { className?: string; iconSize?: number }) {
+export function KambaLogo({ className = '', iconSize = 34, href = '/' }: { className?: string; iconSize?: number; href?: string }) {
   return (
-    <Link href="/" className={`inline-flex shrink-0 items-center gap-2 ${className}`} aria-label="Kamba home">
+    <Link href={href} className={`inline-flex shrink-0 items-center gap-2 ${className}`} aria-label="Kamba home">
       <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="#24543B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4" />
         <path d="M3 6h18" />
