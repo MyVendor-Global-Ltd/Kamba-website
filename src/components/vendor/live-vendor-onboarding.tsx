@@ -165,6 +165,7 @@ export function LiveVendorOnboarding() {
           description: storeForm.description.trim(),
         }),
       })
+      setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
       const statusLoaded = await loadStatus()
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
