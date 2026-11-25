@@ -12,13 +12,15 @@ import type { Product } from '@/types/commerce'
 import type { StoreProfile, ServiceProfile } from '@/types/vendor'
 import { isMockMode } from '@/lib/mock-api'
 import { formatKobo } from '@/lib/formatting'
-import { ProductCardSkeleton, StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
+import { StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Search, X, Package, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+
+type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[] }
 
 interface SearchResult {
   products: Product[]
-  stores: StoreProfile[]
+  stores: SearchStore[]
   services: ServiceProfile[]
   total: number
 }
@@ -29,7 +31,7 @@ function SearchPageContent() {
   const { toast } = useToast()
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
-  const [activeTab, setActiveTab] = useState<'all' | 'products' | 'stores' | 'services'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'stores' | 'services'>('all')
   const [results, setResults] = useState<SearchResult>({ products: [], stores: [], services: [], total: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -86,7 +88,6 @@ function SearchPageContent() {
               verification_status,
             }
           })
-          .filter((store) => `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
         const services = serviceResponse.services
           .map((service) => {
             const tier = service.vendor_profiles?.verification_tier
@@ -106,8 +107,33 @@ function SearchPageContent() {
           })
           .filter((service) => `${service.name} ${service.description || ''} ${service.city || ''} ${service.category || ''}`.toLowerCase().includes(term.toLowerCase()))
 
-        nextResults = { products, stores, services, total: products.length + stores.length + services.length }
+        const matchingProductStoreIds = new Set(products.map((product) => product.store_id).filter(Boolean))
+        const matchingStores = stores
+          .map((store) => ({ ...store, has_matching_products: matchingProductStoreIds.has(store.id) }))
+          .filter((store) => store.has_matching_products || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
+
+        nextResults = { products, stores: matchingStores, services, total: products.length + matchingStores.length + services.length }
       }
+      if (isMockMode) {
+        const matchingProductStoreIds = new Set(nextResults.products.map((product) => product.store_id).filter(Boolean))
+        nextResults = {
+          ...nextResults,
+          stores: nextResults.stores
+            .map((store) => ({ ...store, has_matching_products: matchingProductStoreIds.has(store.id) }))
+            .filter((store) => store.has_matching_products || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase())),
+        }
+        nextResults.total = nextResults.products.length + nextResults.stores.length + nextResults.services.length
+      }
+      const matchingProductStoreIds = new Set(nextResults.products.map((product) => product.store_id).filter(Boolean))
+      const storesWithProducts = nextResults.stores
+        .map((store) => ({
+          ...store,
+          matching_products: nextResults.products.filter((product) => product.store_id === store.id),
+        }))
+        // Keep the API's natural order; don't rank stores by how many matching items they have.
+        .filter((store) => matchingProductStoreIds.has(store.id) || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
+
+      nextResults = { ...nextResults, stores: storesWithProducts, total: storesWithProducts.length + nextResults.services.length }
       setResults(nextResults)
       setPagination((previous) => ({ ...previous, page: 1 }))
     } catch (err) {
@@ -143,12 +169,11 @@ function SearchPageContent() {
     setResults({ products: [], stores: [], services: [], total: 0 })
   }
 
-  const activeResultCount = activeTab === 'products' ? results.products.length : activeTab === 'stores' ? results.stores.length : activeTab === 'services' ? results.services.length : results.total
+  const activeResultCount = activeTab === 'stores' ? results.stores.length : activeTab === 'services' ? results.services.length : results.total
   const activeTotalPages = Math.ceil(activeResultCount / pagination.pageSize)
 
   const tabs = [
     { id: 'all', label: 'All', icon: Search, count: results.total },
-    { id: 'products', label: 'Products', icon: Package, count: results.products.length },
     { id: 'stores', label: 'Stores', icon: Store, count: results.stores.length },
     { id: 'services', label: 'Services', icon: Briefcase, count: results.services.length },
   ]
@@ -263,27 +288,11 @@ function SearchPageContent() {
         {loading && results.total === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(9)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
+              <StoreCardSkeleton key={i} />
             ))}
           </div>
         ) : activeTab === 'all' ? (
           <>
-            {results.products.length > 0 && (
-              <section className="mb-12">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold font-display text-text-primary">Products</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('products')}>
-                    View all <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {results.products.slice(0, 6).map((product) => (
-                    <ProductSearchCard key={product.id} product={product} />
-                  ))}
-                </div>
-              </section>
-            )}
-
             {results.stores.length > 0 && (
               <section className="mb-12">
                 <div className="flex items-center justify-between mb-6">
@@ -326,8 +335,6 @@ function SearchPageContent() {
               </div>
             )}
           </>
-        ) : activeTab === 'products' ? (
-          <ProductResults products={results.products.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         ) : activeTab === 'stores' ? (
           <StoreResults stores={results.stores.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)} loading={loading} />
         ) : (
@@ -353,84 +360,47 @@ function SearchPageContent() {
   )
 }
 
-// Product Search Card
-function ProductSearchCard({ product }: { product: Product }) {
-  const imageUrl = product.images?.[0] || product.image_url || '/placeholder-product.jpg'
-  
-  return (
-    <Link href={`/marketplace/products/${product.id}`} className="group">
-      <Card variant="elevated" className="h-full group-hover:border-coral/30 transition-colors">
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-ink-raised/30">
-          <img
-            src={imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-          {product.compare_at_price && product.compare_at_price > product.price && (
-            <Badge variant="destructive" className="absolute top-2 left-2">
-              -{Math.round((1 - product.price / product.compare_at_price) * 100)}%
-            </Badge>
-          )}
-        </div>
-        <CardContent className="p-4 pt-3 space-y-2">
-          <h3 className="font-semibold text-text-primary line-clamp-1 group-hover:text-coral transition-colors">{product.name}</h3>
-          {product.store_name && (
-            <p className="text-sm text-text-tertiary">{product.store_name}</p>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-text-primary">
-              {formatKobo(product.price)}
-            </span>
-            {product.compare_at_price && product.compare_at_price > product.price && (
-              <span className="text-sm text-text-tertiary line-through">
-                {formatKobo(product.compare_at_price)}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  )
-}
-
-// Store Search Card
-function StoreSearchCard({ store }: { store: StoreProfile }) {
+// Product matches are previews inside vendor cards; they never link directly to checkout.
+function StoreSearchCard({ store }: { store: SearchStore }) {
   const imageUrl = store.logo_url || '/placeholder-store.jpg'
-  
   return (
-    <Link href={`/marketplace/stores/${store.slug}`} className="group">
-      <Card variant="elevated" className="h-full group-hover:border-coral/30 transition-colors">
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-ink-raised/30">
-          <img
-            src={imageUrl}
-            alt={store.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+    <Card variant="elevated" className="h-full group">
+      <Link href={`/marketplace/stores/${store.slug}`} className="block">
+        <div className="relative aspect-[16/9] overflow-hidden rounded-t-xl bg-ink-raised/30">
+          <img src={imageUrl} alt={store.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" loading="lazy" />
           {store.verification_status !== 'pending' && (
             <Badge variant="verification" className="absolute top-2 left-2">
-              {store.verification_status === 'business' ? 'Business Verified' : 'NIN Verified'}
+              {store.verification_status === 'business' ? 'Business Verified' : store.verification_status === 'nin' ? 'NIN Verified' : 'Basic Verified'}
             </Badge>
           )}
         </div>
-        <CardContent className="p-4 pt-3 space-y-2">
-          <h3 className="font-semibold text-text-primary line-clamp-1 group-hover:text-coral transition-colors">{store.name}</h3>
-          {store.category && (
-            <Badge variant="secondary" size="sm">{store.category}</Badge>
-          )}
-          {store.city && store.state && (
-            <p className="text-sm text-text-tertiary flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {store.city}, {store.state}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+      </Link>
+      <CardContent className="p-4 space-y-3">
+        <div>
+          <Link href={`/marketplace/stores/${store.slug}`} className="font-semibold text-text-primary group-hover:text-coral transition-colors">{store.name}</Link>
+          {store.category && <p className="text-xs text-text-tertiary mt-1">{store.category}</p>}
+          {store.city && store.state && <p className="text-xs text-text-tertiary mt-1">{store.city}, {store.state}</p>}
+        </div>
+        {store.matching_products.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {store.matching_products.slice(0, 4).map((product) => (
+              <Link key={product.id} href={`/marketplace/stores/${store.slug}?product=${encodeURIComponent(product.id)}`} className="min-w-0 rounded-lg border border-border/60 p-2 hover:border-coral/50 transition-colors" aria-label={`Explore ${store.name} and view ${product.name}`}>
+                <div className="aspect-square rounded-md overflow-hidden bg-ink-raised/30 mb-2">
+                  <img src={product.images?.[0] || product.image_url || '/placeholder-product.jpg'} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+                <p className="text-xs text-text-primary line-clamp-2">{product.name}</p>
+                <p className="text-sm font-semibold text-text-primary mt-1">{formatKobo(product.price)}</p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-text-tertiary line-clamp-2">{store.description || 'Explore this local store and its catalogue.'}</p>
+        )}
+        <Link href={`/marketplace/stores/${store.slug}`} className="inline-flex items-center text-sm font-medium text-coral hover:underline">
+          Explore store <ChevronRight className="w-4 h-4 ml-1" />
+        </Link>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -475,33 +445,7 @@ function ServiceSearchCard({ service }: { service: ServiceProfile }) {
 }
 
 // Full Results Components
-function ProductResults({ products, loading }: { products: Product[]; loading: boolean }) {
-  if (loading && products.length === 0) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(9)].map((_, i) => <ProductCardSkeleton key={i} />)}
-      </div>
-    )
-  }
-
-  if (products.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <Package className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
-        <h3 className="text-lg font-semibold text-text-primary mb-2">No products found</h3>
-        <p className="text-text-tertiary">Try adjusting your search terms.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {products.map((product) => <ProductSearchCard key={product.id} product={product} />)}
-    </div>
-  )
-}
-
-function StoreResults({ stores, loading }: { stores: StoreProfile[]; loading: boolean }) {
+function StoreResults({ stores, loading }: { stores: SearchStore[]; loading: boolean }) {
   if (loading && stores.length === 0) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

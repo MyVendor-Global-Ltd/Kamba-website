@@ -148,18 +148,22 @@ h3 { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
 @media (min-width: 1024px) { .container { padding-inline: 2rem; } }
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes reveal-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes page-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes enter-from-left { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes enter-from-bottom { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes reveal-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.animate-fade-in { animation: fade-in 0.25s ease-out; }
-.page-enter { animation: page-enter 0.28s ease-out both; }
-.reveal-ready [data-scroll-reveal]:not(.is-visible) { opacity: 0; transform: translateY(12px); }
-.reveal-ready [data-scroll-reveal].is-visible { animation: reveal-in 0.42s cubic-bezier(0.2, 0.65, 0.3, 1) both; }
+.animate-fade-in { animation: fade-in 0.5s cubic-bezier(0.42, 0, 0.58, 1) both; }
+.page-enter { animation: page-enter 0.7s cubic-bezier(0.42, 0, 0.58, 1) both; }
+.motion-enter-left { animation: enter-from-left 0.75s cubic-bezier(0.42, 0, 0.58, 1) both; }
+.motion-enter-up { animation: enter-from-bottom 0.75s cubic-bezier(0.42, 0, 0.58, 1) both; }
+.reveal-ready [data-scroll-reveal]:not(.is-visible) { opacity: 0; transform: translateY(18px); }
+.reveal-ready [data-scroll-reveal].is-visible { animation: reveal-in 0.72s cubic-bezier(0.42, 0, 0.58, 1) both; }
 .marketplace-grid [data-scroll-reveal] { content-visibility: auto; contain-intrinsic-size: auto 380px; }
 button, a, input, select, textarea { transition-property: color, background-color, border-color, box-shadow, transform; transition-duration: 160ms; transition-timing-function: ease-out; }
 button:active:not(:disabled), a:active { transform: translateY(1px); }
-.animate-slide-up { animation: slide-up 0.3s ease-out; }
+.animate-slide-up { animation: slide-up 0.68s cubic-bezier(0.42, 0, 0.58, 1) both; }
 .skeleton {
   background: linear-gradient(90deg, var(--surface) 25%, #F0EFE8 50%, var(--surface) 75%);
   background-size: 200% 100%;

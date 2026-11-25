@@ -55,17 +55,17 @@ export default function MarketplacePage() {
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy via-ink to-ink border border-border/50 p-8 lg:p-12 animate-fade-in">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--coral-glow)_0%,_transparent_70%)] opacity-50" />
         <div className="relative z-10 max-w-3xl">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-coral-dim text-coral text-sm font-semibold mb-6">
+          <span className="motion-enter-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-coral-dim text-coral text-sm font-semibold mb-6" style={{ animationDelay: '80ms' }}>
             <span className="w-2 h-2 rounded-full bg-coral animate-pulse" />
             Now serving 50+ cities across Nigeria
           </span>
-          <h1 className="text-4xl lg:text-5xl font-bold font-display text-text-primary leading-tight mb-6">
+          <h1 className="motion-enter-left text-4xl lg:text-5xl font-bold font-display text-text-primary leading-tight mb-6">
             Discover Local <span className="gradient-text">Products & Services</span>
           </h1>
-          <p className="text-lg text-text-secondary mb-8 max-w-xl">
+          <p className="motion-enter-up text-lg text-text-secondary mb-8 max-w-xl" style={{ animationDelay: '180ms' }}>
             Nigeria's trusted marketplace connecting you with verified local businesses. Shop products, book services, and pay securely with escrow protection.
           </p>
-          <div className="flex flex-wrap gap-4">
+          <div className="motion-enter-up flex flex-wrap gap-4" style={{ animationDelay: '280ms' }}>
             <Link href="/marketplace/stores">
               <Button size="lg" variant="default">
                 Browse Stores

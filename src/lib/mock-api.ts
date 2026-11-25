@@ -345,7 +345,8 @@ export async function mockApiJson<T>(path: string, options: RequestInit & { para
   if (pathname === '/search') {
     const q = (query.get('q') || '').toLowerCase()
     const products = mockProducts.filter(p => p.is_active && `${p.name} ${p.description} ${p.store_name} ${p.category}`.toLowerCase().includes(q))
-    const stores = mockStores.filter(s => `${s.name} ${s.description} ${s.city} ${s.category}`.toLowerCase().includes(q))
+    const matchingProductStoreIds = new Set(products.map((product) => product.store_id))
+    const stores = mockStores.filter(s => matchingProductStoreIds.has(s.id) || `${s.name} ${s.description} ${s.city} ${s.category}`.toLowerCase().includes(q))
     const services = mockServices.filter(s => `${s.name} ${s.description} ${s.city} ${s.category}`.toLowerCase().includes(q))
     return response({ products, stores, services, total: products.length + stores.length + services.length }) as T
   }
