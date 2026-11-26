@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Activity, Bell, ChevronLeft, ChevronRight, CreditCard, LayoutDashboard, LogOut,
-  MapPin, Menu, Package, Search, Settings, ShoppingBag, Store, UserRound, X
+  MapPin, Menu, Package, Search, Settings, ShoppingBag, UserRound, X
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
@@ -33,9 +33,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           ? [
               { label: 'Vendor dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
               { label: 'Business settings', href: '/vendor/profile', icon: Settings },
-              { label: 'Products & stock', href: '/vendor/products', icon: Package },
-              { label: 'Vendor orders', href: '/vendor/orders', icon: ShoppingBag },
-              { label: 'Service page', href: '/vendor/service', icon: Activity },
             ]
           : [
               { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
