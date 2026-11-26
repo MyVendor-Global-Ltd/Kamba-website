@@ -369,7 +369,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
   const imageUrl = store.logo_url || '/placeholder-store.jpg'
   return (
     <Card variant="elevated" className="h-full group">
-      <Link href={`/marketplace/stores/${store.slug}`} className="block">
+      <Link href={`/store/${store.slug}`} className="block">
         <div className="relative aspect-[16/9] overflow-hidden rounded-t-xl bg-ink-raised/30">
           <img src={imageUrl} alt={store.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" loading="lazy" />
           {store.verification_status !== 'pending' && (
@@ -381,14 +381,14 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
       </Link>
       <CardContent className="p-4 space-y-3">
         <div>
-          <Link href={`/marketplace/stores/${store.slug}`} className="font-semibold text-text-primary group-hover:text-coral transition-colors">{store.name}</Link>
+          <Link href={`/store/${store.slug}`} className="font-semibold text-text-primary group-hover:text-coral transition-colors">{store.name}</Link>
           {store.category && <p className="text-xs text-text-tertiary mt-1">{store.category}</p>}
           {store.city && store.state && <p className="text-xs text-text-tertiary mt-1">{store.city}, {store.state}</p>}
         </div>
         {store.matching_products.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {store.matching_products.slice(0, 4).map((product) => (
-              <Link key={product.id} href={`/marketplace/stores/${store.slug}?product=${encodeURIComponent(product.id)}`} className="min-w-0 rounded-lg border border-border/60 p-2 hover:border-coral/50 transition-colors" aria-label={`Explore ${store.name} and view ${product.name}`}>
+              <Link key={product.id} href={`/store/${store.slug}?product=${encodeURIComponent(product.id)}`} className="min-w-0 rounded-lg border border-border/60 p-2 hover:border-coral/50 transition-colors" aria-label={`Explore ${store.name} and view ${product.name}`}>
                 <div className="aspect-square rounded-md overflow-hidden bg-ink-raised/30 mb-2">
                   <img src={product.images?.[0] || product.image_url || '/placeholder-product.jpg'} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
                 </div>
@@ -400,7 +400,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
         ) : (
           <p className="text-sm text-text-tertiary line-clamp-2">{store.description || 'Explore this local store and its catalogue.'}</p>
         )}
-        <Link href={`/marketplace/stores/${store.slug}`} className="inline-flex items-center text-sm font-medium text-coral hover:underline">
+        <Link href={`/store/${store.slug}`} className="inline-flex items-center text-sm font-medium text-coral hover:underline">
           Explore store <ChevronRight className="w-4 h-4 ml-1" />
         </Link>
       </CardContent>
