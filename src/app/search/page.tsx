@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -40,8 +40,10 @@ function SearchPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [pagination, setPagination] = useState({ page: 1, pageSize: 12 })
+  const searchRequestRef = useRef(0)
 
   const performSearch = useCallback(async (searchQuery: string) => {
+    const requestId = ++searchRequestRef.current
     const term = searchQuery.trim()
     if (!term) {
       setResults({ products: [], stores: [], services: [], total: 0 })
@@ -142,9 +144,11 @@ function SearchPageContent() {
         .filter((store) => matchingProductStoreIds.has(store.id) || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
 
       nextResults = { ...nextResults, stores: storesWithProducts, total: storesWithProducts.length + nextResults.services.length }
+      if (requestId !== searchRequestRef.current) return
       setResults(nextResults)
       setPagination((previous) => ({ ...previous, page: 1 }))
     } catch (err) {
+      if (requestId !== searchRequestRef.current) return
       setError(err instanceof Error ? err.message : 'Search failed')
       toast({
         type: 'error',
@@ -152,7 +156,7 @@ function SearchPageContent() {
         description: 'Could not complete the search. Please try again.',
       })
     } finally {
-      setLoading(false)
+      if (requestId === searchRequestRef.current) setLoading(false)
     }
   }, [toast, coords, radius])
 
