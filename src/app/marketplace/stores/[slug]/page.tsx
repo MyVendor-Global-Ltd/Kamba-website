@@ -93,7 +93,7 @@ export default function StoreDetailPage() {
 
   if (loading) return (
     <main className="min-h-screen w-full overflow-x-clip bg-background px-4 py-8 sm:px-8">
-      <div className="mx-auto w-full max-w-7xl"><div className="h-[48vh] min-h-[320px] animate-pulse rounded-sm bg-muted" /><div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="aspect-[4/5] animate-pulse rounded-sm bg-muted" />)}</div></div>
+      <div className="mx-auto w-full max-w-7xl"><div className="h-[48vh] min-h-[320px] animate-pulse rounded-sm bg-muted" /><div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="aspect-[4/5] animate-pulse rounded-sm bg-muted" />)}</div></div>
     </main>
   )
 
@@ -109,7 +109,7 @@ export default function StoreDetailPage() {
   )
 
   const name = store.store_name || store.name || 'Independent store'
-  const cover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url
+  const categoryCover: Record<string, string> = { 'Electronics & Gadgets': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1800&auto=format&fit=crop&q=85', 'Fashion & Clothing': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800&auto=format&fit=crop&q=85', 'Beauty & Personal Care': 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1800&auto=format&fit=crop&q=85', 'Home & Living': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1800&auto=format&fit=crop&q=85', 'Food & Groceries': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1800&auto=format&fit=crop&q=85', 'Health & Wellness': 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=1800&auto=format&fit=crop&q=85', 'Automotive': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1800&auto=format&fit=crop&q=85', 'Sports & Fitness': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1800&auto=format&fit=crop&q=85', 'Books & Stationery': 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1800&auto=format&fit=crop&q=85', 'Home Services': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1800&auto=format&fit=crop&q=85', 'Repairs & Maintenance': 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?w=1800&auto=format&fit=crop&q=85', 'Professional Services': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85', 'Education & Tutoring': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1800&auto=format&fit=crop&q=85', 'Events & Photography': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1800&auto=format&fit=crop&q=85' };\n  const cover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url || categoryCover[store.category || ''] || 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85'
   const location = store.location_text || store.business_profiles?.location_text || store.business_profiles?.service_area_text || store.city
   const username = store.users?.username ? '@' + store.users.username.replace(/^@/, '') : null
   const isVerified = store.vendor_profiles?.is_verified === true
