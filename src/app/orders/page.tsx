@@ -46,6 +46,10 @@ interface OrderListResponse {
     created_at: string
     store_name?: string
     item_count: number
+    payment_status?: string | null
+    delivery_status?: string | null
+    marketplace_checkout_id?: string | null
+    updated_at?: string
   }>
 }
 interface OrderDetailItem {
@@ -85,8 +89,8 @@ export default function OrdersPage() {
         id: order.id,
         order_number: order.id,
         status: order.status,
-        payment_status: order.status === 'paid_held' ? 'held' : 'See order details',
-        delivery_status: 'not available',
+        payment_status: order.payment_status || 'unknown',
+        delivery_status: order.delivery_status || 'not_created',
         delivery_type: order.delivery_type,
         total: order.total,
         created_at: order.created_at,
