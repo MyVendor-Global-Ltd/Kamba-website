@@ -116,32 +116,32 @@ export default function StoreDetailPage() {
 
   return (
     <main className="min-h-screen w-full min-w-0 overflow-x-clip bg-background text-text-primary">
-      <section className="w-full border-b border-border bg-primary-strong text-primary-foreground">
+      <section className="w-full border-b border-border bg-background text-text-primary">
         <div className="mx-auto grid w-full max-w-[1440px] min-w-0 grid-cols-1 lg:min-h-[650px] lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
           <div className="flex min-w-0 flex-col px-5 pb-10 pt-6 sm:px-8 sm:pb-14 sm:pt-8 lg:px-12 lg:py-10 xl:px-16">
             <div className="flex min-w-0 items-center justify-between gap-4">
-              <Link href="/marketplace/stores" className="inline-flex min-w-0 items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-primary-foreground/75 hover:text-primary-foreground"><ArrowLeft className="h-4 w-4 shrink-0" /><span>All stores</span></Link>
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-foreground/60">Kamba / Store</span>
+              <Link href="/marketplace/stores" className="inline-flex min-w-0 items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-text-secondary hover:text-text-primary"><ArrowLeft className="h-4 w-4 shrink-0" /><span>All stores</span></Link>
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted">Kamba / Store</span>
             </div>
             <div className="mt-16 min-w-0 sm:mt-24 lg:my-auto lg:py-16">
-              <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-bold uppercase tracking-[0.17em] text-primary-foreground/70">
+              <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-bold uppercase tracking-[0.17em] text-text-secondary">
                 <span>{store.category || 'Independent label'}</span><span className="h-px w-7 bg-gold" /><span>Made close to home</span>
                 {isVerified && <span className="inline-flex items-center gap-1 text-gold"><ShieldCheck className="h-3.5 w-3.5" />Verified seller</span>}
               </div>
-              <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-primary-foreground">{name}</h1>
-              {store.description && <p className="mt-6 max-w-xl break-words text-sm leading-7 text-primary-foreground/75 sm:text-base">{store.description}</p>}
-              <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-xs text-primary-foreground/70">
+              <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-text-primary">{name}</h1>
+              {store.description && <p className="mt-6 max-w-xl break-words text-sm leading-7 text-text-secondary sm:text-base">{store.description}</p>}
+              <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-xs text-text-secondary">
                 {location && <span className="inline-flex min-w-0 items-center gap-2"><MapPin className="h-3.5 w-3.5 shrink-0 text-gold" /><span className="break-words">{location}</span></span>}
                 {username && <span>{username}</span>}
                 {typeof store.follower_count === 'number' && <span>{store.follower_count.toLocaleString()} followers</span>}
               </div>
-              <a href="#collection" className="mt-8 inline-flex min-h-12 max-w-full items-center justify-center gap-4 border border-gold/70 px-5 py-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-primary-foreground hover:bg-gold hover:text-primary-strong">Explore the collection <ArrowDown className="h-4 w-4 shrink-0" /></a>
+              <a href="#collection" className="mt-8 inline-flex min-h-12 max-w-full items-center justify-center gap-4 border border-gold/70 px-5 py-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-text-primary hover:bg-gold hover:text-primary-strong">Explore the collection <ArrowDown className="h-4 w-4 shrink-0" /></a>
             </div>
-            <div className="mt-10 flex items-center justify-between gap-4 border-t border-primary-foreground/15 pt-5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/55 lg:mt-0"><span>Independent business</span><span>Discover local, shop Kamba</span></div>
+            <div className="mt-10 flex items-center justify-between gap-4 border-t border-border pt-5 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted lg:mt-0"><span>Independent business</span><span>Discover local, shop Kamba</span></div>
           </div>
-          <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-primary sm:min-h-[480px] lg:min-h-full">
-            {cover ? <img src={cover} alt={name + ' storefront'} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_25%,var(--gold)_0%,var(--primary)_42%,var(--primary-strong)_100%)]" />}
-            <div className="absolute inset-0 bg-gradient-to-t from-primary-strong/55 via-transparent to-primary-strong/10" />
+          <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-muted sm:min-h-[480px] lg:min-h-full">
+            {cover ? <img src={cover} alt={name + ' storefront'} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-muted" />}
+            <div className="absolute inset-0 bg-transparent" />
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-8 sm:left-8 sm:right-8">
               <div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/70">The Kamba directory</p><p className="mt-1 break-words font-display text-xl font-semibold text-white sm:text-2xl">{name}</p></div>
               <span className="shrink-0 rounded-full border border-white/50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white">Local finds</span>
@@ -161,7 +161,7 @@ export default function StoreDetailPage() {
         </div> : <div className="grid min-h-[280px] place-items-center border-y border-border px-5 py-14 text-center"><div className="max-w-md"><Package className="mx-auto h-8 w-8 text-gold" /><h3 className="mt-5 font-display text-2xl font-semibold sm:text-3xl">A collection in the making.</h3><p className="mt-3 text-sm leading-6 text-text-secondary">This store is open, but its products are not listed yet. Check back soon.</p></div></div>}
       </section>
 
-      <section className="w-full bg-primary-soft px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
+      <section className="w-full border-t border-border bg-background px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
         <div className="mx-auto flex w-full max-w-[1440px] min-w-0 flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div className="min-w-0 max-w-2xl"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Independent. Local. Yours to discover.</p><h2 className="mt-4 break-words font-display text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.02] tracking-[-0.05em] text-primary-strong">Find your next favourite, closer to home.</h2></div>
           <Link href="/marketplace/stores" className="inline-flex shrink-0 items-center gap-3 border-b border-primary pb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Discover more stores <ArrowUpRight className="h-4 w-4" /></Link>
