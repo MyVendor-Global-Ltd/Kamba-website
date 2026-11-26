@@ -139,7 +139,7 @@ export function LiveVendorOnboarding() {
       }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
     }, 700)
     return () => window.clearTimeout(timeout)
-  }, [draftLoaded, vendorType, storeForm, serviceForm, operatingHours])
+  }, [draftLoaded, vendorType, storeForm, serviceForm])
 
   const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -195,7 +195,7 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
-          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility,  } : { operating_hours: operatingHours }),
+          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility } : {}),
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
           slug: makeSlug(storeForm.store_name),
           service_title: serviceForm.service_title.trim(),
