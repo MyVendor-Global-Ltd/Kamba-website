@@ -131,7 +131,7 @@ export async function apiJson<T = any>(
     const error = await res.json().catch(() => ({}))
     throw new ApiError(
       res.status,
-      error.message || `API error: ${res.status}`,
+      error.message || error.error || `API error: ${res.status}`,
       error.code,
       error.details
     )
