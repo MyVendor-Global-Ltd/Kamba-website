@@ -107,6 +107,7 @@ function NotificationsContent() {
     try {
       const saved = await apiJson<InboxNotification>('/notifications/' + encodeURIComponent(notification.id) + '/read', { method: 'PATCH' })
       setItems((current) => current.map((item) => item.id === saved.id ? saved : item))
+      setOpenedNotification((current) => current?.id === saved.id ? saved : current)
       setUnreadCount((count) => Math.max(0, count - 1))
     } catch (err) {
       addToast({ type: 'error', title: 'Could not update notification', message: err instanceof Error ? err.message : 'Please try again.' })
