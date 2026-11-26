@@ -31,6 +31,8 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [addingToCart, setAddingToCart] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(false)
   const { addItem } = useCart()
   const { addToast } = useToast()
 
@@ -61,6 +63,29 @@ export default function ProductDetailPage() {
       })
     return () => { active = false }
   }, [id])
+
+  useEffect(() => {
+    if (!product?.store_slug && !product?.store_id) {
+      setRelatedProducts([])
+      return
+    }
+    let active = true
+    setRelatedLoading(true)
+    apiJson<{ products: Product[] }>('/commerce/products', {
+      params: { store: product.store_slug || product.store_id, limit: 24, stock_status: 'in_stock' },
+    })
+      .then((data) => {
+        if (!active) return
+        const items = (data.products || [])
+          .filter((item) => item.id !== product.id && item.is_active && item.stock_quantity > 0 && (item.in_stock ?? true))
+          .sort((a, b) => Number(b.category === product.category) - Number(a.category === product.category))
+          .slice(0, 8)
+        setRelatedProducts(items)
+      })
+      .catch(() => { if (active) setRelatedProducts([]) })
+      .finally(() => { if (active) setRelatedLoading(false) })
+    return () => { active = false }
+  }, [product?.id, product?.store_slug, product?.store_id, product?.category])
 
   const handleToggleWishlist = async () => {
     if (!product) return
@@ -182,7 +207,42 @@ export default function ProductDetailPage() {
 
       {product.videos && product.videos.length > 0 && <section className="mx-auto max-w-[1600px] px-4 py-12 sm:px-8 sm:py-16 lg:px-12"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#8A7650]">See it closer</p><h2 className="mt-2 text-3xl font-medium text-[#173D2A] [font-family:Georgia,'Times_New_Roman',serif]">Product in motion</h2></div><Play className="mb-1 h-5 w-5 text-[#8A7650]" /></div><div className="grid gap-4 sm:grid-cols-2">{product.videos.map((videoUrl) => <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-2xl border border-[#DCD9CE] bg-[#EAE8DE]"><source src={videoUrl} />Your browser does not support embedded videos.</video>)}</div></section>}
 
-      <div className="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-4 border-t border-[#DCD9CE] px-4 py-8 sm:flex-row sm:items-center sm:px-8 lg:px-12"><div><p className="text-sm font-semibold text-[#1C2A21]">Something else caught your eye?</p><p className="mt-1 text-xs text-[#7D897F]">Explore more finds from independent Kamba sellers.</p></div><Link href="/marketplace/products" className="inline-flex h-11 items-center rounded-full border border-[#BFC5B9] px-5 text-xs font-bold uppercase tracking-[.12em] text-[#24543B] transition hover:bg-[#E8F0E9]">Explore products <ChevronRight className="ml-2 h-4 w-4" /></Link></div>
+      {relatedProducts.length > 0 && <section className="border-t border-[#DCD9CE] bg-[#F0EFE7] px-4 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+        <div className="mx-auto max-w-[1600px]">
+          <div className="mb-7 flex flex-col justify-between gap-4 sm:mb-9 sm:flex-row sm:items-end">
+            <div>
+              <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#8A7650]"><span className="h-px w-7 bg-[#B68B3B]" /> From the same store</p>
+              <h2 className="mt-3 max-w-2xl text-3xl font-medium leading-[1.04] tracking-[-.045em] text-[#173D2A] [font-family:Georgia,'Times_New_Roman',serif] sm:text-5xl">More to discover at {product.store_name || 'this store'}.</h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[#56645A]">Still exploring? Take a look at other pieces from this seller. You might find the one that feels just right.</p>
+            </div>
+            <Link href={'/store/' + (product.store_slug || product.store_id)} className="inline-flex h-11 shrink-0 items-center gap-2 self-start rounded-full border border-[#BFC5B9] px-5 text-[10px] font-bold uppercase tracking-[.12em] text-[#24543B] transition hover:bg-[#E8F0E9] sm:self-auto">View all from this store <ChevronRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 sm:-mx-8 sm:gap-4 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:px-0">
+            {relatedProducts.map((item, index) => {
+              const image = item.images?.[0] || item.image_url
+              return <article key={item.id} className="group w-[68%] shrink-0 snap-start sm:w-[42%] lg:w-auto">
+                <Link href={'/marketplace/products/' + item.id} className="block">
+                  <div className="aspect-[4/5] overflow-hidden rounded-xl bg-[#E6E4DA]">
+                    {image ? <img src={image} alt={item.name} loading={index < 2 ? 'eager' : 'lazy'} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" /> : <div className="grid h-full place-items-center text-[#24543B]/40"><ShoppingBag className="h-9 w-9" /></div>}
+                  </div>
+                  <div className="flex items-start justify-between gap-3 py-3">
+                    <h3 className="min-w-0 text-sm font-semibold leading-5 text-[#1C2A21] transition group-hover:text-[#24543B]">{item.name}</h3>
+                    <p className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-[#24543B]">{formatKobo(item.price)}</p>
+                  </div>
+                </Link>
+              </article>
+            })}
+          </div>
+        </div>
+      </section>}
+      {relatedLoading && <div className="sr-only" role="status">Finding more products from this store…</div>}
+      <div className="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-4 border-t border-[#DCD9CE] px-4 pb-24 pt-8 sm:flex-row sm:items-center sm:px-8 sm:pb-8 lg:px-12"><div><p className="text-sm font-semibold text-[#1C2A21]">Looking for something different?</p><p className="mt-1 text-xs text-[#7D897F]">Explore more independent sellers and local finds on Kamba.</p></div><Link href="/marketplace/products" className="inline-flex h-11 items-center rounded-full border border-[#BFC5B9] px-5 text-xs font-bold uppercase tracking-[.12em] text-[#24543B] transition hover:bg-[#E8F0E9]">Explore all products <ChevronRight className="ml-2 h-4 w-4" /></Link></div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#DCD9CE] bg-[#F6F5EF]/95 px-4 py-3 pb-[calc(.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(28,42,33,.08)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-xl items-center gap-3">
+          <div className="min-w-0 flex-1"><p className="text-[9px] font-bold uppercase tracking-[.14em] text-[#7D897F]">Your selection</p><p className="truncate text-base font-semibold tabular-nums text-[#173D2A]">{formatKobo(product.price)}</p></div>
+          <button type="button" onClick={handleAddToCart} disabled={addingToCart || !inStock} className="inline-flex h-12 min-w-[54%] items-center justify-center gap-2 rounded-full bg-[#24543B] px-5 text-[10px] font-bold uppercase tracking-[.14em] text-white transition hover:bg-[#173D2A] disabled:cursor-not-allowed disabled:opacity-45"><ShoppingBag className="h-4 w-4" />{addingToCart ? 'Adding…' : inStock ? 'Add to bag' : 'Out of stock'}</button>
+        </div>
+      </div>
     </main>
   )
 }
