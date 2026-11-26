@@ -515,7 +515,7 @@ function ProductSearchCard({ product }: { product: Product }) {
         {product.store_name && <p className="text-xs text-text-tertiary">{product.store_name}</p>}
         <p className="text-sm font-semibold text-text-primary">{formatKobo(product.price)}</p>
         {typeof product.stock_quantity === 'number' && (
-          <p className={`text-xs ${available ? 'text-emerald-600' : 'text-text-tertiary'}`}>
+          <p className="text-xs text-text-tertiary">
             {available ? 'In stock' : 'Out of stock'}
           </p>
         )}
