@@ -21,23 +21,76 @@ export default function StoreDetailPage() {
   const [highlightedProductId, setHighlightedProductId] = useState('')
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
     setHighlightedProductId(new URLSearchParams(window.location.search).get('product') || '')
-    Promise.all([
-      apiJson<{ store: Store & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } } }>(`/vendors/stores/${slug}`),
-      apiJson<{ products: Product[] }>('/commerce/products', { params: { store: slug, limit: 100, stock_status: 'all' } }),
-    ])
-      .then(([storeRes, productsRes]) => {
+
+    async function loadStorefront() {
+      try {
+        // The store is the primary resource. A product-list failure must not make
+        // an otherwise valid storefront look like a missing page.
+        const storeRes = await apiJson<{
+          store: (Store & {
+            store_name?: string
+            location_text?: string
+            vendor_profiles?: { is_verified?: boolean; verification_tier?: string }
+          }) | null
+          unavailable?: boolean
+          banned?: boolean
+          message?: string
+        }>(`/vendors/stores/${encodeURIComponent(slug)}`)
+
+        if (cancelled) return
         const rawStore = storeRes.store
+        if (!rawStore) {
+          setStore(null)
+          setError(storeRes.message || (storeRes.unavailable || storeRes.banned
+            ? 'This store is currently unavailable.'
+            : 'The store could not be found.'))
+          setLoading(false)
+          return
+        }
+
         const tier = rawStore.vendor_profiles?.verification_tier
         const verificationStatus: Store['verification_status'] = rawStore.verification_status || (rawStore.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
-        setStore({ ...rawStore, name: rawStore.name || rawStore.store_name || 'Local store', city: rawStore.city || rawStore.location_text, vendor_id: rawStore.vendor_id || '', is_active: rawStore.is_active ?? true, created_at: rawStore.created_at || '', updated_at: rawStore.updated_at || '', verification_status: verificationStatus })
-        setProducts((productsRes.products || []).map((product) => ({ ...product, image_url: product.image_url || product.images?.[0], compare_at_price: product.compare_at_price ?? product.original_price })))
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load store')
-        setLoading(false)
-      })
+        setStore({
+          ...rawStore,
+          name: rawStore.name || rawStore.store_name || 'Local store',
+          city: rawStore.city || rawStore.location_text,
+          vendor_id: rawStore.vendor_id || '',
+          is_active: rawStore.is_active ?? true,
+          created_at: rawStore.created_at || '',
+          updated_at: rawStore.updated_at || '',
+          verification_status: verificationStatus,
+        })
+
+        try {
+          const productsRes = await apiJson<{ products: Product[] }>('/commerce/products', {
+            params: { store: slug, limit: 100, stock_status: 'all' },
+          })
+          if (!cancelled) {
+            setProducts((productsRes.products || []).map((product) => ({
+              ...product,
+              image_url: product.image_url || product.images?.[0],
+              compare_at_price: product.compare_at_price ?? product.original_price,
+            })))
+          }
+        } catch {
+          if (!cancelled) setError('The store is available, but its products could not be loaded. Please try again.')
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setStore(null)
+          setError(err instanceof Error ? err.message : 'Failed to load this store.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadStorefront()
+    return () => { cancelled = true }
   }, [slug])
 
   useEffect(() => {
