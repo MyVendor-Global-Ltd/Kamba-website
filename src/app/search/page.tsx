@@ -146,7 +146,7 @@ function SearchPageContent() {
         // Keep the API's natural order; don't rank stores by how many matching items they have.
         .filter((store) => matchingProductStoreIds.has(store.id) || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
 
-      nextResults = { ...nextResults, stores: storesWithProducts, total: storesWithProducts.length + nextResults.services.length }
+      nextResults = { ...nextResults, stores: storesWithProducts, total: nextResults.products.length + storesWithProducts.length + nextResults.services.length }
       if (requestId !== searchSequenceRef.current) return
       setResults(nextResults)
       setPagination((previous) => ({ ...previous, page: 1 }))
@@ -369,6 +369,20 @@ function SearchPageContent() {
           </div>
         ) : activeTab === 'all' ? (
           <>
+            {results.products.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold font-display text-text-primary">Products</h2>
+                  <span className="text-sm text-text-tertiary">{results.products.length} matches</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {results.products.slice(0, 6).map((product) => (
+                    <ProductSearchCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {results.stores.length > 0 && (
               <section className="mb-12">
                 <div className="flex items-center justify-between mb-6">
@@ -478,6 +492,33 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
         <Link href={`/store/${store.slug}`} className="inline-flex items-center text-sm font-medium text-coral hover:underline">
           Explore store <ChevronRight className="w-4 h-4 ml-1" />
         </Link>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ProductSearchCard({ product }: { product: Product }) {
+  const imageUrl = product.images?.[0] || product.image_url || '/placeholder-product.jpg'
+  const available = product.is_available !== false && product.in_stock !== false && product.stock_quantity > 0
+
+  return (
+    <Card variant="elevated" className="h-full group">
+      <Link href={`/marketplace/products/${product.id}`} className="block">
+        <div className="aspect-[4/3] overflow-hidden rounded-t-xl bg-ink-raised/30">
+          <img src={imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" loading="lazy" />
+        </div>
+      </Link>
+      <CardContent className="p-4 space-y-2">
+        <Link href={`/marketplace/products/${product.id}`} className="font-semibold text-text-primary group-hover:text-coral transition-colors line-clamp-2">
+          {product.name}
+        </Link>
+        {product.store_name && <p className="text-xs text-text-tertiary">{product.store_name}</p>}
+        <p className="text-sm font-semibold text-text-primary">{formatKobo(product.price)}</p>
+        {typeof product.stock_quantity === 'number' && (
+          <p className={`text-xs ${available ? 'text-emerald-600' : 'text-text-tertiary'}`}>
+            {available ? 'In stock' : 'Out of stock'}
+          </p>
+        )}
       </CardContent>
     </Card>
   )
