@@ -68,7 +68,11 @@ export function NotificationBell() {
   }, [state.isAuthenticated, addToast, playChime])
 
   useEffect(() => {
-    const markInteraction = () => { userInteracted.current = true }
+    const markInteraction = () => {
+      userInteracted.current = true
+      if (!audioContext.current && window.AudioContext) audioContext.current = new window.AudioContext()
+      if (audioContext.current?.state === 'suspended') void audioContext.current.resume()
+    }
     window.addEventListener('pointerdown', markInteraction, { passive: true })
     window.addEventListener('keydown', markInteraction)
     return () => {
