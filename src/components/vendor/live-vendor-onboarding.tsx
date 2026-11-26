@@ -349,7 +349,7 @@ export function LiveVendorOnboarding() {
                 <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
               </select>
             </label>
-            <p className="text-xs leading-5 text-text-tertiary">You will enter one business location in the next step. It can also be used as your default pickup location; you will choose whether customers can see the exact address publicly.</p>
+            <p className="text-xs leading-5 text-text-tertiary">You will enter one business location in the next step. This is the saved location for your business and the planned pickup point once Kamba's pickup collection flow is connected. You choose whether the exact address appears publicly.</p>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
           </form>
         </CardContent></Card>
