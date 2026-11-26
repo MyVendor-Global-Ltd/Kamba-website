@@ -5,10 +5,11 @@ import { useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useCartContext } from '@/context/CartContext'
 import { usePathname, useRouter } from 'next/navigation'
-import { Bell, ChevronDown, LogOut, Menu, Search, ShoppingCart, UserRound, X } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, Search, ShoppingCart, UserRound, X } from 'lucide-react'
 import { KambaLogo } from '@/components/layout/kamba-logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { isMockMode } from '@/lib/mock-api'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Header() {
   const { state, logout } = useAuth()
