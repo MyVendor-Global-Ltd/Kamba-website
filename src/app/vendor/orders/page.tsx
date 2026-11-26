@@ -46,7 +46,7 @@ interface Order {
   order_number: string
   status: string
   payment_status: string
-  delivery_status: string
+  delivery_status: string | null
   subtotal: number
   platform_fee: number
   delivery_fee: number
@@ -111,21 +111,25 @@ export default function VendorOrdersPage() {
         delivery_type: 'pickup' | 'delivery'
         created_at: string
         store_name?: string
+        payment_status?: string | null
+        delivery_status?: string | null
+        marketplace_checkout_id?: string | null
+        updated_at?: string
         item_count: number
       }> }>('/commerce/vendor/orders', { params: { limit: 100, offset: 0 } })
       setOrders((data.orders || []).map((order) => ({
         id: order.id,
         order_number: order.id,
         status: order.status,
-        payment_status: order.status === 'paid_held' ? 'held' : 'status managed by Kamba',
-        delivery_status: 'not available',
+        payment_status: order.payment_status || 'unknown',
+        delivery_status: order.delivery_status ?? null,
         delivery_type: order.delivery_type,
         subtotal: order.subtotal,
         platform_fee: order.platform_fee,
         delivery_fee: order.shipping_amount,
         total: Number(order.total ?? order.total_amount ?? 0),
         created_at: order.created_at,
-        updated_at: order.created_at,
+        updated_at: order.updated_at || order.created_at,
         shipping_address: { address: order.delivery_type === 'pickup' ? 'Vendor pickup' : 'Open order details for the delivery address', city: '', state: '' },
         payment_method: 'Managed by Kamba',
         customer: { name: 'Buyer details protected' },
@@ -173,12 +177,12 @@ export default function VendorOrdersPage() {
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingOrder(orderId)
     try {
-      await apiJson(`/commerce/vendor/orders/${orderId}`, {
+      const result = await apiJson<{ id: string; status: string; updated_at: string }>(`/commerce/vendor/orders/${orderId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus }),
       })
       setOrders(prev => prev.map(order =>
-        order.id === orderId ? { ...order, status: newStatus, updated_at: new Date().toISOString() } : order
+        order.id === orderId ? { ...order, status: result.status, updated_at: result.updated_at } : order
       ))
       addToast({
         type: 'success',
