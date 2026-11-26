@@ -239,9 +239,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const persistLocalCart = useCallback((next: CartState) => {
     cartRef.current = next
     setCart(next)
-    setStoredGuestCart(next)
+    if (isGuest) setStoredGuestCart(next)
     setStoredCart(next)
-  }, [])
+  }, [isGuest])
 
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
     try {
@@ -338,7 +338,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, persistLocalCart, refresh])
+  }, [isAuthenticatedBuyer, usesLocalCart, persistLocalCart, refresh])
 
   return (
     <CartContext.Provider value={{ cart, isGuest, isLoading, error, addItem, updateItem, removeItem, clear, refresh }}>
