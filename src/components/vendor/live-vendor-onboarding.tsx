@@ -99,7 +99,7 @@ export function LiveVendorOnboarding() {
   const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
   useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
   const [storeForm, setStoreForm] = useState({
-    store_name: '', slug: '', category: '', tagline: '', description: '',
+    store_name: '', slug: '', category: '', custom_category: '', tagline: '', description: '',
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
@@ -186,7 +186,7 @@ export function LiveVendorOnboarding() {
           delivery_setup: { management_method: 'kamba_managed', delivery_areas: [], vendor_delivery_fee: null },
           business_name: storeForm.store_name.trim(),
           store_name: storeForm.store_name.trim(),
-          category: storeForm.category.trim(),
+          category: (storeForm.category === 'Other' ? storeForm.custom_category : storeForm.category).trim(),
           tagline: storeForm.tagline.trim(),
           description: storeForm.description.trim(),
         }),
