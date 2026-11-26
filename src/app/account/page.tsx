@@ -20,6 +20,7 @@ interface UserProfile {
   email: string
   phone?: string
   phone_verified?: boolean
+  email_verified?: boolean
   first_name: string
   last_name: string
   username?: string
@@ -84,6 +85,11 @@ export default function AccountPage() {
   const [preferencesLoading, setPreferencesLoading] = useState(true)
   const [preferencesSaving, setPreferencesSaving] = useState(false)
   const [preferencesError, setPreferencesError] = useState('')
+  const [emailOtp, setEmailOtp] = useState('')
+  const [emailOtpSent, setEmailOtpSent] = useState(false)
+  const [emailVerificationBusy, setEmailVerificationBusy] = useState(false)
+  const [emailVerificationMessage, setEmailVerificationMessage] = useState('')
+  const [emailVerificationError, setEmailVerificationError] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
@@ -126,6 +132,51 @@ export default function AccountPage() {
   useEffect(() => {
     void Promise.resolve().then(loadData)
   }, [loadData])
+
+  const requestEmailVerification = async () => {
+    if (!profile?.id || !profile.email) return
+    setEmailVerificationBusy(true)
+    setEmailVerificationError('')
+    setEmailVerificationMessage('')
+    try {
+      await apiJson('/auth/otp/request', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: profile.id, purpose: 'EMAIL_VERIFICATION', endpoint: profile.email }),
+      })
+      setEmailOtpSent(true)
+      setEmailVerificationMessage('A verification code has been sent to ' + profile.email + '. Check your inbox and spam folder.')
+    } catch (error) {
+      setEmailVerificationError(error instanceof Error ? error.message : 'Could not send the email verification code.')
+    } finally {
+      setEmailVerificationBusy(false)
+    }
+  }
+
+  const verifyEmailAddress = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!profile?.id || !/^\\d{6}$/.test(emailOtp)) {
+      setEmailVerificationError('Enter the 6-digit code sent to your email.')
+      return
+    }
+    setEmailVerificationBusy(true)
+    setEmailVerificationError('')
+    setEmailVerificationMessage('')
+    try {
+      await apiJson('/auth/otp/verify', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: profile.id, purpose: 'EMAIL_VERIFICATION', input_otp: emailOtp }),
+      })
+      setProfile((current) => current ? { ...current, email_verified: true } : current)
+      updateUser({ email_verified: true })
+      setEmailOtp('')
+      setEmailOtpSent(false)
+      setEmailVerificationMessage('Your email address is verified.')
+    } catch (error) {
+      setEmailVerificationError(error instanceof Error ? error.message : 'That verification code could not be confirmed.')
+    } finally {
+      setEmailVerificationBusy(false)
+    }
+  }
 
   const handleSaveProfile = async () => {
     try {
@@ -316,6 +367,32 @@ export default function AccountPage() {
               </Card>
             </div>
             <div className="lg:col-span-2 space-y-6">
+              <Card variant="elevated">
+                <CardHeader><CardTitle className="text-text-primary flex items-center justify-between">Email verification {profile.email_verified ? <Badge variant="default">Verified</Badge> : <Badge variant="warning">Not verified</Badge>}</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-text-secondary">{profile.email}</p>
+                  {profile.email_verified ? (
+                    <p className="text-sm text-success">Your email address is verified.</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-text-secondary">Verify this email address before starting vendor onboarding. We will send a one-time code to this inbox.</p>
+                      {!emailOtpSent ? (
+                        <Button type="button" onClick={() => void requestEmailVerification()} disabled={emailVerificationBusy}>{emailVerificationBusy ? 'Sending code…' : 'Send email verification code'}</Button>
+                      ) : (
+                        <form onSubmit={verifyEmailAddress} className="space-y-3">
+                          <Input label="6-digit verification code" value={emailOtp} onChange={(event) => setEmailOtp(event.target.value.replace(/\\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" required />
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="submit" disabled={emailVerificationBusy || emailOtp.length !== 6}>{emailVerificationBusy ? 'Verifying…' : 'Verify email address'}</Button>
+                            <Button type="button" variant="outline" onClick={() => void requestEmailVerification()} disabled={emailVerificationBusy}>Resend code</Button>
+                          </div>
+                        </form>
+                      )}
+                    </>
+                  )}
+                  {emailVerificationMessage && <p role="status" className="text-sm text-success">{emailVerificationMessage}</p>}
+                  {emailVerificationError && <p role="alert" className="text-sm text-destructive">{emailVerificationError}</p>}
+                </CardContent>
+              </Card>
               <Card variant="elevated">
                 <CardHeader>
                   <CardTitle className="text-text-primary flex items-center justify-between">
