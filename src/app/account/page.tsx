@@ -153,7 +153,7 @@ export default function AccountPage() {
 
   const verifyEmailAddress = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!profile?.id || !/^\\d{6}$/.test(emailOtp)) {
+    if (!profile?.id || !/^\d{6}$/.test(emailOtp)) {
       setEmailVerificationError('Enter the 6-digit code sent to your email.')
       return
     }
@@ -379,7 +379,7 @@ export default function AccountPage() {
                         <Button type="button" onClick={() => void requestEmailVerification()} disabled={emailVerificationBusy}>{emailVerificationBusy ? 'Sending code…' : 'Send email verification code'}</Button>
                       ) : (
                         <form onSubmit={verifyEmailAddress} className="space-y-3">
-                          <Input label="6-digit verification code" value={emailOtp} onChange={(event) => setEmailOtp(event.target.value.replace(/\\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" required />
+                          <Input label="6-digit verification code" value={emailOtp} onChange={(event) => setEmailOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" required />
                           <div className="flex flex-wrap gap-2">
                             <Button type="submit" disabled={emailVerificationBusy || emailOtp.length !== 6}>{emailVerificationBusy ? 'Verifying…' : 'Verify email address'}</Button>
                             <Button type="button" variant="outline" onClick={() => void requestEmailVerification()} disabled={emailVerificationBusy}>Resend code</Button>
