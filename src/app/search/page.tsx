@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { formatKobo } from '@/lib/formatting'
 import { StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ProductSearchShowcase } from '@/components/marketplace/product-search-showcase'
 
 type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[] }
 
@@ -36,8 +37,10 @@ function SearchPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [pagination, setPagination] = useState({ page: 1, pageSize: 12 })
+  const searchSequenceRef = useRef(0)
 
   const performSearch = useCallback(async (searchQuery: string) => {
+    const requestId = ++searchSequenceRef.current
     const term = searchQuery.trim()
     if (!term) {
       setResults({ products: [], stores: [], services: [], total: 0 })
@@ -138,9 +141,11 @@ function SearchPageContent() {
         .filter((store) => matchingProductStoreIds.has(store.id) || `${store.name} ${store.description || ''} ${store.city || ''} ${store.category || ''}`.toLowerCase().includes(term.toLowerCase()))
 
       nextResults = { ...nextResults, stores: storesWithProducts, total: storesWithProducts.length + nextResults.services.length }
+      if (requestId !== searchSequenceRef.current) return
       setResults(nextResults)
       setPagination((previous) => ({ ...previous, page: 1 }))
     } catch (err) {
+      if (requestId !== searchSequenceRef.current) return
       setError(err instanceof Error ? err.message : 'Search failed')
       toast({
         type: 'error',
@@ -148,7 +153,7 @@ function SearchPageContent() {
         description: 'Could not complete the search. Please try again.',
       })
     } finally {
-      setLoading(false)
+      if (requestId === searchSequenceRef.current) setLoading(false)
     }
   }, [toast])
 
@@ -159,6 +164,12 @@ function SearchPageContent() {
   }, [query, performSearch])
 
 
+  const updateQuery = (nextQuery: string) => {
+    // Invalidate any in-flight request as soon as the user changes the query.
+    searchSequenceRef.current += 1
+    setQuery(nextQuery)
+  }
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
@@ -168,7 +179,8 @@ function SearchPageContent() {
   }
 
   const handleClear = () => {
-    setQuery('')
+    updateQuery('')
+    setLoading(false)
     router.push('/search')
     setResults({ products: [], stores: [], services: [], total: 0 })
   }
@@ -186,21 +198,19 @@ function SearchPageContent() {
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
       {/* Search Header: keep this form mounted so typing never replaces the focused input. */}
       <header className="animate-fade-in">
-        {!query.trim() && (
-          <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className={`text-center max-w-2xl mx-auto mb-8 ${query.trim() ? 'hidden' : ''}`}>
             <div className="w-20 h-20 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-6 text-coral">
               <Search className="w-10 h-10" />
             </div>
             <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary mb-4">Search Kamba Marketplace</h1>
             <p className="text-text-secondary text-lg">Find products, stores, and services from local vendors near you</p>
           </div>
-        )}
         <form onSubmit={handleSearch} className={`relative ${!query.trim() ? 'max-w-xl' : 'max-w-3xl'} mx-auto mb-8`}>
           <Input
             type="search"
             placeholder={query.trim() ? "Search products, stores, services..." : "What are you looking for?"}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => updateQuery(e.target.value)}
             className="pl-12 pr-16 h-14 text-lg"
             autoFocus={!query.trim()}
           />
@@ -215,18 +225,16 @@ function SearchPageContent() {
           </Button>
         </form>
 
-        {!query.trim() && (
-          <div className="mt-4 mb-8 text-center">
+        <div className={`mt-4 mb-8 text-center ${query.trim() ? 'hidden' : ''}`}>
             <p className="text-text-tertiary text-sm mb-4">Popular searches:</p>
             <div className="flex flex-wrap justify-center gap-2">
               {['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Food', 'Services'].map((cat) => (
-                <Button key={cat} variant="ghost" size="sm" onClick={() => { setQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
+                <Button key={cat} variant="ghost" size="sm" onClick={() => { updateQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
                   {cat}
                 </Button>
               ))}
             </div>
           </div>
-        )}
         {query.trim() && (
           <p className="text-center text-text-secondary">
             Showing results for <span className="font-medium text-text-primary">&quot;{query}&quot;</span>
@@ -234,6 +242,8 @@ function SearchPageContent() {
           </p>
         )}
       </header>
+
+      {!query.trim() && <ProductSearchShowcase />}
 
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-slide-up text-center">
