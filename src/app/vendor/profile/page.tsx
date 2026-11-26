@@ -142,6 +142,15 @@ export default function VendorProfilePage() {
       </Card>
 
       <Card variant="outlined">
+        <CardHeader><CardTitle>Business workspace</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          {store && <Link href="/vendor/store" className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white">Edit business and pickup details</Link>}
+          {service && <Link href="/vendor/service" className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white">Edit service details</Link>}
+          <Link href="/vendor/payments" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary">Payouts and earnings</Link>
+        </CardContent>
+      </Card>
+
+      <Card variant="outlined">
         <CardHeader><CardTitle>Business contact details</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={saveContacts} className="space-y-4">
