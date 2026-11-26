@@ -65,7 +65,7 @@ export function StoreLaunchProgress() {
       setStore(currentStore)
       setProducts(productResponse.products || [])
       const business = firstBusiness(currentStore.business_profiles)
-      if (business?.operating_hours) setHours(business.operating_hours)
+      if (business?.operating_hours) setHours(Object.fromEntries(DAYS.map((day) => [day, { ...DEFAULT_HOURS[day], ...(business.operating_hours?.[day] || {}) }])) as OperatingHours)
       const currentDelivery = storeResponse.delivery_settings || null
       setDelivery(currentDelivery)
       if (currentDelivery) {
