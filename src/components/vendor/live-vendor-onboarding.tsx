@@ -286,7 +286,7 @@ export function LiveVendorOnboarding() {
   const timelineStep = stage === 'not_eligible' ? 0 : stage === 'vendor_profile_required' || stage === 'liveness_required' ? 1 : stage === 'profile_setup' ? 2 : 3
   const timelineSteps = [
     { title: 'Verify account', detail: 'Email and phone' },
-    { title: 'Choose business type', detail: 'Products, services or both' },
+    { title: 'Choose business type', detail: 'Products or services' },
     { title: 'Business details', detail: 'Name, location and operations' },
     { title: 'Review and finish', detail: 'Location evidence and status' },
   ]
@@ -332,14 +332,14 @@ export function LiveVendorOnboarding() {
           <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5 text-primary" /> Create your storefront</CardTitle><p className="text-sm text-text-secondary">Give your shop a name and identity. You can add a cover image and refine the storefront after creation.</p></CardHeader><CardContent>
             <form onSubmit={createStore} className="space-y-4">
               <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">1. Business identity</legend>
+                <legend className="px-1 text-sm font-semibold text-text-primary">Business details</legend>
                 <Input label="Business / store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
                 <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Store URL slug</label><Input value={storeForm.slug || 'your-store-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. Use letters, numbers and hyphens; the URL updates as you type.</p></div>
                 <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
                 <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
               </fieldset>
               <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">2. Business and pickup location</legend>
+                <legend className="px-1 text-sm font-semibold text-text-primary">Business location</legend>
               <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
               {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
               {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={storeForm.location_visibility === 'public'} onChange={(event) => updateStore('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you enter can still be shown. Kamba can use the saved business location for pickup and fulfilment.</span></span></label></div>}
