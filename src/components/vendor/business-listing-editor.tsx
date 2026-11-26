@@ -21,6 +21,9 @@ interface BusinessDetails {
 interface ExistingListing {
   slug?: string | null
   store_image_url?: string | null
+  store_logo_url?: string | null
+  store_slideshow_images?: string[] | null
+  store_logo_in_slideshow?: boolean
   store_name?: string | null
   service_title?: string | null
   category?: string | null
@@ -44,6 +47,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
   const [storeImageUrl, setStoreImageUrl] = useState('')
+  const [storeLogoUrl, setStoreLogoUrl] = useState('')
+  const [slideshowImages, setSlideshowImages] = useState<string[]>([])
+  const [logoInSlideshow, setLogoInSlideshow] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
@@ -78,6 +84,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setTitle((isService ? current.service_title : current.store_name) || '')
       setSlug(current.slug || '')
       setStoreImageUrl(current.store_image_url || '')
+      setStoreLogoUrl(current.store_logo_url || '')
+      setSlideshowImages(current.store_slideshow_images || [])
+      setLogoInSlideshow(current.store_logo_in_slideshow === true)
       setCategory(current.category || '')
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
@@ -98,14 +107,18 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
 
-  const uploadStoreImage = async (file: File) => {
+  const uploadStoreAsset = async (file: File, target: 'cover' | 'logo' | 'slideshow') => {
     if (isService) return
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       setError('Choose a JPEG, PNG or WebP image.')
       return
     }
     if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
-      setError('Your store cover image must be 5 MB or smaller.')
+      setError('Each brand image must be 5 MB or smaller.')
+      return
+    }
+    if (target === 'slideshow' && slideshowImages.length >= 10) {
+      setError('You can add up to 10 slideshow images.')
       return
     }
 
@@ -124,18 +137,43 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       })
       if (!response.ok) throw new Error('The image upload failed. Please try again.')
 
+      const field = target === 'cover' ? 'store_image_url' : target === 'logo' ? 'store_logo_url' : 'store_slideshow_images'
+      const value = target === 'slideshow' ? [...slideshowImages, upload.public_url] : upload.public_url
       const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', {
         method: 'PATCH',
-        body: JSON.stringify({ store_image_url: upload.public_url }),
+        body: JSON.stringify({ [field]: value }),
       })
-      if (!updated.store) throw new Error('The server did not confirm your storefront image.')
+      if (!updated.store) throw new Error('The server did not confirm your brand image.')
       setListing((current) => current ? { ...current, ...updated.store } : updated.store)
-      setStoreImageUrl(upload.public_url)
-      setSuccess('Your storefront cover image has been updated.')
+      if (target === 'cover') setStoreImageUrl(upload.public_url)
+      if (target === 'logo') setStoreLogoUrl(upload.public_url)
+      if (target === 'slideshow') setSlideshowImages((current) => [...current, upload.public_url])
+      setSuccess(target === 'cover' ? 'Your storefront cover has been updated.' : target === 'logo' ? 'Your business logo has been updated.' : 'Slideshow image added.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not upload your storefront image.')
+      setError(err instanceof Error ? err.message : 'Could not upload this brand image.')
     } finally {
       setUploadingImage(false)
+    }
+  }
+
+  const removeSlideshowImage = async (url: string) => {
+    const nextImages = slideshowImages.filter((image) => image !== url)
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    try {
+      const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', {
+        method: 'PATCH',
+        body: JSON.stringify({ store_slideshow_images: nextImages }),
+      })
+      if (!updated.store) throw new Error('The server did not confirm the slideshow update.')
+      setSlideshowImages(nextImages)
+      setListing((current) => current ? { ...current, ...updated.store } : updated.store)
+      setSuccess('Slideshow updated.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the slideshow.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -152,7 +190,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     try {
       const payload = {
         [isService ? 'service_title' : 'store_name']: title.trim(),
-        ...(!isService ? { store_image_url: storeImageUrl || null } : {}),
+        ...(!isService ? { store_image_url: storeImageUrl || null, store_logo_url: storeLogoUrl || null, store_slideshow_images: slideshowImages, store_logo_in_slideshow: logoInSlideshow } : {}),
         category: category.trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
@@ -217,6 +255,26 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 {uploadingImage ? 'Uploading image…' : storeImageUrl ? 'Replace cover image' : 'Upload cover image'}
                 <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreImage(file) }} />
               </label>
+              <div className="border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-text-primary">Business logo</h3>
+                <p className="mt-1 text-xs leading-5 text-text-tertiary">A square logo works best. It appears beside your business name across the storefront.</p>
+                <div className="mt-3 flex items-center gap-4">
+                  {storeLogoUrl ? <img src={storeLogoUrl} alt="Business logo" className="h-20 w-20 rounded-full border border-border bg-white object-contain p-2" /> : <div className="grid h-20 w-20 place-items-center rounded-full border border-dashed border-border text-xs text-text-tertiary">No logo</div>}
+                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-ink-raised">
+                    {uploadingImage ? 'Uploading…' : storeLogoUrl ? 'Replace logo' : 'Upload logo'}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'logo') }} />
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-3 border-t border-border pt-4">
+                <div><h3 className="text-sm font-semibold text-text-primary">Storefront slideshow</h3><p className="mt-1 text-xs leading-5 text-text-tertiary">Add up to 10 images. Each image displays for 3 seconds. If you include your logo, it stays on screen for 10 seconds.</p></div>
+                {slideshowImages.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{slideshowImages.map((url, index) => <div key={url} className="relative overflow-hidden rounded-lg border border-border"><img src={url} alt={'Slideshow image ' + (index + 1)} className="h-28 w-full object-cover" /><button type="button" onClick={() => void removeSlideshowImage(url)} disabled={saving || uploadingImage} className="absolute right-2 top-2 rounded bg-black/75 px-2 py-1 text-xs font-semibold text-white">Remove</button></div>)}</div>}
+                <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-ink-raised">
+                  {uploadingImage ? 'Uploading…' : 'Add slideshow image'}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving || slideshowImages.length >= 10} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'slideshow') }} />
+                </label>
+                <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={logoInSlideshow} onChange={async (event) => { const checked = event.target.checked; setLogoInSlideshow(checked); try { await apiJson('/vendors/store', { method: 'PATCH', body: JSON.stringify({ store_logo_in_slideshow: checked }) }); setSuccess(checked ? 'Your logo will display for 10 seconds in the slideshow.' : 'Your logo will remain as the storefront mark, outside the slideshow.') } catch (err) { setLogoInSlideshow(!checked); setError(err instanceof Error ? err.message : 'Could not save slideshow settings.') } }} className="mt-1" /><span>Include my logo in the slideshow for 10 seconds</span></label>
+              </div>
             </div>}
             <Input label="Category" value={category} onChange={(event) => setCategory(event.target.value)} required maxLength={100} />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={5000} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-primary" /></label>
