@@ -374,7 +374,7 @@ export default function ProductDetailPage() {
                     <p className="mt-0.5 text-xs text-white/40">Kamba storefront</p>
                   </div>
                   <Link
-                    href={`/marketplace/stores/${product.store_slug || product.store_id}`}
+                    href={`/store/${product.store_slug || product.store_id}`}
                     className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-semibold text-white transition hover:bg-white/10"
                   >
                     <Store className="h-3.5 w-3.5" /> Visit
