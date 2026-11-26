@@ -14,7 +14,7 @@ const rows = [
 
 type ShowcaseProduct = Product & { images?: string[] }
 
-function ProductShowcaseCard({ product, rowId }: { product: ShowcaseProduct; rowId: string }) {
+function ProductShowcaseCard({ product, rowId, interactive }: { product: ShowcaseProduct; rowId: string; interactive: boolean }) {
   const image = product.images?.[0] || product.image_url
 
   return (
@@ -22,6 +22,7 @@ function ProductShowcaseCard({ product, rowId }: { product: ShowcaseProduct; row
       href={`/marketplace/products/${product.id}`}
       className={`store-showcase-card store-showcase-card--${rowId} store-showcase-card--product`}
       aria-label={`${product.name}, ${formatKobo(product.price)}`}
+      tabIndex={interactive ? 0 : -1}
     >
       <div className="store-showcase-image">
         {image ? (
@@ -107,14 +108,16 @@ export function ProductSearchShowcase() {
           return (
             <div className={`store-showcase-row ${row.size}`} key={row.id}>
               <div className={`store-showcase-track ${row.speed}`}>
-                {sequence.map((product, itemIndex) => (
-                  <ProductShowcaseCard key={`${product.id}-${itemIndex}`} product={product} rowId={row.id} />
-                ))}
-                {sequence.map((product, itemIndex) => (
-                  <div key={`duplicate-${product.id}-${itemIndex}`} aria-hidden="true">
-                    <ProductShowcaseCard product={product} rowId={row.id} />
-                  </div>
-                ))}
+                <div className="store-showcase-sequence">
+                  {sequence.map((product, itemIndex) => (
+                    <ProductShowcaseCard key={`${product.id}-${itemIndex}`} product={product} rowId={row.id} interactive />
+                  ))}
+                </div>
+                <div className="store-showcase-sequence" aria-hidden="true">
+                  {sequence.map((product, itemIndex) => (
+                    <ProductShowcaseCard key={`duplicate-${product.id}-${itemIndex}`} product={product} rowId={row.id} interactive={false} />
+                  ))}
+                </div>
               </div>
             </div>
           )
