@@ -354,8 +354,8 @@ export function LiveVendorOnboarding() {
       {(stage === 'not_eligible' || (stage === 'liveness_required' && !eligibility.eligible)) && (
         <Card variant="outlined"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-gold" /> Complete these account requirements first</CardTitle></CardHeader><CardContent className="space-y-3">
           {(eligibility?.issues || []).map((issue) => <p key={issue.code} className="text-sm text-text-secondary">{issue.message}</p>)}
-          <p className="text-sm text-text-secondary">Finish your username and phone verification in account settings, then return here.</p>
-          <Button onClick={() => router.push((eligibility?.issues || []).some((issue) => issue.code === 'PHONE_NOT_VERIFIED') ? '/auth/phone?callbackUrl=%2Fvendor%2Fonboard' : '/account')}>{(eligibility?.issues || []).some((issue) => issue.code === 'PHONE_NOT_VERIFIED') ? 'Verify phone number' : 'Open account settings'}</Button>
+          <p className="text-sm text-text-secondary">Finish your email and phone verification in account settings, then return here.</p>
+          <Button onClick={() => router.push((eligibility?.issues || []).some((issue) => issue.code === 'PHONE_NOT_VERIFIED') ? '/auth/phone?callbackUrl=%2Fvendor%2Fonboard' : '/account?tab=settings')}>{(eligibility?.issues || []).some((issue) => issue.code === 'PHONE_NOT_VERIFIED') ? 'Verify phone number' : (eligibility?.issues || []).some((issue) => issue.code === 'EMAIL_NOT_VERIFIED') ? 'Open email verification settings' : 'Open account settings'}</Button>
         </CardContent></Card>
       )}
 
