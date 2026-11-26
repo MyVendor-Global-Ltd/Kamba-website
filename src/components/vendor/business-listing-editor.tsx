@@ -141,7 +141,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (locationMode === 'hybrid' && !locationText.trim() && !serviceAreaText.trim() && !onlineUrl.trim()) {
+    if ((!isService || vendorType !== 'both') && locationMode === 'hybrid' && !locationText.trim() && !serviceAreaText.trim() && !onlineUrl.trim()) {
       setError('For a hybrid business, provide at least a physical location, service area or website.')
       setSuccess('')
       return
