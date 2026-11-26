@@ -40,6 +40,7 @@ export default function VendorPaymentsPage() {
   const [banks, setBanks] = useState<Bank[]>([])
   const [payoutAccount, setPayoutAccount] = useState<PayoutAccount | null>(null)
   const [bankCode, setBankCode] = useState('')
+  const [manualBankName, setManualBankName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [accountName, setAccountName] = useState('')
   const [resolved, setResolved] = useState<ResolvedAccount | null>(null)
@@ -162,7 +163,7 @@ export default function VendorPaymentsPage() {
                 </select>
               </label>
             ) : (
-              <Input label="Bank name" value="" readOnly placeholder="Bank selection will be available when payouts are configured" />
+              <Input label="Bank name" value={manualBankName} onChange={(event) => setManualBankName(event.target.value)} placeholder="Enter your bank name" />
             )}
             <Input label="Account number" type="text" inputMode="numeric" maxLength={10} value={accountNumber} onChange={(event) => { setAccountNumber(event.target.value.replace(/\D/g, '').slice(0, 10)); setResolved(null); setAccountName('') }} placeholder="10-digit account number" />
           </div>
