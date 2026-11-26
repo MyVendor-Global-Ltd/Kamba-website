@@ -12,8 +12,6 @@ import { AlertCircle, CheckCircle2, Store, Wrench } from 'lucide-react'
 
 type VendorType = 'products' | 'services' | 'both'
 type LocationMode = 'physical' | 'service_area' | 'online' | 'mobile' | 'hybrid'
-type DayHours = { closed: boolean; open: string; close: string }
-type OperatingHours = Record<string, DayHours>
 interface Eligibility {
   eligible: boolean
   issues: Array<{ code: string; message: string }>
@@ -82,15 +80,7 @@ export function LiveVendorOnboarding() {
   const [success, setSuccess] = useState('')
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
-  const [operatingHours, setOperatingHours] = useState<OperatingHours>({
-    monday: { closed: false, open: '09:00', close: '18:00' },
-    tuesday: { closed: false, open: '09:00', close: '18:00' },
-    wednesday: { closed: false, open: '09:00', close: '18:00' },
-    thursday: { closed: false, open: '09:00', close: '18:00' },
-    friday: { closed: false, open: '09:00', close: '18:00' },
-    saturday: { closed: false, open: '09:00', close: '18:00' },
-    sunday: { closed: true, open: '09:00', close: '18:00' },
-  })
+
   const [storePhotos, setStorePhotos] = useState<File[]>([])
   const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
   useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
@@ -115,11 +105,10 @@ export function LiveVendorOnboarding() {
       setEligibility(eligibilityData)
       setStatus(statusData)
       try {
-        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours } }>('/vendors/onboard/draft')
+        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm> } }>('/vendors/onboard/draft')
         if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
         if (saved.draft?.storeForm) setStoreForm((previous) => ({ ...previous, ...saved.draft?.storeForm }))
         if (saved.draft?.serviceForm) setServiceForm((previous) => ({ ...previous, ...saved.draft?.serviceForm }))
-        if (saved.draft?.operatingHours) setOperatingHours(saved.draft.operatingHours)
       } catch { /* Existing onboarding remains usable if draft retrieval is temporarily unavailable. */ }
       setDraftLoaded(true)
       if (statusData.vendor_type) setVendorType(statusData.vendor_type)
@@ -146,7 +135,7 @@ export function LiveVendorOnboarding() {
     const timeout = window.setTimeout(() => {
       void apiJson('/vendors/onboard/draft', {
         method: 'PUT',
-        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm, operatingHours } }),
+        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm } }),
       }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
     }, 700)
     return () => window.clearTimeout(timeout)
@@ -176,8 +165,6 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
-          operating_hours: operatingHours,
-          delivery_setup: { management_method: 'kamba_managed', delivery_areas: [], vendor_delivery_fee: null },
           business_name: storeForm.store_name.trim(),
           store_name: storeForm.store_name.trim(),
           category: (storeForm.category === 'Other' ? storeForm.custom_category : storeForm.category).trim(),
@@ -208,7 +195,7 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
-          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility, operating_hours: operatingHours } : { operating_hours: operatingHours }),
+          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility,  } : { operating_hours: operatingHours }),
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
           slug: makeSlug(storeForm.store_name),
           service_title: serviceForm.service_title.trim(),
