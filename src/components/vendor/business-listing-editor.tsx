@@ -12,6 +12,7 @@ type EditorKind = 'store' | 'service'
 interface BusinessDetails {
   business_name?: string | null
   location_mode?: LocationMode | null
+  location_visibility?: 'private' | 'public' | null
   location_text?: string | null
   service_area_text?: string | null
   online_url?: string | null
@@ -54,6 +55,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [locationText, setLocationText] = useState('')
   const [serviceAreaText, setServiceAreaText] = useState('')
   const [onlineUrl, setOnlineUrl] = useState('')
+  const [locationVisibility, setLocationVisibility] = useState<'private' | 'public'>('private')
+  const [vendorType, setVendorType] = useState<'products' | 'services' | 'both'>('products')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -63,7 +66,11 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     setLoading(true)
     setError('')
     try {
-      const response = await apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint)
+      const [response, profileResponse] = await Promise.all([
+        apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint),
+        apiJson<{ vendor_profile: { vendor_type: 'products' | 'services' | 'both' } }>('/vendors/profile'),
+      ])
+      setVendorType(profileResponse.vendor_profile?.vendor_type || 'products')
       const current = isService ? response.service_profile : response.store
       if (!current) throw new Error(isService ? 'No service profile was returned.' : 'No storefront was returned.')
       const business = firstBusiness(current.business_profiles)
@@ -81,6 +88,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setLocationText(business?.location_text || current.location_text || '')
       setServiceAreaText(business?.service_area_text || '')
       setOnlineUrl(business?.online_url || '')
+      setLocationVisibility(business?.location_visibility === 'public' ? 'public' : 'private')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this business listing.')
     } finally {
@@ -144,15 +152,12 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     try {
       const payload = {
         [isService ? 'service_title' : 'store_name']: title.trim(),
-        ...(!isService ? { slug: slug.trim(), store_image_url: storeImageUrl || null } : {}),
+        ...(!isService ? { store_image_url: storeImageUrl || null } : {}),
         category: category.trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
         contact_whatsapp: whatsapp.trim() || null,
-        location_mode: locationMode,
-        location_text: locationText.trim(),
-        service_area_text: serviceAreaText.trim(),
-        online_url: onlineUrl.trim(),
+        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility } : {}),
         ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
       }
       const response = await apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint, {
@@ -172,7 +177,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   }
 
   const heading = isService ? 'Service page' : 'Storefront'
-  const titleLabel = isService ? 'Service title' : 'Store name'
+  const titleLabel = isService && vendorType === 'both' ? 'Service listing name' : 'Business name'
+  const titleSlug = title.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
+  const slugPreview = isService && vendorType === 'both' ? slug : titleSlug || slug
 
   if (loading) return <div className="container mx-auto max-w-3xl px-4 py-12"><div className="h-80 animate-pulse rounded-xl bg-surface-muted" /></div>
   if (!listing) return (
@@ -198,7 +205,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         <CardContent>
           <form onSubmit={save} className="space-y-4">
             <Input label={titleLabel} value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
-            {!isService && <div className="space-y-2"><Input label="Store URL" value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase().trim().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''))} required minLength={3} maxLength={60} /><p className="text-xs text-text-tertiary">Your public storefront address: <span className="font-medium text-text-secondary">kamba.ng/store/{slug || 'your-store-name'}</span></p></div>}
+            <div className="space-y-2"><Input label={isService ? 'Service URL slug' : 'Store URL slug'} value={slugPreview} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. This URL cannot be edited separately.</p></div>
             {!isService && <div className="space-y-3 rounded-xl border border-border p-4">
               <div>
                 <h2 className="text-sm font-semibold text-text-primary">Storefront cover</h2>
@@ -222,8 +229,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 </select>
               </label>
             )}
-            <div className="border-t border-border pt-4">
-              <h2 className="font-semibold text-text-primary">Business location</h2>
+            {isService && vendorType === 'both' ? <div className="rounded-lg border border-border p-4"><h2 className="font-semibold text-text-primary">Shared business location</h2><p className="mt-1 text-sm text-text-secondary">This service uses the same business and pickup location as your storefront. Edit the address and its visibility from Storefront settings so the two listings stay in sync.</p></div> : <div className="border-t border-border pt-4">
+              <h2 className="font-semibold text-text-primary">Business / pickup location</h2>
               <label className="mt-3 block text-sm font-medium text-text-secondary">Location type
                 <select value={locationMode} onChange={(event) => setLocationMode(event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                   <option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option>
@@ -232,7 +239,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               {(locationMode === 'physical' || locationMode === 'hybrid') && <Input label="Business address or location" value={locationText} onChange={(event) => setLocationText(event.target.value)} required={locationMode === 'physical'} placeholder="Street, area, city and state" />}
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
-            </div>
+              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="mt-3 rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={locationVisibility === 'public'} onChange={(event) => setLocationVisibility(event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you provide can still be shown. Kamba can use the saved location for pickup and fulfilment.</span></span></label></div>}
+            </div>}
             <div className="flex flex-wrap items-center gap-3"><Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>{!isService && listing.slug && <a href={'/store/' + listing.slug} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">View public store ↗</a>}</div>
           </form>
         </CardContent>
