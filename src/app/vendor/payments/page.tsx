@@ -164,7 +164,7 @@ export default function VendorPaymentsPage() {
             ) : (
               <Input label="Bank name" value="" readOnly placeholder="Bank selection will be available when payouts are configured" />
             )}
-            <Input label="Account number" inputType="text" mask="9999999999" value={accountNumber} onChange={(value) => { setAccountNumber(value.replace(/\D/g, '').slice(0, 10)); setResolved(null); setAccountName('') }} placeholder="10-digit account number" />
+            <Input label="Account number" type="text" inputMode="numeric" maxLength={10} value={accountNumber} onChange={(event) => { setAccountNumber(event.target.value.replace(/\D/g, '').slice(0, 10)); setResolved(null); setAccountName('') }} placeholder="10-digit account number" />
           </div>
 
           {banks.length === 0 && <p className="rounded-lg bg-secondary p-3 text-xs leading-5 text-secondary-foreground">The payout provider has not returned a bank list. You can prepare the account number here, but Kamba will not store or use unverified banking details. Account verification and saving will become available when the payout provider is configured.</p>}
