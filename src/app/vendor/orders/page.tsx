@@ -46,7 +46,7 @@ interface Order {
   order_number: string
   status: string
   payment_status: string
-  delivery_status: string
+  delivery_status: string | null
   subtotal: number
   platform_fee: number
   delivery_fee: number
@@ -122,7 +122,7 @@ export default function VendorOrdersPage() {
         order_number: order.id,
         status: order.status,
         payment_status: order.payment_status || 'unknown',
-        delivery_status: order.delivery_status || 'not_created',
+        delivery_status: order.delivery_status ?? null,
         delivery_type: order.delivery_type,
         subtotal: order.subtotal,
         platform_fee: order.platform_fee,
