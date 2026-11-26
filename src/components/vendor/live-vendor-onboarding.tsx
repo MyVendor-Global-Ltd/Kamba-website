@@ -100,11 +100,11 @@ export function LiveVendorOnboarding() {
   useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
   const [storeForm, setStoreForm] = useState({
     store_name: '', slug: '', category: '', description: '',
-    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '',
+    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
     service_title: '', slug: '', category: '', description: '', price_range: '',
-    location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '',
+    location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public',
     contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
   })
 
@@ -157,7 +157,7 @@ export function LiveVendorOnboarding() {
       }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
     }, 700)
     return () => window.clearTimeout(timeout)
-  }, [draftLoaded, vendorType, homeAddress, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee])
+  }, [draftLoaded, vendorType, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee])
 
   const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -192,7 +192,7 @@ export function LiveVendorOnboarding() {
       })
       const statusLoaded = await loadStatus()
       if (created.store?.slug) setCreatedStoreSlug(created.store.slug)
-      setServiceForm((previous) => ({ ...previous }))
+      setServiceForm((previous) => ({ ...previous, slug: makeSlug(storeForm.store_name) }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
         : 'Store profile created, but onboarding status could not refresh. Use Retry before continuing.')
@@ -213,7 +213,7 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
-          operating_hours: operatingHours,
+          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility, operating_hours: operatingHours } : { operating_hours: operatingHours }),
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
           slug: vendorType === 'both' && storeForm.store_name.trim() ? makeSlug(storeForm.store_name) : serviceForm.slug,
           service_title: serviceForm.service_title.trim(),
@@ -349,7 +349,7 @@ export function LiveVendorOnboarding() {
                 <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
               </select>
             </label>
-            <p className="text-xs leading-5 text-text-tertiary">You will enter your business location once in the next step. That location can also be used as your pickup address. You will be able to control whether the exact address appears publicly.</p>
+            <p className="text-xs leading-5 text-text-tertiary">You will enter one business location in the next step. It can also be used as your default pickup location; you will choose whether customers can see the exact address publicly.</p>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
           </form>
         </CardContent></Card>
@@ -370,6 +370,7 @@ export function LiveVendorOnboarding() {
               <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
               <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
               {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
+              {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={storeForm.location_visibility === 'public'} onChange={(event) => updateStore('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, customers see your service area instead of your street address. Kamba can still use the saved business location for pickup and fulfilment.</span></span></label></div>}
               {showOperationalFields()}
                             <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
               <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
@@ -398,14 +399,15 @@ export function LiveVendorOnboarding() {
       {stage === 'profile_setup' && needsService && (
         <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Wrench className="h-5 w-5 text-primary" /> Create your service profile</CardTitle></CardHeader><CardContent>
           <form onSubmit={createService} className="space-y-4">
-            <Input label="Business / service name" value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
+            <Input label={vendorType === 'both' ? 'Service listing name' : 'Business name'} value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Public URL slug</label><Input value={serviceForm.slug || 'your-business-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name.</p></div>
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
             <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => { const mode = event.target.value as LocationMode; updateService('location_mode', mode); updateService('fulfilment_options', mode === 'physical' ? ['on_site'] : mode === 'online' ? ['online'] : mode === 'hybrid' ? ['on_site', 'customer_visit', 'online'] : ['customer_visit']); }} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
-            {showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
-            {showOperationalFields()}
+            {vendorType === 'both' ? <p className="rounded-lg border border-border p-3 text-sm text-text-secondary">Your business location, address visibility, operating hours and delivery settings are shared with the storefront you created in the previous step. You do not need to enter them again.</p> : showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
+            {vendorType !== 'both' && (serviceForm.location_mode === 'physical' || serviceForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={serviceForm.location_visibility === 'public'} onChange={(event) => updateService('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. Customers see your service area instead of your street address unless you choose to publish it.</span></span></label></div>}
+            {vendorType !== 'both' && showOperationalFields()}
             <fieldset className="space-y-2 rounded-lg border border-border p-3">
               <legend className="px-1 text-sm font-medium text-text-secondary">How will customers receive this service?</legend>
               {[
