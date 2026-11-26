@@ -18,7 +18,7 @@ interface Order {
   order_number: string
   status: string
   payment_status: string
-  delivery_status?: string
+  delivery_status?: string | null
   delivery_type?: 'delivery' | 'pickup'
   total: number
   created_at: string
@@ -90,7 +90,7 @@ export default function OrdersPage() {
         order_number: order.id,
         status: order.status,
         payment_status: order.payment_status || 'unknown',
-        delivery_status: order.delivery_status || 'not_created',
+        delivery_status: order.delivery_status ?? null,
         delivery_type: order.delivery_type,
         total: order.total,
         created_at: order.created_at,
