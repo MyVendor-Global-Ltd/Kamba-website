@@ -157,6 +157,7 @@ export function LiveVendorOnboarding() {
     setSubmitting(true); setError(''); setSuccess('')
     try {
       await apiJson('/vendors/onboard/basic', { method: 'POST', body: JSON.stringify({ vendor_type: vendorType }) })
+      setServiceForm((previous) => ({ ...previous, service_title: storeForm.store_name.trim(), slug: makeSlug(storeForm.store_name) }))
       const statusLoaded = await loadStatus()
       try { await refreshProfile() } catch { /* Status is authoritative for onboarding continuation. */ }
       setSuccess(statusLoaded ? 'Basic vendor profile created. Continue with your business details.' : 'Profile created, but status could not refresh. Retry to continue.')
@@ -209,7 +210,7 @@ export function LiveVendorOnboarding() {
           ...serviceForm,
           ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility, operating_hours: operatingHours } : { operating_hours: operatingHours }),
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
-          slug: vendorType === 'both' && storeForm.store_name.trim() ? makeSlug(storeForm.store_name) : serviceForm.slug,
+          slug: makeSlug(storeForm.store_name),
           service_title: serviceForm.service_title.trim(),
           category: serviceForm.category.trim(),
           tagline: serviceForm.tagline.trim(),
@@ -308,7 +309,9 @@ export function LiveVendorOnboarding() {
       {(stage === 'vendor_profile_required' || stage === 'liveness_required') && eligibility.eligible && (
         <Card variant="elevated"><CardHeader><CardTitle>Start your Basic vendor profile</CardTitle></CardHeader><CardContent>
           <form onSubmit={createBasicProfile} className="space-y-4">
-            <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
+            <Input label="Business name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
+             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Your storefront URL</label><Input value={'kamba.ng/store/' + (storeForm.slug || 'your-business-name')} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Your URL is generated automatically as you type your business name.</p></div>
+             <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
               <select value={vendorType} onChange={(event) => setVendorType(event.target.value as VendorType)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                 <option value="products">Products</option><option value="services">Services</option>
               </select>
@@ -370,7 +373,7 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createService} className="space-y-4">
             <fieldset className="space-y-4 rounded-xl border border-border p-4">
               <legend className="px-1 text-sm font-semibold text-text-primary">Service details and fulfilment</legend>
-              <Input label={vendorType === 'both' ? 'Service listing title' : 'Business name'} value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
+              <div className="rounded-lg border border-border p-3"><p className="text-xs text-text-tertiary">Business name</p><p className="mt-1 font-semibold text-text-primary">{storeForm.store_name}</p><p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/store/{storeForm.slug || 'your-business-name'}</p></div>
               {vendorType === 'both' && <p className="text-xs leading-5 text-text-tertiary">Your business name is the same as the storefront name you entered earlier. This field names the service you offer, not a second business. The service URL is generated from your shared business name.</p>}
             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Public URL slug</label><Input value={serviceForm.slug || 'your-business-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name.</p></div>
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
