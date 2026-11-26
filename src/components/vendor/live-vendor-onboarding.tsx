@@ -405,14 +405,14 @@ export function LiveVendorOnboarding() {
       )}
 
       {stage === 'complete' && (
-        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Vendor profile submitted</CardTitle></CardHeader><CardContent className="space-y-4">
-          <Badge variant="warning">Verification pending</Badge>
-          <p className="text-sm leading-6 text-text-secondary">Your Basic vendor profile is ready. Optional identity and business verification can be completed separately.</p>
+        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Your business is live</CardTitle></CardHeader><CardContent className="space-y-4">
+          <Badge variant="success">Storefront live</Badge>
+          <p className="text-sm leading-6 text-text-secondary">Your public business page is live. You can keep building it from your vendor dashboard. Identity and business verification are separate and can be completed later.</p>
           
           {(status?.vendor_type || vendorType) !== 'services' && !status?.location_photos_uploaded && (
             <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
-              <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
-              <p className="text-sm text-text-secondary">Choose 2–6 photos of your actual business location. These are used for the store-location verification step.</p>
+              <h3 className="font-semibold text-text-primary">Add business location photos (optional)</h3>
+              <p className="text-sm text-text-secondary">You can add 2–6 photos of your actual business location to help customers recognise your business. This is optional.</p>
               <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setStorePhotos(Array.from(event.target.files || []).slice(0, 6))} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" />
               {storePhotoPreviews.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{storePhotoPreviews.map(({ file, url }, index) => (
                 <div key={url} className="overflow-hidden rounded-lg border border-border">
