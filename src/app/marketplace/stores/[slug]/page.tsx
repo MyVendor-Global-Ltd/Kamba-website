@@ -127,14 +127,14 @@ export default function StoreDetailPage() {
             </div>
             <div className="mt-16 min-w-0 sm:mt-24 lg:my-auto lg:py-16">
               <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-bold uppercase tracking-[0.17em] text-text-secondary">
-                <span>{store.category || 'Independent label'}</span><span className="h-px w-7 bg-gold" /><span>Made close to home</span>
+                <span>{store.category || 'Independent label'}</span>
+                <span className="h-px w-7 bg-gold" />
+                <span>Made close to home</span>
                 {isVerified && <span className="inline-flex items-center gap-1 text-gold"><ShieldCheck className="h-3.5 w-3.5" />Verified seller</span>}
               </div>
-              <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-primary-foreground">{name}</h1>
-              {store.business_profiles?.tagline && <p className="mt-5 max-w-xl break-words text-sm font-semibold leading-6 text-gold sm:text-base">{store.business_profiles.tagline}</p>}{store.description && <p className="mt-3 max-w-xl break-words text-sm leading-7 text-primary-foreground/75 sm:text-base">{store.description}</p>}
-              <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-xs text-primary-foreground/70">
               <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-text-primary">{name}</h1>
-              {store.description && <p className="mt-6 max-w-xl break-words text-sm leading-7 text-text-secondary sm:text-base">{store.description}</p>}
+              {store.business_profiles?.tagline && <p className="mt-5 max-w-xl break-words text-sm font-semibold leading-6 text-primary sm:text-base">{store.business_profiles.tagline}</p>}
+              {store.description && <p className="mt-3 max-w-xl break-words text-sm leading-7 text-text-secondary sm:text-base">{store.description}</p>}
               <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-xs text-text-secondary">
                 {location && <span className="inline-flex min-w-0 items-center gap-2"><MapPin className="h-3.5 w-3.5 shrink-0 text-gold" /><span className="break-words">{location}</span></span>}
                 {username && <span>{username}</span>}
@@ -147,9 +147,6 @@ export default function StoreDetailPage() {
           <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-primary sm:min-h-[480px] lg:min-h-full">
             {cover && failedCoverUrl !== cover ? <img src={cover} alt={name + ' storefront'} onError={() => setFailedCoverUrl(cover)} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_25%,var(--gold)_0%,var(--primary)_42%,var(--primary-strong)_100%)]" />}
             <div className="absolute inset-0 bg-gradient-to-t from-primary-strong/55 via-transparent to-primary-strong/10" />
-          <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-muted sm:min-h-[480px] lg:min-h-full">
-            {cover ? <img src={cover} alt={name + ' storefront'} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-muted" />}
-            <div className="absolute inset-0 bg-transparent" />
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-8 sm:left-8 sm:right-8">
               <div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/70">The Kamba directory</p><p className="mt-1 break-words font-display text-xl font-semibold text-white sm:text-2xl">{name}</p></div>
               <span className="shrink-0 rounded-full border border-white/50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white">Local finds</span>
