@@ -139,9 +139,8 @@ export default function AccountPage() {
     setEmailVerificationError('')
     setEmailVerificationMessage('')
     try {
-      await apiJson('/auth/otp/request', {
+      await apiJson('/auth/email/verify', {
         method: 'POST',
-        body: JSON.stringify({ user_id: profile.id, purpose: 'EMAIL_VERIFICATION', endpoint: profile.email }),
       })
       setEmailOtpSent(true)
       setEmailVerificationMessage('A verification code has been sent to ' + profile.email + '. Check your inbox and spam folder.')
@@ -162,9 +161,9 @@ export default function AccountPage() {
     setEmailVerificationError('')
     setEmailVerificationMessage('')
     try {
-      await apiJson('/auth/otp/verify', {
+      await apiJson('/auth/email/verify/confirm', {
         method: 'POST',
-        body: JSON.stringify({ user_id: profile.id, purpose: 'EMAIL_VERIFICATION', input_otp: emailOtp }),
+        body: JSON.stringify({ otp_code: emailOtp }),
       })
       setProfile((current) => current ? { ...current, email_verified: true } : current)
       updateUser({ email_verified: true })
