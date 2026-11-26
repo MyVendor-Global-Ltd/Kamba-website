@@ -122,8 +122,8 @@ export default function VendorProfilePage() {
     <div className="container mx-auto max-w-4xl space-y-6 px-4 py-8 lg:py-12">
       <header>
         <p className="text-sm font-semibold uppercase tracking-wider text-primary">Vendor workspace</p>
-        <h1 className="mt-2 font-display text-3xl font-bold text-text-primary">Vendor profile</h1>
-        <p className="mt-2 text-sm text-text-secondary">Manage your business contact details and review your storefront setup.</p>
+        <h1 className="mt-2 font-display text-3xl font-bold text-text-primary">Business settings</h1>
+        <p className="mt-2 text-sm text-text-secondary">Manage your business identity, storefront, service listing, pickup details and payout account from one place.</p>
       </header>
 
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
@@ -146,7 +146,8 @@ export default function VendorProfilePage() {
         <CardContent className="flex flex-wrap gap-3">
           {store && <Link href="/vendor/store" className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white">Edit business and pickup details</Link>}
           {service && <Link href="/vendor/service" className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white">Edit service details</Link>}
-          <Link href="/vendor/payments" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary">Payouts and earnings</Link>
+          <Link href="/vendor/pickup" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary">Pickup desk</Link>
+          <Link href="/vendor/payments" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary">Payouts and bank account</Link>
         </CardContent>
       </Card>
 
