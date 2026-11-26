@@ -450,12 +450,12 @@ function MockVendorDashboardPage() {
                     href="/vendor/analytics"
                   />
                   <QuickActionCard
-                    title="Store Settings"
-                    description="Update store profile & settings"
+                    title="Business Settings"
+                    description="Manage your business, pickup and payout details"
                     icon={<Settings className="w-5 h-5" />}
                     iconBg="bg-gray-500/10"
                     iconColor="text-text-tertiary"
-                    href="/vendor/settings"
+                    href="/vendor/profile"
                   />
                 </div>
               </CardContent>

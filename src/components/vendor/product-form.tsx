@@ -170,8 +170,13 @@ export function VendorProductForm({
           }}
           className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-text-primary"
         />
-        <label className="block text-xs font-medium text-text-secondary">Image URLs<textarea value={images} onChange={(event) => setImages(event.target.value)} rows={3} placeholder="Uploaded URLs are added here automatically. You can also paste public HTTPS URLs." className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-primary" /></label>
-        <p className="text-xs text-text-tertiary">{images.split(/\n|,/).map((value) => value.trim()).filter(Boolean).length} image URL(s)</p>
+        {images.split(/\n|,/).map((value) => value.trim()).filter(Boolean).map((url, index) => (
+          <div key={url} className="relative overflow-hidden rounded-lg border border-border">
+            <img src={url} alt={`Product image ${index + 1}`} className="h-36 w-full object-cover" />
+            <button type="button" onClick={() => setImages((current) => current.split(/\n|,/).map((item) => item.trim()).filter((item) => item && item !== url).join('\n'))} disabled={uploading || submitting} className="absolute right-2 top-2 rounded-md bg-black/75 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black">Remove</button>
+          </div>
+        ))}
+        <p className="text-xs text-text-tertiary">{images.split(/\n|,/).map((value) => value.trim()).filter(Boolean).length} image(s) selected. Remove any image before saving.</p>
       </section>
 
       <section className="space-y-3 rounded-xl border border-border p-4">
@@ -191,8 +196,13 @@ export function VendorProductForm({
           }}
           className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-text-primary"
         />
-        <label className="block text-xs font-medium text-text-secondary">Video URLs<textarea value={videos} onChange={(event) => setVideos(event.target.value)} rows={2} placeholder="Uploaded video URLs are added here automatically." className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-primary" /></label>
-        <p className="text-xs text-text-tertiary">{videos.split(/\n|,/).map((value) => value.trim()).filter(Boolean).length} video URL(s)</p>
+        {videos.split(/\n|,/).map((value) => value.trim()).filter(Boolean).map((url, index) => (
+          <div key={url} className="relative overflow-hidden rounded-lg border border-border p-2">
+            <video src={url} controls preload="metadata" className="max-h-56 w-full rounded-md bg-black" aria-label={`Product video ${index + 1}`} />
+            <button type="button" onClick={() => setVideos((current) => current.split(/\n|,/).map((item) => item.trim()).filter((item) => item && item !== url).join('\n'))} disabled={uploading || submitting} className="mt-2 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-ink-raised">Remove video</button>
+          </div>
+        ))}
+        <p className="text-xs text-text-tertiary">{videos.split(/\n|,/).map((value) => value.trim()).filter(Boolean).length} video(s) selected. Preview and remove files before saving.</p>
       </section>
 
       {uploadProgress && <p aria-live="polite" className="text-xs text-text-secondary">{uploadProgress}</p>}

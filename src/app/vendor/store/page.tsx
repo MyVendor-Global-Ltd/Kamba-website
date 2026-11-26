@@ -1,7 +1,2 @@
-'use client'
-
-import { BusinessListingEditor } from '@/components/vendor/business-listing-editor'
-
-export default function VendorStorePage() {
-  return <BusinessListingEditor kind="store" />
-}
+import { redirect } from 'next/navigation'
+export default function VendorStorePage(){redirect('/vendor/profile?section=business')}

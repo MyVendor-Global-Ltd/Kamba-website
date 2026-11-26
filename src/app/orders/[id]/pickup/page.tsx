@@ -1,42 +1,38 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { AlertCircle, CheckCircle2, Clock3, MapPin, PackageCheck, QrCode } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { isMockMode } from '@/lib/mock-api'
-import { getPickupDemo, type PickupDemo } from '@/lib/pickup-prototype'
-import { PickupQr } from '@/components/marketplace/pickup-qr'
-import { formatDateTime } from '@/lib/formatting'
-
-export default function BuyerPickupPage() {
-  const params = useParams<{ id: string }>()
-  const [pickup, setPickup] = useState<PickupDemo | null>(null)
-  useEffect(() => {
-    if (!isMockMode) return
-    const refreshPickup = () => setPickup(getPickupDemo(params.id))
-    void Promise.resolve().then(refreshPickup)
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'kamba_pickup_prototype') refreshPickup()
-    }
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [params.id])
-  if (!isMockMode) return <div className="container mx-auto max-w-2xl px-4 py-16"><Card><CardContent className="space-y-3 p-6"><AlertCircle className="h-7 w-7 text-gold" /><h1 className="text-2xl">Pickup verification is not connected yet</h1><p className="text-text-secondary">The backend currently documents pickup checkout, but not a vendor pickup-code issuance or collection-verification endpoint. This screen will activate when that contract is available.</p></CardContent></Card></div>
-  const stage = pickup?.stage || 'awaiting_confirmation'
-  return <div className="container mx-auto max-w-3xl space-y-6 px-4 py-10">
-    <div><p className="text-sm font-semibold uppercase tracking-wider text-primary">Order collection</p><h1 className="mt-2 text-3xl">Your pickup details</h1><p className="mt-2 text-text-secondary">Order {pickup?.orderNumber || params.id}</p></div>
-    <Card><CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Pickup progress</CardTitle><Badge variant="outline">{stage.replaceAll('_',' ')}</Badge></div></CardHeader><CardContent className="space-y-5">
-      <div className="flex items-start gap-3"><PackageCheck className="mt-1 h-5 w-5 text-primary" /><div><p className="font-semibold">Vendor confirmation</p><p className="text-sm text-text-secondary">{stage === 'awaiting_confirmation' ? 'Your order is waiting for the vendor to confirm it.' : 'The vendor has accepted the order.'}</p></div></div>
-      {stage === 'confirmed' && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">The vendor confirmed your order. It will appear here once preparation begins.</p>}
-      {stage === 'preparing' && <p className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">Your order is being prepared. Pickup details will appear when it is marked ready.</p>}
-      {stage === 'ready_for_pickup' && <><div className="rounded-xl border border-primary/20 bg-secondary p-5 text-center"><p className="text-sm font-medium text-secondary-foreground">Your one-time pickup code</p><p className="my-2 font-display text-4xl font-bold tracking-[0.25em] text-primary">{pickup?.pickupCode}</p><p className="text-xs text-secondary-foreground">Show this code to the vendor when collecting your order.</p></div><div className="flex items-start gap-3"><MapPin className="mt-1 h-5 w-5 text-primary" /><div><p className="font-semibold">Approved collection point</p><p className="text-sm text-text-secondary">{pickup?.pickupLocation}</p></div></div><div className="rounded-lg border border-border p-4"><div className="mb-3 flex items-center gap-2 font-medium"><QrCode className="h-5 w-5 text-primary" /> QR pickup pass</div><PickupQr value={pickup?.pickupCode || ''} /><p className="mt-3 text-center text-xs text-text-tertiary">This QR encodes the same one-time code shown above. The vendor can scan it or enter the code manually.</p></div></>}
-      {stage === 'collected' && <div className="space-y-3"><div className="flex items-center gap-2 text-primary"><CheckCircle2 className="h-6 w-6" /><span className="font-semibold">Collection recorded in the prototype</span></div><div className="rounded-lg bg-secondary p-4"><div className="flex items-center gap-2 font-semibold"><Clock3 className="h-4 w-4" /> 24-hour dispute window</div><p className="mt-1 text-sm text-secondary-foreground">Ends: {pickup?.disputeWindowEndsAt ? formatDateTime(pickup.disputeWindowEndsAt) : 'Not available'}</p><p className="mt-2 text-sm text-secondary-foreground">Vendor payout status: {pickup?.payoutStatus === 'awaiting_dispute_window' ? 'Awaiting the 24-hour dispute window and backend eligibility confirmation' : pickup?.payoutStatus}</p></div></div>}
-      {stage === 'awaiting_confirmation' && <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">The pickup location and code are intentionally hidden until the order reaches Ready for pickup.</div>}
-    </CardContent></Card>
-    <div className="flex flex-wrap gap-3"><Link href="/orders" className="inline-flex h-10 items-center rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-text-primary">Back to orders</Link><Link href="/vendor/pickup" className="inline-flex h-10 items-center rounded-lg bg-secondary px-4 text-sm font-semibold text-secondary-foreground">Open vendor prototype</Link></div>
-    <p className="text-xs text-text-tertiary">Development prototype only. No real collection, identity check, payment release or bank transfer is performed.</p>
-  </div>
+import {useCallback,useEffect,useState} from 'react'
+import {useParams} from 'next/navigation'
+import {AlertCircle,CheckCircle2,Clock3,MapPin,PackageCheck,RefreshCw,QrCode} from 'lucide-react'
+import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card'
+import {Badge} from '@/components/ui/badge'
+import {Button} from '@/components/ui/button'
+import {PickupQr} from '@/components/marketplace/pickup-qr'
+import {apiJson,ApiError} from '@/lib/api'
+interface PickupDetails{order_id:string;pickup_status:'confirmed'|'preparing'|'ready_for_pickup'|'collected';pickup_address:string;pickup_code:string|null;code_expires_at:string|null;collected_at:string|null}
+export default function BuyerPickupPage(){
+ const params=useParams<{id:string}>()
+ const [pickup,setPickup]=useState<PickupDetails|null>(null)
+ const [loading,setLoading]=useState(true)
+ const [error,setError]=useState('')
+ const [notReady,setNotReady]=useState(false)
+ const load=useCallback(async()=>{
+  setLoading(true);setError('');setNotReady(false)
+  try{const data=await apiJson<PickupDetails>(`/commerce/orders/${encodeURIComponent(params.id)}/pickup`);setPickup(data)}
+  catch(err){if(err instanceof ApiError&&err.code==='PICKUP_NOT_READY'){setNotReady(true);setPickup(null)}else setError(err instanceof Error?err.message:'Could not load pickup details.')}
+  finally{setLoading(false)}
+ },[params.id])
+ useEffect(()=>{void load()},[load])
+ const stage=pickup?.pickup_status||'awaiting_confirmation'
+ return <div className="container mx-auto max-w-3xl space-y-6 px-4 py-10">
+  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold uppercase tracking-wider text-primary">Order collection</p><h1 className="mt-2 text-3xl font-bold text-text-primary">Your pickup details</h1><p className="mt-2 text-sm text-text-secondary">Order {params.id}</p></div><Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4"/>Refresh</Button></div>
+  {loading&&<Card><CardContent className="p-6 text-sm text-text-secondary">Checking pickup status…</CardContent></Card>}
+  {!loading&&error&&<Card><CardContent className="space-y-3 p-6"><AlertCircle className="h-6 w-6 text-destructive"/><p role="alert" className="text-sm text-destructive">{error}</p><Button variant="outline" onClick={()=>void load()}>Try again</Button></CardContent></Card>}
+  {!loading&&notReady&&<Card><CardHeader><CardTitle>Waiting for the vendor</CardTitle></CardHeader><CardContent className="space-y-3"><PackageCheck className="h-7 w-7 text-primary"/><p className="text-sm text-text-secondary">Your order is not ready for collection yet. The exact pickup address and one-time QR pass remain hidden until the vendor has accepted, prepared and marked the paid order ready.</p><Button variant="outline" onClick={()=>void load()}>Check again</Button></CardContent></Card>}
+  {!loading&&pickup&&<><Card><CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Pickup progress</CardTitle><Badge variant={stage==='collected'?'success':'outline'}>{stage.replaceAll('_',' ')}</Badge></div></CardHeader><CardContent className="space-y-4"><div className="flex items-start gap-3"><PackageCheck className="mt-1 h-5 w-5 text-primary"/><div><p className="font-semibold text-text-primary">Vendor collection status</p><p className="text-sm text-text-secondary">{stage==='collected'?'Your collection has been verified.':stage==='ready_for_pickup'?'Your order is ready. Present this QR pass to the vendor.':'The vendor is preparing your order.'}</p></div></div></CardContent></Card>
+  <Card><CardHeader><CardTitle>Approved pickup address</CardTitle></CardHeader><CardContent className="flex items-start gap-3"><MapPin className="mt-1 h-5 w-5 text-primary"/><address className="text-sm not-italic leading-6 text-text-primary">{pickup.pickup_address}</address></CardContent></Card>
+  {pickup.pickup_code&&<Card><CardHeader><div className="flex items-center gap-2"><QrCode className="h-5 w-5 text-primary"/><CardTitle>One-time pickup QR</CardTitle></div></CardHeader><CardContent className="space-y-3 text-center"><PickupQr value={pickup.pickup_code}/><p className="font-mono text-3xl font-bold tracking-[0.25em] text-primary">{pickup.pickup_code}</p><p className="text-xs text-text-tertiary">Show this QR to the vendor. It expires {pickup.code_expires_at?new Date(pickup.code_expires_at).toLocaleString('en-NG'):'after 24 hours'} and can be used only once.</p></CardContent></Card>}
+  {stage==='collected'&&<Card><CardContent className="space-y-2 p-5"><CheckCircle2 className="h-6 w-6 text-primary"/><p className="font-semibold text-text-primary">Collection verified</p><p className="text-sm text-text-secondary">The vendor has scanned your QR pass. Confirm receipt from the order page when you have received your items.</p><Link href={`/orders/${params.id}`} className="text-sm font-semibold text-primary underline">Return to order</Link></CardContent></Card>}</>}
+  <p className="text-xs text-text-tertiary">Your address is revealed for this paid order only. It does not change the public/private address setting on the vendor&apos;s storefront.</p>
+ </div>
 }

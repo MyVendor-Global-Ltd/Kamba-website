@@ -22,6 +22,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const isVendor = state.user?.role === 'vendor'
+  const needsAccountVerification = Boolean(state.user && (!state.user.email_verified || !state.user.phone_verified))
 
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Discover', items: [{ label: 'Search Kamba', href: '/search', icon: Search }] },
@@ -31,11 +32,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         ...(isVendor
           ? [
               { label: 'Vendor dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-              { label: 'Storefront', href: '/vendor/store', icon: Store },
-              { label: 'Products & stock', href: '/vendor/products', icon: Package },
-              { label: 'Vendor orders', href: '/vendor/orders', icon: ShoppingBag },
-              { label: 'Service page', href: '/vendor/service', icon: Activity },
-              { label: 'Vendor profile', href: '/vendor/profile', icon: UserRound },
+              { label: 'Business settings', href: '/vendor/profile', icon: Settings },
             ]
           : [
               { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
@@ -47,7 +44,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       label: 'Your activity',
       items: [
         { label: 'Notifications', href: '/notifications', icon: Bell },
-        { label: 'Orders & delivery tracking', href: '/orders', icon: ShoppingBag },
+        { label: isVendor ? 'My purchases' : 'Orders & delivery tracking', href: '/orders', icon: ShoppingBag },
         { label: 'Service requests', href: '/service-requests', icon: Activity },
         { label: 'Shopping cart', href: '/cart', icon: Package },
       ],
@@ -113,7 +110,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       isActive ? 'bg-primary-soft text-primary' : 'text-text-secondary hover:bg-ink-raised/70 hover:text-text-primary'
                     )}
                   >
-                    <Icon className="h-[18px] w-[18px] shrink-0" />
+                    <span className="relative shrink-0"><Icon className="h-[18px] w-[18px]" />{needsAccountVerification && isAccountItem && requestedTab === 'profile' && <span aria-label="Email or phone verification incomplete" title="Email or phone verification incomplete" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />}</span>
                     {expanded && <span className="truncate">{item.label}</span>}
                   </button>
                 )
@@ -166,7 +163,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-text-tertiary">{pathname.startsWith('/vendor') ? 'Vendor workspace' : 'Your account'}</p>
                 <h1 className="truncate text-base font-semibold text-text-primary sm:text-lg">
-                  {pathname === '/account' ? (searchParams.get('tab') === 'profile' ? 'Profile & personal details' : searchParams.get('tab') === 'addresses' ? 'Delivery addresses' : searchParams.get('tab') === 'payment' ? 'Payment preferences' : searchParams.get('tab') === 'settings' ? 'Preferences & security' : 'Your dashboard') : pathname.startsWith('/vendor/dashboard') ? 'Vendor overview' : pathname.startsWith('/vendor/store') ? 'Storefront settings' : pathname.startsWith('/vendor/products') ? 'Products' : pathname.startsWith('/vendor/orders') ? 'Vendor orders' : pathname.startsWith('/orders') ? 'Your orders' : pathname.startsWith('/service-requests') ? 'Service requests' : pathname.startsWith('/notifications') ? 'Notifications' : pathname.startsWith('/vendor') ? 'Vendor workspace' : 'Your workspace'}
+                  {pathname === '/account' ? (searchParams.get('tab') === 'profile' ? 'Profile & personal details' : searchParams.get('tab') === 'addresses' ? 'Delivery addresses' : searchParams.get('tab') === 'payment' ? 'Payment preferences' : searchParams.get('tab') === 'settings' ? 'Preferences & security' : 'Your dashboard') : pathname.startsWith('/vendor/dashboard') ? 'Vendor overview' : pathname.startsWith('/vendor/profile') ? 'Business settings' : pathname.startsWith('/vendor/store') ? 'Storefront settings' : pathname.startsWith('/vendor/pickup') ? 'Pickup desk' : pathname.startsWith('/vendor/payments') ? 'Payouts' : pathname.startsWith('/vendor/products') ? 'Products' : pathname.startsWith('/vendor/orders') ? 'Vendor orders' : pathname.startsWith('/orders') ? 'Your orders' : pathname.startsWith('/service-requests') ? 'Service requests' : pathname.startsWith('/notifications') ? 'Notifications' : pathname.startsWith('/vendor') ? 'Vendor workspace' : 'Your workspace'}
                 </h1>
               </div>
             </div>
