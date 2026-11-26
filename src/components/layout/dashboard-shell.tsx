@@ -31,11 +31,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         ...(isVendor
           ? [
               { label: 'Vendor dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-              { label: 'Storefront', href: '/vendor/store', icon: Store },
+              { label: 'Business settings', href: '/vendor/profile', icon: Settings },
               { label: 'Products & stock', href: '/vendor/products', icon: Package },
               { label: 'Vendor orders', href: '/vendor/orders', icon: ShoppingBag },
               { label: 'Service page', href: '/vendor/service', icon: Activity },
-              { label: 'Vendor profile', href: '/vendor/profile', icon: UserRound },
             ]
           : [
               { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
