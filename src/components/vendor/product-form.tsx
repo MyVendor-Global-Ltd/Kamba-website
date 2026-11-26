@@ -59,23 +59,48 @@ export function VendorProductForm({
     if (!files.length) return
     setError('')
     setUploading(true)
+    setUploadProgress(\`Preparing \${files.length} files…\`)
+
+    const uploadedUrls: string[] = []
+    const failures: string[] = []
+    let nextIndex = 0
     let completed = 0
-    try {
-      for (const file of files) {
-        setUploadProgress(`Uploading ${completed + 1} of ${files.length}…`)
-        const uploaded = await uploadProductMedia(file)
-        if (uploaded.kind !== expectedKind) throw new Error('The selected file does not match this media field.')
-        if (expectedKind === 'image') {
-          setImages((current) => [...current.split(/\n|,/).map((value) => value.trim()).filter(Boolean), uploaded.url].join('\n'))
-        } else {
-          setVideos((current) => [...current.split(/\n|,/).map((value) => value.trim()).filter(Boolean), uploaded.url].join('\n'))
+
+    const uploadWorker = async () => {
+      while (true) {
+        const index = nextIndex++
+        if (index >= files.length) return
+        const file = files[index]
+        try {
+          const uploaded = await uploadProductMedia(file)
+          if (uploaded.kind !== expectedKind) throw new Error('The selected file does not match this media field.')
+          uploadedUrls[index] = uploaded.url
+        } catch (err) {
+          failures.push(err instanceof Error ? err.message : \`\${file.name} failed to upload.\`)
+        } finally {
+          completed += 1
+          setUploadProgress(\`Uploading \${completed} of \${files.length}…\`)
         }
-        completed += 1
       }
-      setUploadProgress(`${completed} file${completed === 1 ? '' : 's'} uploaded.`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Media upload failed.')
-      setUploadProgress('')
+    }
+
+    try {
+      // Three concurrent uploads reduce waiting time without flooding mobile networks.
+      await Promise.all(Array.from({ length: Math.min(3, files.length) }, () => uploadWorker()))
+      const successfulUrls = uploadedUrls.filter(Boolean)
+      if (successfulUrls.length) {
+        if (expectedKind === 'image') {
+          setImages((current) => [...current.split(/\\n|,/).map((value) => value.trim()).filter(Boolean), ...successfulUrls].join('\\n'))
+        } else {
+          setVideos((current) => [...current.split(/\\n|,/).map((value) => value.trim()).filter(Boolean), ...successfulUrls].join('\\n'))
+        }
+      }
+      if (failures.length) {
+        setError(\`\${successfulUrls.length} of \${files.length} files uploaded. \${failures[0]}\`)
+        setUploadProgress(\`Uploaded \${successfulUrls.length} of \${files.length} files. You can retry the failed files.\`)
+      } else {
+        setUploadProgress(\`\${successfulUrls.length} file\${successfulUrls.length === 1 ? '' : 's'} uploaded.\`)
+      }
     } finally {
       setUploading(false)
     }
