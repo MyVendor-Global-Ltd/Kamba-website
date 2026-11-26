@@ -15,7 +15,7 @@ type PublicStore = Store & {
   location_text?: string | null
   follower_count?: number
   users?: { username?: string; profile_picture_url?: string | null } | null
-  business_profiles?: { business_name?: string; location_mode?: string; location_text?: string | null; service_area_text?: string | null } | null
+  business_profiles?: { business_name?: string; tagline?: string | null; location_mode?: string; location_text?: string | null; service_area_text?: string | null } | null
   vendor_profiles?: { is_verified?: boolean; verification_tier?: string } | null
 }
 
@@ -129,7 +129,7 @@ export default function StoreDetailPage() {
                 {isVerified && <span className="inline-flex items-center gap-1 text-gold"><ShieldCheck className="h-3.5 w-3.5" />Verified seller</span>}
               </div>
               <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-primary-foreground">{name}</h1>
-              {store.description && <p className="mt-6 max-w-xl break-words text-sm leading-7 text-primary-foreground/75 sm:text-base">{store.description}</p>}
+              {store.business_profiles?.tagline && <p className="mt-5 max-w-xl break-words text-sm font-semibold leading-6 text-gold sm:text-base">{store.business_profiles.tagline}</p>}{store.description && <p className="mt-3 max-w-xl break-words text-sm leading-7 text-primary-foreground/75 sm:text-base">{store.description}</p>}
               <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-xs text-primary-foreground/70">
                 {location && <span className="inline-flex min-w-0 items-center gap-2"><MapPin className="h-3.5 w-3.5 shrink-0 text-gold" /><span className="break-words">{location}</span></span>}
                 {username && <span>{username}</span>}
