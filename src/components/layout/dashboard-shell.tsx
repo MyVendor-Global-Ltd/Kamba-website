@@ -27,10 +27,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     {
       label: 'Workspace',
       items: [
-        { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
         ...(isVendor
-          ? [{ label: 'Vendor workspace', href: '/vendor/dashboard', icon: Store }]
-          : [{ label: 'Become a vendor', href: '/vendor/onboard', icon: Store }]),
+          ? [
+              { label: 'Vendor dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+              { label: 'Storefront', href: '/vendor/store', icon: Store },
+              { label: 'Products & stock', href: '/vendor/products', icon: Package },
+              { label: 'Vendor orders', href: '/vendor/orders', icon: ShoppingBag },
+              { label: 'Service page', href: '/vendor/service', icon: Activity },
+              { label: 'Vendor profile', href: '/vendor/profile', icon: UserRound },
+            ]
+          : [
+              { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
+              { label: 'Become a vendor', href: '/vendor/onboard', icon: Store },
+            ]),
       ],
     },
     {
