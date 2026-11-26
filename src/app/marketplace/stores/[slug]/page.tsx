@@ -71,12 +71,12 @@ export default function StoreDetailPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError('')
-    setProductsError('')
-    setHighlightedProductId(new URLSearchParams(window.location.search).get('product') || '')
 
     async function loadStorefront() {
+      setLoading(true)
+      setError('')
+      setProductsError('')
+      setHighlightedProductId(new URLSearchParams(window.location.search).get('product') || '')
       try {
         const storeRes = await apiJson<{
           store: PublicStore | null
@@ -119,7 +119,7 @@ export default function StoreDetailPage() {
       }
     }
 
-    void loadStorefront()
+    void Promise.resolve().then(loadStorefront)
     return () => { cancelled = true }
   }, [slug])
 
