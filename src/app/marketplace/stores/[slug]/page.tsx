@@ -156,7 +156,7 @@ export default function StoreDetailPage() {
   const cover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url
   const location = store.location_text || store.business_profiles?.location_text || store.business_profiles?.service_area_text || store.city
   const username = store.users?.username ? '@' + store.users.username.replace(/^@/, '') : null
-  const isVerified = store.vendor_profiles?.is_verified || store.verification_status !== 'pending'
+  const isVerified = store.vendor_profiles?.is_verified === true
 
   return (
     <main className="min-h-screen bg-[#f4f1e9] text-[#20231e]">
