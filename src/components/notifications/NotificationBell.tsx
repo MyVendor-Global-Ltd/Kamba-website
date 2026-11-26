@@ -18,6 +18,7 @@ export function NotificationBell() {
   const previousCount = useRef<number | null>(null)
   const userInteracted = useRef(false)
   const audioContext = useRef<AudioContext | null>(null)
+  const lastForegroundNotification = useRef(0)
 
   const playChime = useCallback(() => {
     if (!userInteracted.current || typeof window === 'undefined') return
@@ -54,11 +55,13 @@ export function NotificationBell() {
       setUnreadCount(nextCount)
       if (previousCount.current !== null && nextCount > previousCount.current) {
         const difference = nextCount - previousCount.current
-        addToast({
-          type: 'info',
-          title: difference === 1 ? 'New notification' : 'New notifications',
-          message: difference === 1 ? 'You have an unread Kamba update.' : 'You have ' + difference + ' new Kamba updates.',
-        })
+        if (Date.now() - lastForegroundNotification.current > 45000) {
+          addToast({
+            type: 'info',
+            title: difference === 1 ? 'New notification' : 'New notifications',
+            message: difference === 1 ? 'You have an unread Kamba update.' : 'You have ' + difference + ' new Kamba updates.',
+          })
+        }
         playChime()
       }
       previousCount.current = nextCount
@@ -80,6 +83,12 @@ export function NotificationBell() {
       window.removeEventListener('keydown', markInteraction)
       if (audioContext.current && audioContext.current.state !== 'closed') void audioContext.current.close()
     }
+  }, [])
+
+  useEffect(() => {
+    const onForegroundNotification = () => { lastForegroundNotification.current = Date.now() }
+    window.addEventListener('kamba:foreground-notification', onForegroundNotification)
+    return () => window.removeEventListener('kamba:foreground-notification', onForegroundNotification)
   }, [])
 
   useEffect(() => {
