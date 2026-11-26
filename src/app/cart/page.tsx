@@ -20,8 +20,8 @@ export default function CartPage() {
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 space-y-4">
             {[...Array(3)].map((_, i) => (
-              <Card key={i} variant="elevated">
-                <CardContent className="p-4">
+              <Card key={i} variant="default">
+                <CardContent className="border border-[#E5E7DF] bg-white p-3 shadow-[2px_2px_8px_rgba(31,42,34,.04)] sm:p-4">
                   <div className="flex gap-4">
                     <div className="h-20 w-20 bg-ink-raised/50 rounded-lg" />
                     <div className="flex-1 space-y-2">
@@ -33,7 +33,7 @@ export default function CartPage() {
               </Card>
             ))}
           </div>
-          <Card variant="elevated">
+          <Card variant="default">
             <CardContent className="p-4 space-y-4">
               <div className="h-6 w-1/3 bg-ink-raised/50 rounded" />
               <div className="space-y-2">
@@ -53,7 +53,7 @@ export default function CartPage() {
   if (isGuest && (!cart || cart.items.length === 0)) {
     return (
       <div className="container mx-auto flex min-h-[65vh] items-center justify-center px-4 py-12">
-        <Card variant="elevated" className="w-full max-w-xl">
+        <Card variant="default" className="w-full max-w-xl">
           <CardContent className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
             <span className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
               <LockKeyhole className="h-8 w-8" />
@@ -98,18 +98,18 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
+    <div className="min-h-screen bg-[#F7F7F3] px-3 py-6 text-[#202820] sm:px-6 lg:py-10">
       <header className="animate-fade-in">
-        <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">Shopping Cart</h1>
+        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-text-primary">Shopping Cart</h1>
         <p className="text-text-secondary mt-2">Review your items before checkout.</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
-        <div className="lg:col-span-2 space-y-4">
+      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-3" style={{ animationDelay: '100ms' }}>
+        <div className="space-y-3 lg:col-span-2">
           {cart.items.map((item) => (
-            <Card key={item.id} variant="elevated" className="p-4">
+            <Card key={item.id} variant="default" className="border border-[#E5E7DF] bg-white p-3 shadow-[2px_2px_8px_rgba(31,42,34,.04)] sm:p-4">
               <div className="flex gap-4">
-                <div className="w-20 h-20 bg-ink-raised/50 rounded-xl flex-shrink-0 overflow-hidden">
+                <div className="w-20 h-20 bg-ink-raised/50 rounded-lg flex-shrink-0 overflow-hidden">
                   {item.product?.image_url ? (
                     <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
                   ) : (
@@ -164,7 +164,7 @@ export default function CartPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <Card variant="elevated" className="sticky top-24">
+          <Card variant="default" className="sticky top-24 border border-[#E5E7DF] bg-white shadow-[2px_2px_8px_rgba(31,42,34,.04)]">
             <CardHeader>
               <CardTitle className="text-text-primary">Order summary</CardTitle>
             </CardHeader>
