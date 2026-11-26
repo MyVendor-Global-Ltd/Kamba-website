@@ -39,6 +39,7 @@ export function FirebaseForegroundNotifications() {
 
     void listenToForegroundMessages((payload) => {
       if (!active) return
+      window.dispatchEvent(new Event('kamba:foreground-notification'))
       addToast({
         type: 'info',
         title: payload.notification?.title || 'Kamba update',
