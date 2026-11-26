@@ -99,13 +99,13 @@ export function LiveVendorOnboarding() {
   const [vendorDeliveryFee, setVendorDeliveryFee] = useState('0')
   const [storePhotos, setStorePhotos] = useState<File[]>([])
   const [storeForm, setStoreForm] = useState({
-    business_name: '', store_name: '', slug: '', category: '', description: '',
-    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '', same_as_business_address: false,
+    store_name: '', slug: '', category: '', description: '',
+    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
-    business_name: '', service_title: '', slug: '', category: '', description: '', price_range: '',
+    service_title: '', slug: '', category: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '',
-    contact_preference: 'whatsapp', contact_whatsapp: '', same_as_business_address: false, fulfilment_options: ['customer_visit'] as string[],
+    contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
   })
 
   const loadStatus = useCallback(async () => {
@@ -208,7 +208,7 @@ export function LiveVendorOnboarding() {
           home_address: homeAddress.trim(),
           operating_hours: operatingHours,
           delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
-          business_name: storeForm.business_name.trim(),
+          business_name: storeForm.store_name.trim(),
           store_name: storeForm.store_name.trim(),
           category: storeForm.category.trim(),
           description: storeForm.description.trim(),
@@ -216,7 +216,7 @@ export function LiveVendorOnboarding() {
       })
       const statusLoaded = await loadStatus()
       if (created.store?.slug) setCreatedStoreSlug(created.store.slug)
-      setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
+      setServiceForm((previous) => ({ ...previous }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
         : 'Store profile created, but onboarding status could not refresh. Use Retry before continuing.')
@@ -239,7 +239,7 @@ export function LiveVendorOnboarding() {
           ...serviceForm,
           home_address: homeAddress.trim(),
           operating_hours: operatingHours,
-          business_name: serviceForm.business_name.trim(),
+          business_name: serviceForm.service_title.trim(),
           service_title: serviceForm.service_title.trim(),
           category: serviceForm.category.trim(),
           description: serviceForm.description.trim(),
@@ -280,8 +280,9 @@ export function LiveVendorOnboarding() {
     } finally { setSubmitting(false) }
   }
 
-  const updateStore = <K extends keyof typeof storeForm>(field: K, value: (typeof storeForm)[K]) => setStoreForm((previous) => ({ ...previous, [field]: value }))
-  const updateService = <K extends keyof typeof serviceForm>(field: K, value: (typeof serviceForm)[K]) => setServiceForm((previous) => ({ ...previous, [field]: value }))
+  const makeSlug = (value: string) => value.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
+  const updateStore = <K extends keyof typeof storeForm>(field: K, value: (typeof storeForm)[K]) => setStoreForm((previous) => ({ ...previous, [field]: value, ...(field === 'store_name' ? { slug: makeSlug(String(value)) } : {}) }))
+  const updateService = <K extends keyof typeof serviceForm>(field: K, value: (typeof serviceForm)[K]) => setServiceForm((previous) => ({ ...previous, [field]: value, ...(field === 'service_title' ? { slug: makeSlug(String(value)) } : {}) }))
   const showLocationFields = (mode: LocationMode, update: (field: 'location_text' | 'service_area_text' | 'online_url', value: string) => void, values: { location_text: string; service_area_text: string; online_url: string }) => (
     <div className="space-y-3">
       {(mode === 'physical' || mode === 'hybrid') && <Input label="Business location" value={values.location_text} onChange={(event) => update('location_text', event.target.value)} required={mode === 'physical'} placeholder="Street, area, city and state" />}
@@ -340,7 +341,7 @@ export function LiveVendorOnboarding() {
   const stage = status.stage || 'not_eligible'
   const needsStore = status?.next_step === 'create_store'
   const needsService = status?.next_step === 'create_service'
-  const previewStoreSlug = (storeForm.slug || storeForm.store_name).toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-').replace(/[_-]+/g, '-').replace(/^-|-$/g, '') || 'your-store-name'
+  const previewStoreSlug = storeForm.slug || makeSlug(storeForm.store_name) || 'your-store-name'
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 px-4 py-8 lg:py-12">
@@ -364,8 +365,8 @@ export function LiveVendorOnboarding() {
                 <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
               </select>
             </label>
-            <Input label="Your home / residential address (private)" value={homeAddress} onChange={(event) => setHomeAddress(event.target.value)} required placeholder="Your residential address" />
-            <p className="text-xs leading-5 text-text-tertiary">This address is kept private and is not displayed on your public business profile.</p>
+            <Input label="Private residential address (not your business or pickup address)" value={homeAddress} onChange={(event) => setHomeAddress(event.target.value)} required placeholder="Your residential address" />
+            <p className="text-xs leading-5 text-text-tertiary">This is only for private account records. Your business location is entered separately below and is used as the default pickup location when applicable.</p>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
           </form>
         </CardContent></Card>
@@ -380,16 +381,14 @@ export function LiveVendorOnboarding() {
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5 text-primary" /> Create your storefront</CardTitle><p className="text-sm text-text-secondary">Give your shop a name and identity. You can add a cover image and refine the storefront after creation.</p></CardHeader><CardContent>
             <form onSubmit={createStore} className="space-y-4">
-              <Input label="Business name" value={storeForm.business_name} onChange={(event) => updateStore('business_name', event.target.value)} required />
-              <Input label="Store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
-              <Input label="Store URL slug (editable)" value={storeForm.slug} onChange={(event) => updateStore('slug', event.target.value.toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-').replace(/[_-]+/g, '-').replace(/^-|-$/g, ''))} placeholder="Leave blank to generate from store name" />
+              <Input label="Business / store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
+              <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Store URL slug</label><Input value={storeForm.slug || 'your-store-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. Use letters, numbers and hyphens; the URL updates as you type.</p></div>
               <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
               <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
               <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
               {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
               {showOperationalFields()}
-              {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={storeForm.same_as_business_address} onChange={(event) => updateStore('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
-              <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
+                            <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
               <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
             </form>
           </CardContent></Card>
@@ -416,9 +415,8 @@ export function LiveVendorOnboarding() {
       {stage === 'profile_setup' && needsService && (
         <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Wrench className="h-5 w-5 text-primary" /> Create your service profile</CardTitle></CardHeader><CardContent>
           <form onSubmit={createService} className="space-y-4">
-            <Input label="Business name" value={serviceForm.business_name} onChange={(event) => updateService('business_name', event.target.value)} required />
-            <Input label="Service title" value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
-            <Input label="Service URL slug (editable)" value={serviceForm.slug} onChange={(event) => updateService('slug', event.target.value)} placeholder="Leave blank to generate from service title" />
+            <Input label="Business / service name" value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
+            <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Public URL slug</label><Input value={serviceForm.slug || 'your-business-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name.</p></div>
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
@@ -439,8 +437,7 @@ export function LiveVendorOnboarding() {
                 </label>
               ))}
             </fieldset>
-            {(serviceForm.location_mode === 'physical' || serviceForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={serviceForm.same_as_business_address} onChange={(event) => updateService('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
-            <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
+                        <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
             <Input label="Business WhatsApp number" value={serviceForm.contact_whatsapp} onChange={(event) => updateService('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
           </form>
