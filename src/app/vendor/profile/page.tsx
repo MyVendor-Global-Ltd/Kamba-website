@@ -11,6 +11,7 @@ interface BusinessProfile {
   business_name?: string | null
   business_slug?: string | null
   location_mode?: string | null
+  location_visibility?: 'private' | 'public' | null
   location_text?: string | null
   service_area_text?: string | null
   online_url?: string | null
@@ -105,7 +106,7 @@ export default function VendorProfilePage() {
   if (!profile) {
     return (
       <div className="container mx-auto max-w-4xl space-y-4 px-4 py-12">
-        <h1 className="font-display text-3xl font-bold text-text-primary">Vendor profile</h1>
+        <h1 className="font-display text-3xl font-bold text-text-primary">Business settings</h1>
         <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error || 'No vendor profile was returned.'}</p>
         <Button variant="outline" onClick={() => void loadProfile()}>Retry</Button>
       </div>
@@ -135,7 +136,7 @@ export default function VendorProfilePage() {
           <div><p className="text-xs text-text-tertiary">Vendor type</p><p className="mt-1 font-medium capitalize text-text-primary">{profile.vendor_type}</p></div>
           <div><p className="text-xs text-text-tertiary">Verification status</p><p className="mt-1 font-medium capitalize text-text-primary">{verification.replaceAll('_', ' ')}</p></div>
           <div><p className="text-xs text-text-tertiary">Account status</p><p className="mt-1 font-medium text-text-primary">{profile.is_banned ? 'Restricted' : profile.is_active ? 'Active' : 'Inactive'}</p></div>
-          <div><p className="text-xs text-text-tertiary">Business location</p><p className="mt-1 font-medium text-text-primary">{business?.location_text || business?.service_area_text || business?.online_url || 'Not provided'}</p></div>
+          <div><p className="text-xs text-text-tertiary">Business / pickup location</p><p className="mt-1 font-medium text-text-primary">{business?.location_text || business?.service_area_text || business?.online_url || 'Not provided'}</p>{business?.location_text && <p className="mt-1 text-xs text-text-tertiary">Exact address is {business.location_visibility === 'public' ? 'visible on public pages' : 'hidden from public pages'}.</p>}</div>
           {store && <div className="space-y-1"><p className="text-xs text-text-tertiary">Storefront</p><p className="font-medium text-text-primary">{store.store_name}</p>{store.category && <p className="text-sm text-text-secondary">{store.category}</p>}{store.slug && <Link className="text-sm text-primary underline" href={`/store/${store.slug}`}>View public store</Link>}</div>}
           {service && <div className="space-y-1"><p className="text-xs text-text-tertiary">Service profile</p><p className="font-medium text-text-primary">{service.service_title}</p>{service.category && <p className="text-sm text-text-secondary">{service.category}</p>}{service.slug && <Link className="text-sm text-primary underline" href={`/marketplace/services/${service.slug}`}>View public service page</Link>}</div>}
         </CardContent>
