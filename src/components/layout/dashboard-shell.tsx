@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Activity, Bell, ChevronLeft, ChevronRight, CreditCard, LayoutDashboard, LogOut,
-  MapPin, Menu, Package, Search, Settings, ShoppingBag, UserRound, X
+  MapPin, Menu, Package, Search, Settings, ShoppingBag, Store, UserRound, X
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
