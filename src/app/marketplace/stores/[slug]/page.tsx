@@ -15,7 +15,7 @@ type PublicStore = Store & {
   location_text?: string | null
   follower_count?: number
   users?: { username?: string; profile_picture_url?: string | null } | null
-  business_profiles?: { business_name?: string; location_mode?: string; location_text?: string | null; service_area_text?: string | null } | null
+  business_profiles?: { business_name?: string; tagline?: string | null; location_mode?: string; location_text?: string | null; service_area_text?: string | null } | null
   vendor_profiles?: { is_verified?: boolean; verification_tier?: string } | null
 }
 
@@ -50,6 +50,7 @@ export default function StoreDetailPage() {
   const [error, setError] = useState('')
   const [productsError, setProductsError] = useState('')
   const [highlightedProductId, setHighlightedProductId] = useState('')
+  const [failedCoverUrl, setFailedCoverUrl] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -93,7 +94,7 @@ export default function StoreDetailPage() {
 
   if (loading) return (
     <main className="min-h-screen w-full overflow-x-clip bg-background px-4 py-8 sm:px-8">
-      <div className="mx-auto w-full max-w-7xl"><div className="h-[48vh] min-h-[320px] animate-pulse rounded-sm bg-muted" /><div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="aspect-[4/5] animate-pulse rounded-sm bg-muted" />)}</div></div>
+      <div className="mx-auto w-full max-w-7xl"><div className="h-[48vh] min-h-[320px] animate-pulse rounded-sm bg-muted" /><div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="aspect-[4/5] animate-pulse rounded-sm bg-muted" />)}</div></div>
     </main>
   )
 
@@ -109,7 +110,8 @@ export default function StoreDetailPage() {
   )
 
   const name = store.store_name || store.name || 'Independent store'
-  const cover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url
+  const categoryCover: Record<string, string> = { 'Electronics & Gadgets': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1800&auto=format&fit=crop&q=85', 'Fashion & Clothing': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800&auto=format&fit=crop&q=85', 'Beauty & Personal Care': 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1800&auto=format&fit=crop&q=85', 'Home & Living': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1800&auto=format&fit=crop&q=85', 'Food & Groceries': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1800&auto=format&fit=crop&q=85', 'Health & Wellness': 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=1800&auto=format&fit=crop&q=85', 'Automotive': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1800&auto=format&fit=crop&q=85', 'Sports & Fitness': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1800&auto=format&fit=crop&q=85', 'Books & Stationery': 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1800&auto=format&fit=crop&q=85', 'Home Services': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1800&auto=format&fit=crop&q=85', 'Repairs & Maintenance': 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?w=1800&auto=format&fit=crop&q=85', 'Professional Services': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85', 'Education & Tutoring': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1800&auto=format&fit=crop&q=85', 'Events & Photography': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1800&auto=format&fit=crop&q=85' };
+  const cover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url || categoryCover[store.category || ''] || 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85'
   const location = store.location_text || store.business_profiles?.location_text || store.business_profiles?.service_area_text || store.city
   const username = store.users?.username ? '@' + store.users.username.replace(/^@/, '') : null
   const isVerified = store.vendor_profiles?.is_verified === true
@@ -125,11 +127,14 @@ export default function StoreDetailPage() {
             </div>
             <div className="mt-16 min-w-0 sm:mt-24 lg:my-auto lg:py-16">
               <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-bold uppercase tracking-[0.17em] text-text-secondary">
-                <span>{store.category || 'Independent label'}</span><span className="h-px w-7 bg-gold" /><span>Made close to home</span>
+                <span>{store.category || 'Independent label'}</span>
+                <span className="h-px w-7 bg-gold" />
+                <span>Made close to home</span>
                 {isVerified && <span className="inline-flex items-center gap-1 text-gold"><ShieldCheck className="h-3.5 w-3.5" />Verified seller</span>}
               </div>
               <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-text-primary">{name}</h1>
-              {store.description && <p className="mt-6 max-w-xl break-words text-sm leading-7 text-text-secondary sm:text-base">{store.description}</p>}
+              {store.business_profiles?.tagline && <p className="mt-5 max-w-xl break-words text-sm font-semibold leading-6 text-primary sm:text-base">{store.business_profiles.tagline}</p>}
+              {store.description && <p className="mt-3 max-w-xl break-words text-sm leading-7 text-text-secondary sm:text-base">{store.description}</p>}
               <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-xs text-text-secondary">
                 {location && <span className="inline-flex min-w-0 items-center gap-2"><MapPin className="h-3.5 w-3.5 shrink-0 text-gold" /><span className="break-words">{location}</span></span>}
                 {username && <span>{username}</span>}
@@ -139,9 +144,9 @@ export default function StoreDetailPage() {
             </div>
             <div className="mt-10 flex items-center justify-between gap-4 border-t border-border pt-5 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted lg:mt-0"><span>Independent business</span><span>Discover local, shop Kamba</span></div>
           </div>
-          <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-muted sm:min-h-[480px] lg:min-h-full">
-            {cover ? <img src={cover} alt={name + ' storefront'} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-muted" />}
-            <div className="absolute inset-0 bg-transparent" />
+          <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-primary sm:min-h-[480px] lg:min-h-full">
+            {cover && failedCoverUrl !== cover ? <img src={cover} alt={name + ' storefront'} onError={() => setFailedCoverUrl(cover)} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_25%,var(--gold)_0%,var(--primary)_42%,var(--primary-strong)_100%)]" />}
+            <div className="absolute inset-0 bg-gradient-to-t from-primary-strong/55 via-transparent to-primary-strong/10" />
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-8 sm:left-8 sm:right-8">
               <div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/70">The Kamba directory</p><p className="mt-1 break-words font-display text-xl font-semibold text-white sm:text-2xl">{name}</p></div>
               <span className="shrink-0 rounded-full border border-white/50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white">Local finds</span>

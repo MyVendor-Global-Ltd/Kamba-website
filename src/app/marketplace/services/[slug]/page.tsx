@@ -139,7 +139,8 @@ export default function ServiceDetailPage() {
               <ChevronLeft className="w-4 h-4" />
               All Services
             </Link>
-            <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">{service.name}</h1>
+            <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">{service.business_profiles?.business_name || service.name}</h1>
+            {service.business_profiles?.tagline && <p className="mt-2 font-semibold text-primary">{service.business_profiles.tagline}</p>}
             <p className="text-text-secondary mt-2">{service.description || 'No description available'}</p>
             <div className="flex flex-wrap items-center gap-3 mt-4">
               {service.verification_status !== 'pending' && (

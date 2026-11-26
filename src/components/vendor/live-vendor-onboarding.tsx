@@ -12,9 +12,6 @@ import { AlertCircle, CheckCircle2, Store, Wrench } from 'lucide-react'
 
 type VendorType = 'products' | 'services' | 'both'
 type LocationMode = 'physical' | 'service_area' | 'online' | 'mobile' | 'hybrid'
-type DayHours = { closed: boolean; open: string; close: string }
-type OperatingHours = Record<string, DayHours>
-const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 interface Eligibility {
   eligible: boolean
   issues: Array<{ code: string; message: string }>
@@ -83,27 +80,16 @@ export function LiveVendorOnboarding() {
   const [success, setSuccess] = useState('')
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
-  const [operatingHours, setOperatingHours] = useState<OperatingHours>({
-    monday: { closed: false, open: '09:00', close: '17:00' },
-    tuesday: { closed: false, open: '09:00', close: '17:00' },
-    wednesday: { closed: false, open: '09:00', close: '17:00' },
-    thursday: { closed: false, open: '09:00', close: '17:00' },
-    friday: { closed: false, open: '09:00', close: '17:00' },
-    saturday: { closed: false, open: '09:00', close: '17:00' },
-    sunday: { closed: true, open: '09:00', close: '17:00' },
-  })
-  const [deliveryMethod, setDeliveryMethod] = useState<'vendor_managed' | 'kamba_managed'>('vendor_managed')
-  const [deliveryAreas, setDeliveryAreas] = useState('')
-  const [vendorDeliveryFee, setVendorDeliveryFee] = useState('0')
+
   const [storePhotos, setStorePhotos] = useState<File[]>([])
   const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
   useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
   const [storeForm, setStoreForm] = useState({
-    store_name: '', slug: '', category: '', description: '',
+    store_name: '', slug: '', category: '', custom_category: '', tagline: '', description: '',
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
-    service_title: '', slug: '', category: '', description: '', price_range: '',
+    service_title: '', slug: '', category: '', custom_category: '', tagline: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public',
     contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
   })
@@ -119,14 +105,10 @@ export function LiveVendorOnboarding() {
       setEligibility(eligibilityData)
       setStatus(statusData)
       try {
-        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours; deliveryMethod?: 'vendor_managed' | 'kamba_managed'; deliveryAreas?: string; vendorDeliveryFee?: string } }>('/vendors/onboard/draft')
+        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm> } }>('/vendors/onboard/draft')
         if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
         if (saved.draft?.storeForm) setStoreForm((previous) => ({ ...previous, ...saved.draft?.storeForm }))
         if (saved.draft?.serviceForm) setServiceForm((previous) => ({ ...previous, ...saved.draft?.serviceForm }))
-        if (saved.draft?.operatingHours) setOperatingHours(saved.draft.operatingHours)
-        if (saved.draft?.deliveryMethod) setDeliveryMethod(saved.draft.deliveryMethod)
-        if (saved.draft?.deliveryAreas) setDeliveryAreas(saved.draft.deliveryAreas)
-        if (saved.draft?.vendorDeliveryFee) setVendorDeliveryFee(saved.draft.vendorDeliveryFee)
       } catch { /* Existing onboarding remains usable if draft retrieval is temporarily unavailable. */ }
       setDraftLoaded(true)
       if (statusData.vendor_type) setVendorType(statusData.vendor_type)
@@ -153,17 +135,18 @@ export function LiveVendorOnboarding() {
     const timeout = window.setTimeout(() => {
       void apiJson('/vendors/onboard/draft', {
         method: 'PUT',
-        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee } }),
+        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm } }),
       }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
     }, 700)
     return () => window.clearTimeout(timeout)
-  }, [draftLoaded, vendorType, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee])
+  }, [draftLoaded, vendorType, storeForm, serviceForm])
 
   const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
     setSubmitting(true); setError(''); setSuccess('')
     try {
       await apiJson('/vendors/onboard/basic', { method: 'POST', body: JSON.stringify({ vendor_type: vendorType }) })
+      setServiceForm((previous) => ({ ...previous, service_title: storeForm.store_name.trim(), slug: makeSlug(storeForm.store_name) }))
       const statusLoaded = await loadStatus()
       try { await refreshProfile() } catch { /* Status is authoritative for onboarding continuation. */ }
       setSuccess(statusLoaded ? 'Basic vendor profile created. Continue with your business details.' : 'Profile created, but status could not refresh. Retry to continue.')
@@ -182,11 +165,10 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
-          operating_hours: operatingHours,
-          delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
           business_name: storeForm.store_name.trim(),
           store_name: storeForm.store_name.trim(),
-          category: storeForm.category.trim(),
+          category: (storeForm.category === 'Other' ? storeForm.custom_category : storeForm.category).trim(),
+          tagline: storeForm.tagline.trim(),
           description: storeForm.description.trim(),
         }),
       })
@@ -213,11 +195,12 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
-          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility, operating_hours: operatingHours } : { operating_hours: operatingHours }),
+          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility } : {}),
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
-          slug: vendorType === 'both' && storeForm.store_name.trim() ? makeSlug(storeForm.store_name) : serviceForm.slug,
+          slug: makeSlug(storeForm.store_name),
           service_title: serviceForm.service_title.trim(),
-          category: serviceForm.category.trim(),
+          category: (serviceForm.category === 'Other' ? serviceForm.custom_category : serviceForm.category).trim(),
+          tagline: serviceForm.tagline.trim(),
           description: serviceForm.description.trim(),
           price_range: serviceForm.price_range.trim(),
         }),
@@ -267,38 +250,7 @@ export function LiveVendorOnboarding() {
     </div>
   )
 
-  const showOperationalFields = () => (
-    <div className="space-y-4 rounded-lg border border-border p-4">
-      <div>
-        <h3 className="font-semibold text-text-primary">Operating hours</h3>
-        <p className="text-xs text-text-tertiary">Set the days and times customers can reach or visit your business.</p>
-      </div>
-      <div className="space-y-2">
-        {WEEKDAYS.map((day) => (
-          <div key={day} className="grid grid-cols-[90px_1fr_1fr_auto] items-center gap-2 text-sm">
-            <span className="capitalize text-text-secondary">{day}</span>
-            <Input aria-label={day + ' opening time'} type="time" value={operatingHours[day].open} disabled={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], open: event.target.value } }))} />
-            <Input aria-label={day + ' closing time'} type="time" value={operatingHours[day].close} disabled={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], close: event.target.value } }))} />
-            <label className="flex items-center gap-1 text-xs text-text-secondary"><input type="checkbox" checked={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], closed: event.target.checked } }))} />Closed</label>
-          </div>
-        ))}
-      </div>
-      <div className="space-y-3 border-t border-border pt-4">
-        <h3 className="font-semibold text-text-primary">Delivery arrangement</h3>
-        <label className="block text-sm text-text-secondary">Who will arrange delivery?
-          <select value={deliveryMethod} onChange={(event) => setDeliveryMethod(event.target.value as 'vendor_managed' | 'kamba_managed')} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
-            <option value="vendor_managed">I will arrange delivery</option>
-            <option value="kamba_managed">Ask Kamba to arrange delivery</option>
-          </select>
-        </label>
-        {deliveryMethod === 'vendor_managed' && <>
-          <Input label="Delivery areas (comma-separated)" value={deliveryAreas} onChange={(event) => setDeliveryAreas(event.target.value)} required placeholder="e.g. Ikeja, Yaba, Surulere" />
-          <Input label="Your delivery fee (₦)" type="number" min="0" step="1" value={vendorDeliveryFee} onChange={(event) => setVendorDeliveryFee(event.target.value)} required />
-        </>}
-        {deliveryMethod === 'kamba_managed' && <p className="text-xs text-text-tertiary">Kamba will arrange a delivery provider. The delivery quote is handled separately; no provider fee is being set here.</p>}
-      </div>
-    </div>
-  )
+
 
   if (loading) return <div className="container mx-auto max-w-3xl px-4 py-16"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>
 
@@ -321,7 +273,7 @@ export function LiveVendorOnboarding() {
   const timelineStep = stage === 'not_eligible' ? 0 : stage === 'vendor_profile_required' || stage === 'liveness_required' ? 1 : stage === 'profile_setup' ? 2 : 3
   const timelineSteps = [
     { title: 'Verify account', detail: 'Email and phone' },
-    { title: 'Choose business type', detail: 'Products, services or both' },
+    { title: 'Choose business type', detail: 'Products or services' },
     { title: 'Business details', detail: 'Name, location and operations' },
     { title: 'Review and finish', detail: 'Location evidence and status' },
   ]
@@ -344,13 +296,15 @@ export function LiveVendorOnboarding() {
       {(stage === 'vendor_profile_required' || stage === 'liveness_required') && eligibility.eligible && (
         <Card variant="elevated"><CardHeader><CardTitle>Start your Basic vendor profile</CardTitle></CardHeader><CardContent>
           <form onSubmit={createBasicProfile} className="space-y-4">
-            <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
+            <Input label="Business name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
+             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Your storefront URL</label><Input value={'kamba.ng/store/' + (storeForm.slug || 'your-business-name')} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Your URL is generated automatically as you type your business name.</p></div>
+             <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
               <select value={vendorType} onChange={(event) => setVendorType(event.target.value as VendorType)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
-                <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
+                <option value="products">Products</option><option value="services">Services</option>
               </select>
             </label>
             <p className="text-xs leading-5 text-text-tertiary">You will enter one business location in the next step. This is the saved location for your business and the planned pickup point once Kamba's pickup collection flow is connected. You choose whether the exact address appears publicly.</p>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue'}</Button>
           </form>
         </CardContent></Card>
       )}
@@ -365,21 +319,17 @@ export function LiveVendorOnboarding() {
           <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5 text-primary" /> Create your storefront</CardTitle><p className="text-sm text-text-secondary">Give your shop a name and identity. You can add a cover image and refine the storefront after creation.</p></CardHeader><CardContent>
             <form onSubmit={createStore} className="space-y-4">
               <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">1. Business identity</legend>
+                <legend className="px-1 text-sm font-semibold text-text-primary">Business details</legend>
                 <Input label="Business / store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
                 <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Store URL slug</label><Input value={storeForm.slug || 'your-store-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. Use letters, numbers and hyphens; the URL updates as you type.</p></div>
                 <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
                 <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
               </fieldset>
               <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">2. Business and pickup location</legend>
+                <legend className="px-1 text-sm font-semibold text-text-primary">Business location</legend>
               <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
               {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
               {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={storeForm.location_visibility === 'public'} onChange={(event) => updateStore('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you enter can still be shown. Kamba can use the saved business location for pickup and fulfilment.</span></span></label></div>}
-              </fieldset>
-              <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">3. Operating hours and delivery</legend>
-                {showOperationalFields()}
               </fieldset>
               <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
               <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
@@ -410,7 +360,7 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createService} className="space-y-4">
             <fieldset className="space-y-4 rounded-xl border border-border p-4">
               <legend className="px-1 text-sm font-semibold text-text-primary">Service details and fulfilment</legend>
-              <Input label={vendorType === 'both' ? 'Service listing title' : 'Business name'} value={serviceForm.service_title} onChange={(event) => updateService('service_title', event.target.value)} required />
+              <div className="rounded-lg border border-border p-3"><p className="text-xs text-text-tertiary">Business name</p><p className="mt-1 font-semibold text-text-primary">{storeForm.store_name}</p><p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/store/{storeForm.slug || 'your-business-name'}</p></div>
               {vendorType === 'both' && <p className="text-xs leading-5 text-text-tertiary">Your business name is the same as the storefront name you entered earlier. This field names the service you offer, not a second business. The service URL is generated from your shared business name.</p>}
             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Public URL slug</label><Input value={serviceForm.slug || 'your-business-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name.</p></div>
             <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
@@ -419,7 +369,6 @@ export function LiveVendorOnboarding() {
             {vendorType !== 'both' && <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => { const mode = event.target.value as LocationMode; updateService('location_mode', mode); updateService('fulfilment_options', mode === 'physical' ? ['on_site'] : mode === 'online' ? ['online'] : mode === 'hybrid' ? ['on_site', 'customer_visit', 'online'] : ['customer_visit']); }} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>}
             {vendorType === 'both' ? <p className="rounded-lg border border-border p-3 text-sm text-text-secondary">Your business location, address visibility, operating hours and delivery settings are shared with the storefront you created in the previous step. You do not need to enter them again.</p> : showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
             {vendorType !== 'both' && (serviceForm.location_mode === 'physical' || serviceForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={serviceForm.location_visibility === 'public'} onChange={(event) => updateService('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. Public pages hide your street address unless you choose to publish it. Any service area you enter can still be shown.</span></span></label></div>}
-            {vendorType !== 'both' && showOperationalFields()}
             <fieldset className="space-y-2 rounded-lg border border-border p-3">
               <legend className="px-1 text-sm font-medium text-text-secondary">How will customers receive this service?</legend>
               {[
@@ -443,14 +392,14 @@ export function LiveVendorOnboarding() {
       )}
 
       {stage === 'complete' && (
-        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Vendor profile submitted</CardTitle></CardHeader><CardContent className="space-y-4">
-          <Badge variant="warning">Verification pending</Badge>
-          <p className="text-sm leading-6 text-text-secondary">Your Basic vendor profile is ready. Optional identity and business verification can be completed separately.</p>
+        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Your business is live</CardTitle></CardHeader><CardContent className="space-y-4">
+          <Badge variant="success">Storefront live</Badge>
+          <p className="text-sm leading-6 text-text-secondary">Your public business page is live. You can keep building it from your vendor dashboard. Identity and business verification are separate and can be completed later.</p>
           
           {(status?.vendor_type || vendorType) !== 'services' && !status?.location_photos_uploaded && (
             <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
-              <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
-              <p className="text-sm text-text-secondary">Choose 2–6 photos of your actual business location. These are used for the store-location verification step.</p>
+              <h3 className="font-semibold text-text-primary">Add business location photos (optional)</h3>
+              <p className="text-sm text-text-secondary">You can add 2–6 photos of your actual business location to help customers recognise your business. This is optional.</p>
               <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setStorePhotos(Array.from(event.target.files || []).slice(0, 6))} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" />
               {storePhotoPreviews.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{storePhotoPreviews.map(({ file, url }, index) => (
                 <div key={url} className="overflow-hidden rounded-lg border border-border">

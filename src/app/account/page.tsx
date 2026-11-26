@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 import { enableWebPush, disableWebPush } from '@/lib/firebase-messaging'
 import NotificationContacts from '@/components/account/NotificationContacts'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, MapPin, CreditCard, Settings, Package, Bell, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X, LayoutDashboard, ShoppingBag, Activity } from 'lucide-react'
+import { User, MapPin, CreditCard, Settings, Package, Bell, Edit, ChevronRight, ChevronDown, ChevronUp, Save, X, LayoutDashboard, ShoppingBag, Activity, Store, ArrowUpRight } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -292,6 +292,20 @@ export default function AccountPage() {
       <div className="animate-slide-up">
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {profile?.role === 'buyer' && profile.email_verified && profile.phone_verified && profile.username && (
+              <Card variant="elevated" className="overflow-hidden border-primary/30">
+                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                  <div className="flex min-w-0 items-start gap-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"><Store className="h-6 w-6" /></span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2"><h3 className="font-display text-lg font-semibold text-text-primary">Your business can be on Kamba</h3><Badge variant="gold">NEW</Badge></div>
+                      <p className="mt-1 max-w-2xl text-sm leading-6 text-text-secondary">Create your business page in a few steps. Your storefront can go live before you add your first product or service. Google indexing may take additional time after launch.</p>
+                    </div>
+                  </div>
+                  <Link href="/vendor/onboard" className="shrink-0"><Button>Start your business <ArrowUpRight className="ml-2 h-4 w-4" /></Button></Link>
+                </CardContent>
+              </Card>
+            )}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <Link replace href="/orders" className="group">
                 <Card variant="elevated" className="h-full transition-colors group-hover:border-primary/40">
