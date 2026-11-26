@@ -99,7 +99,7 @@ export function LiveVendorOnboarding() {
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
-    service_title: '', slug: '', category: '', tagline: '', description: '', price_range: '',
+    service_title: '', slug: '', category: '', custom_category: '', tagline: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public',
     contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
   })
@@ -212,7 +212,7 @@ export function LiveVendorOnboarding() {
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
           slug: makeSlug(storeForm.store_name),
           service_title: serviceForm.service_title.trim(),
-          category: serviceForm.category.trim(),
+          category: (serviceForm.category === 'Other' ? serviceForm.custom_category : serviceForm.category).trim(),
           tagline: serviceForm.tagline.trim(),
           description: serviceForm.description.trim(),
           price_range: serviceForm.price_range.trim(),
