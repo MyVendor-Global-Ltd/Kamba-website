@@ -90,9 +90,9 @@ export function VendorProductForm({
       const successfulUrls = uploadedUrls.filter(Boolean)
       if (successfulUrls.length) {
         if (expectedKind === 'image') {
-          setImages((current) => [...current.split(/\\n|,/).map((value) => value.trim()).filter(Boolean), ...successfulUrls].join('\\n'))
+          setImages((current) => [...current.split(/\n|,/).map((value) => value.trim()).filter(Boolean), ...successfulUrls].join('\n'))
         } else {
-          setVideos((current) => [...current.split(/\\n|,/).map((value) => value.trim()).filter(Boolean), ...successfulUrls].join('\\n'))
+          setVideos((current) => [...current.split(/\n|,/).map((value) => value.trim()).filter(Boolean), ...successfulUrls].join('\n'))
         }
       }
       if (failures.length) {
