@@ -178,7 +178,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   const heading = isService ? 'Service page' : 'Storefront'
   const titleLabel = isService && vendorType === 'both' ? 'Service listing name' : 'Business name'
-  const titleSlug = title.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
+  const titleSlug = title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
   const slugPreview = isService && vendorType === 'both' ? slug : titleSlug || slug
 
   if (loading) return <div className="container mx-auto max-w-3xl px-4 py-12"><div className="h-80 animate-pulse rounded-xl bg-surface-muted" /></div>
