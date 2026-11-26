@@ -189,8 +189,8 @@ function NotificationsContent() {
       )}
 
       {openedNotification && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-primary-strong/55 p-0 backdrop-blur-sm sm:items-center sm:p-5" onClick={() => setOpenedNotification(null)}>
-          <section role="dialog" aria-modal="true" aria-labelledby="notification-dialog-title" className="max-h-[min(88dvh,760px)] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-border bg-surface shadow-2xl sm:rounded-2xl" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(55,55,55,0.48)] p-4 backdrop-blur-[2px] animate-fade-in sm:p-6" onClick={() => setOpenedNotification(null)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="notification-dialog-title" className="notification-dialog-enter max-h-[min(88dvh,760px)] w-full max-w-2xl overscroll-contain overflow-y-auto rounded-2xl border border-border bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-8 sm:py-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Kamba notification</p>
               <button type="button" onClick={() => setOpenedNotification(null)} aria-label="Close message" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-text-secondary hover:bg-muted hover:text-text-primary"><X className="h-5 w-5" /></button>
