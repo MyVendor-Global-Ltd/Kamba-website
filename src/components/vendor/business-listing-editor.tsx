@@ -18,6 +18,8 @@ interface BusinessDetails {
 }
 
 interface ExistingListing {
+  slug?: string | null
+  store_image_url?: string | null
   store_name?: string | null
   service_title?: string | null
   category?: string | null
