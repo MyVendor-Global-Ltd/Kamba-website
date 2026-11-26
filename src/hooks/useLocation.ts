@@ -3,10 +3,16 @@
 import { useState, useCallback } from 'react'
 import { LocationCoords, GeolocationState } from '@/types/location'
 
-export function useLocation(): GeolocationState & { getLocation: () => void } {
+export function useLocation(): GeolocationState & { getLocation: () => void; clearLocation: () => void } {
   const [coords, setCoords] = useState<LocationCoords | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const clearLocation = useCallback(() => {
+    setCoords(null)
+    setError(null)
+    setLoading(false)
+  }, [])
 
   const getLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -27,5 +33,5 @@ export function useLocation(): GeolocationState & { getLocation: () => void } {
     )
   }, [])
 
-  return { coords, error, loading, getLocation }
+  return { coords, error, loading, getLocation, clearLocation }
 }
