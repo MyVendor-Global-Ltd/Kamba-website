@@ -185,7 +185,6 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
-          home_address: homeAddress.trim(),
           operating_hours: operatingHours,
           delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
           business_name: storeForm.store_name.trim(),
