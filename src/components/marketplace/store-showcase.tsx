@@ -129,7 +129,7 @@ export function StoreShowcase() {
             id: store.id,
             type: 'store',
             title: store.store_name || 'Local store',
-            href: '/marketplace/stores/' + store.slug,
+            href: '/store/' + store.slug,
             image: store.store_image_url || undefined,
             detail: store.location_text || undefined,
           })
