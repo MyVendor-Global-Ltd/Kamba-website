@@ -14,7 +14,6 @@ type VendorType = 'products' | 'services' | 'both'
 type LocationMode = 'physical' | 'service_area' | 'online' | 'mobile' | 'hybrid'
 type DayHours = { closed: boolean; open: string; close: string }
 type OperatingHours = Record<string, DayHours>
-const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 interface Eligibility {
   eligible: boolean
   issues: Array<{ code: string; message: string }>
@@ -84,17 +83,14 @@ export function LiveVendorOnboarding() {
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
   const [operatingHours, setOperatingHours] = useState<OperatingHours>({
-    monday: { closed: false, open: '09:00', close: '17:00' },
-    tuesday: { closed: false, open: '09:00', close: '17:00' },
-    wednesday: { closed: false, open: '09:00', close: '17:00' },
-    thursday: { closed: false, open: '09:00', close: '17:00' },
-    friday: { closed: false, open: '09:00', close: '17:00' },
-    saturday: { closed: false, open: '09:00', close: '17:00' },
-    sunday: { closed: true, open: '09:00', close: '17:00' },
+    monday: { closed: false, open: '09:00', close: '18:00' },
+    tuesday: { closed: false, open: '09:00', close: '18:00' },
+    wednesday: { closed: false, open: '09:00', close: '18:00' },
+    thursday: { closed: false, open: '09:00', close: '18:00' },
+    friday: { closed: false, open: '09:00', close: '18:00' },
+    saturday: { closed: false, open: '09:00', close: '18:00' },
+    sunday: { closed: true, open: '09:00', close: '18:00' },
   })
-  const [deliveryMethod, setDeliveryMethod] = useState<'vendor_managed' | 'kamba_managed'>('vendor_managed')
-  const [deliveryAreas, setDeliveryAreas] = useState('')
-  const [vendorDeliveryFee, setVendorDeliveryFee] = useState('0')
   const [storePhotos, setStorePhotos] = useState<File[]>([])
   const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
   useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
@@ -119,14 +115,11 @@ export function LiveVendorOnboarding() {
       setEligibility(eligibilityData)
       setStatus(statusData)
       try {
-        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours; deliveryMethod?: 'vendor_managed' | 'kamba_managed'; deliveryAreas?: string; vendorDeliveryFee?: string } }>('/vendors/onboard/draft')
+        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours } }>('/vendors/onboard/draft')
         if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
         if (saved.draft?.storeForm) setStoreForm((previous) => ({ ...previous, ...saved.draft?.storeForm }))
         if (saved.draft?.serviceForm) setServiceForm((previous) => ({ ...previous, ...saved.draft?.serviceForm }))
         if (saved.draft?.operatingHours) setOperatingHours(saved.draft.operatingHours)
-        if (saved.draft?.deliveryMethod) setDeliveryMethod(saved.draft.deliveryMethod)
-        if (saved.draft?.deliveryAreas) setDeliveryAreas(saved.draft.deliveryAreas)
-        if (saved.draft?.vendorDeliveryFee) setVendorDeliveryFee(saved.draft.vendorDeliveryFee)
       } catch { /* Existing onboarding remains usable if draft retrieval is temporarily unavailable. */ }
       setDraftLoaded(true)
       if (statusData.vendor_type) setVendorType(statusData.vendor_type)
@@ -153,11 +146,11 @@ export function LiveVendorOnboarding() {
     const timeout = window.setTimeout(() => {
       void apiJson('/vendors/onboard/draft', {
         method: 'PUT',
-        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee } }),
+        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm, operatingHours } }),
       }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
     }, 700)
     return () => window.clearTimeout(timeout)
-  }, [draftLoaded, vendorType, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee])
+  }, [draftLoaded, vendorType, storeForm, serviceForm, operatingHours])
 
   const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -269,38 +262,7 @@ export function LiveVendorOnboarding() {
     </div>
   )
 
-  const showOperationalFields = () => (
-    <div className="space-y-4 rounded-lg border border-border p-4">
-      <div>
-        <h3 className="font-semibold text-text-primary">Operating hours</h3>
-        <p className="text-xs text-text-tertiary">Set the days and times customers can reach or visit your business.</p>
-      </div>
-      <div className="space-y-2">
-        {WEEKDAYS.map((day) => (
-          <div key={day} className="grid grid-cols-[90px_1fr_1fr_auto] items-center gap-2 text-sm">
-            <span className="capitalize text-text-secondary">{day}</span>
-            <Input aria-label={day + ' opening time'} type="time" value={operatingHours[day].open} disabled={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], open: event.target.value } }))} />
-            <Input aria-label={day + ' closing time'} type="time" value={operatingHours[day].close} disabled={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], close: event.target.value } }))} />
-            <label className="flex items-center gap-1 text-xs text-text-secondary"><input type="checkbox" checked={operatingHours[day].closed} onChange={(event) => setOperatingHours((previous) => ({ ...previous, [day]: { ...previous[day], closed: event.target.checked } }))} />Closed</label>
-          </div>
-        ))}
-      </div>
-      <div className="space-y-3 border-t border-border pt-4">
-        <h3 className="font-semibold text-text-primary">Delivery arrangement</h3>
-        <label className="block text-sm text-text-secondary">Who will arrange delivery?
-          <select value={deliveryMethod} onChange={(event) => setDeliveryMethod(event.target.value as 'vendor_managed' | 'kamba_managed')} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
-            <option value="vendor_managed">I will arrange delivery</option>
-            <option value="kamba_managed">Ask Kamba to arrange delivery</option>
-          </select>
-        </label>
-        {deliveryMethod === 'vendor_managed' && <>
-          <Input label="Delivery areas (comma-separated)" value={deliveryAreas} onChange={(event) => setDeliveryAreas(event.target.value)} required placeholder="e.g. Ikeja, Yaba, Surulere" />
-          <Input label="Your delivery fee (₦)" type="number" min="0" step="1" value={vendorDeliveryFee} onChange={(event) => setVendorDeliveryFee(event.target.value)} required />
-        </>}
-        {deliveryMethod === 'kamba_managed' && <p className="text-xs text-text-tertiary">Kamba will arrange a delivery provider. The delivery quote is handled separately; no provider fee is being set here.</p>}
-      </div>
-    </div>
-  )
+
 
   if (loading) return <div className="container mx-auto max-w-3xl px-4 py-16"><div className="h-48 animate-pulse rounded-xl bg-surface-muted" /></div>
 
@@ -378,10 +340,6 @@ export function LiveVendorOnboarding() {
               <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
               {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
               {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={storeForm.location_visibility === 'public'} onChange={(event) => updateStore('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you enter can still be shown. Kamba can use the saved business location for pickup and fulfilment.</span></span></label></div>}
-              </fieldset>
-              <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">3. Operating hours and delivery</legend>
-                {showOperationalFields()}
               </fieldset>
               <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
               <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
