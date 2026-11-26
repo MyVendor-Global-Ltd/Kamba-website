@@ -31,7 +31,7 @@ function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { coords, error: locationError, loading: locating, getLocation } = useLocation()
+  const { coords, error: locationError, loading: locating, getLocation, clearLocation } = useLocation()
   const [radius, setRadius] = useState(15)
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
@@ -226,7 +226,7 @@ function SearchPageContent() {
               {coords ? "Using my location" : "Use my location"}
             </Button>
             {coords && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => window.location.assign('/search')} className="text-text-tertiary">
+              <Button type="button" variant="ghost" size="sm" onClick={clearLocation} className="text-text-tertiary">
                 <X className="w-3.5 h-3.5 mr-1" /> Clear location
               </Button>
             )}
