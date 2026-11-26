@@ -139,9 +139,8 @@ export default function AccountPage() {
     setEmailVerificationError('')
     setEmailVerificationMessage('')
     try {
-      await apiJson('/auth/otp/request', {
+      await apiJson('/auth/email/verify', {
         method: 'POST',
-        body: JSON.stringify({ user_id: profile.id, purpose: 'EMAIL_VERIFICATION', endpoint: profile.email }),
       })
       setEmailOtpSent(true)
       setEmailVerificationMessage('A verification code has been sent to ' + profile.email + '. Check your inbox and spam folder.')
@@ -154,7 +153,7 @@ export default function AccountPage() {
 
   const verifyEmailAddress = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!profile?.id || !/^\\d{6}$/.test(emailOtp)) {
+    if (!profile?.id || !/^\d{6}$/.test(emailOtp)) {
       setEmailVerificationError('Enter the 6-digit code sent to your email.')
       return
     }
@@ -162,9 +161,9 @@ export default function AccountPage() {
     setEmailVerificationError('')
     setEmailVerificationMessage('')
     try {
-      await apiJson('/auth/otp/verify', {
+      await apiJson('/auth/email/verify/confirm', {
         method: 'POST',
-        body: JSON.stringify({ user_id: profile.id, purpose: 'EMAIL_VERIFICATION', input_otp: emailOtp }),
+        body: JSON.stringify({ otp_code: emailOtp }),
       })
       setProfile((current) => current ? { ...current, email_verified: true } : current)
       updateUser({ email_verified: true })
@@ -380,7 +379,7 @@ export default function AccountPage() {
                         <Button type="button" onClick={() => void requestEmailVerification()} disabled={emailVerificationBusy}>{emailVerificationBusy ? 'Sending code…' : 'Send email verification code'}</Button>
                       ) : (
                         <form onSubmit={verifyEmailAddress} className="space-y-3">
-                          <Input label="6-digit verification code" value={emailOtp} onChange={(event) => setEmailOtp(event.target.value.replace(/\\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" required />
+                          <Input label="6-digit verification code" value={emailOtp} onChange={(event) => setEmailOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" required />
                           <div className="flex flex-wrap gap-2">
                             <Button type="submit" disabled={emailVerificationBusy || emailOtp.length !== 6}>{emailVerificationBusy ? 'Verifying…' : 'Verify email address'}</Button>
                             <Button type="button" variant="outline" onClick={() => void requestEmailVerification()} disabled={emailVerificationBusy}>Resend code</Button>
