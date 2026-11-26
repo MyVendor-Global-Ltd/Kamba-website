@@ -84,7 +84,6 @@ export function LiveVendorOnboarding() {
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
   const [homeAddress, setHomeAddress] = useState('')
-  const [privateAddressSameAsBusiness, setPrivateAddressSameAsBusiness] = useState(false)
   const [operatingHours, setOperatingHours] = useState<OperatingHours>({
     monday: { closed: false, open: '09:00', close: '17:00' },
     tuesday: { closed: false, open: '09:00', close: '17:00' },
@@ -174,27 +173,6 @@ export function LiveVendorOnboarding() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not create your vendor profile.') }
     finally { setSubmitting(false) }
   }
-  const savePrivateAddress = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!privateAddressSameAsBusiness && homeAddress.trim().length < 5) {
-      setError('Enter a valid private residential address.')
-      return
-    }
-    setSubmitting(true); setError(''); setSuccess('')
-    try {
-      await apiJson('/vendors/profile/private-address', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          home_address: homeAddress.trim(),
-          same_as_business_address: privateAddressSameAsBusiness,
-        }),
-      })
-      setSuccess('Private residential address updated.')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update the private address.')
-    } finally { setSubmitting(false) }
-  }
-
   const createStore = async (event: React.FormEvent) => {
     event.preventDefault()
     if (storeForm.location_mode === 'hybrid' && !storeForm.location_text.trim() && !storeForm.service_area_text.trim() && !storeForm.online_url.trim()) {
@@ -442,17 +420,6 @@ export function LiveVendorOnboarding() {
                         <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
             <Input label="Business WhatsApp number" value={serviceForm.contact_whatsapp} onChange={(event) => updateService('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
-          </form>
-        </CardContent></Card>
-      )}
-
-      {(stage === 'profile_setup' || stage === 'complete') && (
-        <Card variant="outlined"><CardHeader><CardTitle>Private residential address</CardTitle></CardHeader><CardContent>
-          <form onSubmit={savePrivateAddress} className="space-y-3">
-            <Input label="Home address" value={homeAddress} onChange={(event) => setHomeAddress(event.target.value)} required={!privateAddressSameAsBusiness} placeholder="Your private residential address" />
-            <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={privateAddressSameAsBusiness} onChange={(event) => setPrivateAddressSameAsBusiness(event.target.checked)} /> My home address is the same as my business address</label>
-            <p className="text-xs text-text-tertiary">This information is private and is never shown on your public store or service profile.</p>
-            <Button type="submit" variant="outline" disabled={submitting || (!privateAddressSameAsBusiness && homeAddress.trim().length < 5)}>{submitting ? 'Saving…' : 'Save private address'}</Button>
           </form>
         </CardContent></Card>
       )}
