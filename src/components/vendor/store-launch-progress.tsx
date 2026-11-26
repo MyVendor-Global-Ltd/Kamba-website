@@ -80,7 +80,7 @@ export function StoreLaunchProgress() {
     }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => { void Promise.resolve().then(load) }, [load])
 
   const activeProducts = useMemo(() => products.filter((product) => product.is_active === true && product.is_available !== false).length, [products])
   const business = firstBusiness(store?.business_profiles)
