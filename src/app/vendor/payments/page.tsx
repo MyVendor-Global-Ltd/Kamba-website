@@ -11,6 +11,8 @@ import { apiJson } from '@/lib/api'
 
 type Payment = {
   id: string
+  order_id?: string
+  order_created_at?: string
   amount?: number
   status?: string
   description?: string
@@ -198,7 +200,7 @@ export default function VendorPaymentsPage() {
         <h2 className="text-lg font-semibold text-text-primary">Payment history</h2>
         {payments.map((payment) => (
           <Card key={payment.id}><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div><h3 className="font-semibold text-text-primary">{payment.description || 'Vendor payment'}</h3><p className="mt-1 text-xs text-text-tertiary">{payment.created_at ? new Date(payment.created_at).toLocaleString('en-NG') : 'Date unavailable'}</p></div>
+            <div><h3 className="font-semibold text-text-primary">{payment.description || (payment.order_id ? `Order ${payment.order_id.slice(0, 8)}` : 'Vendor payment')}</h3><p className="mt-1 text-xs text-text-tertiary">{payment.order_created_at || payment.created_at ? new Date(payment.order_created_at || payment.created_at || '').toLocaleString('en-NG') : 'Date unavailable'}</p></div>
             <div className="text-right"><p className="font-bold text-text-primary">{formatKobo(payment.amount || 0)}</p><Badge variant={payment.status === 'paid' || payment.status === 'released' ? 'default' : 'outline'}>{payment.status || 'unknown'}</Badge></div>
           </CardContent></Card>
         ))}
