@@ -31,8 +31,10 @@ function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { coords, error: locationError, loading: locating, getLocation, clearLocation } = useLocation()
+  const { coords, locationLabel, error: locationError, loading: locating, getLocation, setLocation, clearLocation } = useLocation()
   const [radius, setRadius] = useState(15)
+  const [manualLocation, setManualLocation] = useState('')
+  const [resolvingLocation, setResolvingLocation] = useState(false)
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [activeTab, setActiveTab] = useState<'all' | 'stores' | 'services'>('all')
@@ -175,6 +177,39 @@ function SearchPageContent() {
     }
   }
 
+  const handleManualLocation = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const locationText = manualLocation.trim()
+    if (locationText.length < 3) {
+      toast({ type: 'error', title: 'Enter an area', description: 'Add a neighbourhood, town or city to find nearby results.' })
+      return
+    }
+
+    setResolvingLocation(true)
+    try {
+      const response = await apiJson<{ location: { location_text: string; lat: number; lng: number } }>('/vendors/location/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ location_text: locationText }),
+      })
+      if (!Number.isFinite(response.location?.lat) || !Number.isFinite(response.location?.lng)) {
+        throw new Error('The selected area could not be located.')
+      }
+      setLocation(
+        { lat: response.location.lat, lng: response.location.lng },
+        response.location.location_text || locationText
+      )
+      setManualLocation(response.location.location_text || locationText)
+    } catch (err) {
+      toast({
+        type: 'error',
+        title: 'Location not found',
+        description: err instanceof Error ? err.message : 'Try adding the city and state.',
+      })
+    } finally {
+      setResolvingLocation(false)
+    }
+  }
+
   const handleClear = () => {
     setQuery('')
     router.push('/search')
@@ -246,7 +281,20 @@ function SearchPageContent() {
               </select>
             </label>
           )}
-          {coords && <p className="w-full text-xs text-text-tertiary"><MapPin className="inline w-3 h-3 mr-1" />Showing nearby matches first, within {radius} km where coordinates are available.</p>}
+          {coords && <p className="w-full text-xs text-text-tertiary"><MapPin className="inline w-3 h-3 mr-1" />Around {locationLabel || "your selected location"} · showing matches within {radius} km where coordinates are available.</p>}
+          <form onSubmit={handleManualLocation} className="w-full flex flex-col sm:flex-row gap-2">
+            <Input
+              value={manualLocation}
+              onChange={(event) => setManualLocation(event.target.value)}
+              placeholder="Or enter an area, town or city (e.g. GRA, Port Harcourt)"
+              aria-label="Search around an area"
+              className="h-10"
+            />
+            <Button type="submit" variant="outline" size="sm" disabled={resolvingLocation || manualLocation.trim().length < 3}>
+              {resolvingLocation ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MapPin className="w-4 h-4 mr-2" />}
+              Use this area
+            </Button>
+          </form>
           {locationError && <p role="status" className="w-full text-xs text-text-tertiary">Location unavailable: {locationError}. You can still search without sharing your location.</p>}
         </div>
 
