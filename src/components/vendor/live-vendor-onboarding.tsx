@@ -33,16 +33,41 @@ async function fileToBase64(file: File) {
     throw new Error('Choose a JPEG, PNG or WebP image.')
   }
   if (file.size > 5 * 1024 * 1024) throw new Error('Each image must be 5 MB or smaller.')
+
+  // Resize and encode locally before sending base64 through the API. This keeps
+  // large phone-camera images from making the onboarding request unnecessarily heavy.
+  let uploadBlob: Blob = file
+  let mimeType = file.type
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const context = canvas.getContext('2d')
+    if (context) {
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      const optimized = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82))
+      if (optimized && optimized.size < file.size) {
+        uploadBlob = optimized
+        mimeType = optimized.type || 'image/webp'
+      }
+    }
+    bitmap.close()
+  } catch {
+    // Keep the original image if browser decoding or WebP encoding is unavailable.
+  }
+
   return new Promise<{ base64: string; mime_type: string }>((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : ''
       const base64 = result.split(',')[1]
       if (!base64) reject(new Error('Could not read the selected image.'))
-      else resolve({ base64, mime_type: file.type || 'image/jpeg' })
+      else resolve({ base64, mime_type: mimeType })
     }
     reader.onerror = () => reject(new Error('Could not read the selected image.'))
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(uploadBlob)
   })
 }
 
