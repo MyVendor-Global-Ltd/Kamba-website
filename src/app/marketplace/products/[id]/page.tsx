@@ -158,7 +158,6 @@ export default function ProductDetailPage() {
   const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100) : 0
   const inStock = Boolean(product.is_active && (product.in_stock ?? product.stock_quantity > 0))
   const maxQuantity = Math.max(1, product.stock_quantity || 1)
-  const isFashionProduct = /fashion|clothing|apparel|wear|shoes|footwear|bags?/i.test(product.category || '')
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#F7F7F3] text-[#202820]">
