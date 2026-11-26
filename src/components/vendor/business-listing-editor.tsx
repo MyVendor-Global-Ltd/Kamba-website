@@ -18,6 +18,8 @@ interface BusinessDetails {
 }
 
 interface ExistingListing {
+  slug?: string | null
+  store_image_url?: string | null
   store_name?: string | null
   service_title?: string | null
   category?: string | null
@@ -39,6 +41,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const endpoint = isService ? '/vendors/service' : '/vendors/store'
   const [listing, setListing] = useState<ExistingListing | null>(null)
   const [title, setTitle] = useState('')
+  const [slug, setSlug] = useState('')
+  const [storeImageUrl, setStoreImageUrl] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [priceRange, setPriceRange] = useState('')
@@ -64,6 +69,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       const business = firstBusiness(current.business_profiles)
       setListing(current)
       setTitle((isService ? current.service_title : current.store_name) || '')
+      setSlug(current.slug || '')
+      setStoreImageUrl(current.store_image_url || '')
       setCategory(current.category || '')
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
@@ -81,7 +88,48 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     }
   }, [endpoint, isService])
 
-  useEffect(() => { void loadListing() }, [loadListing])
+  useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
+
+  const uploadStoreImage = async (file: File) => {
+    if (isService) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Choose a JPEG, PNG or WebP image.')
+      return
+    }
+    if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+      setError('Your store cover image must be 5 MB or smaller.')
+      return
+    }
+
+    setUploadingImage(true)
+    setError('')
+    setSuccess('')
+    try {
+      const upload = await apiJson<{ signed_url: string; public_url: string }>('/vendors/store/image-upload-url', {
+        method: 'POST',
+        body: JSON.stringify({ mime_type: file.type }),
+      })
+      const response = await fetch(upload.signed_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!response.ok) throw new Error('The image upload failed. Please try again.')
+
+      const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', {
+        method: 'PATCH',
+        body: JSON.stringify({ store_image_url: upload.public_url }),
+      })
+      if (!updated.store) throw new Error('The server did not confirm your storefront image.')
+      setListing((current) => current ? { ...current, ...updated.store } : updated.store)
+      setStoreImageUrl(upload.public_url)
+      setSuccess('Your storefront cover image has been updated.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload your storefront image.')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -96,6 +144,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     try {
       const payload = {
         [isService ? 'service_title' : 'store_name']: title.trim(),
+        ...(!isService ? { slug: slug.trim(), store_image_url: storeImageUrl || null } : {}),
         category: category.trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
@@ -113,6 +162,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       const updated = isService ? response.service_profile : response.store
       if (!updated) throw new Error('The server did not confirm the listing update.')
       setListing(updated)
+      if (updated.slug) setSlug(updated.slug)
       setSuccess(isService ? 'Your service page has been updated.' : 'Your storefront has been updated.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save your listing.')
@@ -148,6 +198,18 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         <CardContent>
           <form onSubmit={save} className="space-y-4">
             <Input label={titleLabel} value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
+            {!isService && <div className="space-y-2"><Input label="Store URL" value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase().trim().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''))} required minLength={3} maxLength={60} /><p className="text-xs text-text-tertiary">Your public storefront address: <span className="font-medium text-text-secondary">kamba.ng/store/{slug || 'your-store-name'}</span></p></div>}
+            {!isService && <div className="space-y-3 rounded-xl border border-border p-4">
+              <div>
+                <h2 className="text-sm font-semibold text-text-primary">Storefront cover</h2>
+                <p className="mt-1 text-xs leading-5 text-text-tertiary">Choose a strong landscape or portrait image that represents your brand. JPEG, PNG or WebP · up to 5 MB.</p>
+              </div>
+              {storeImageUrl ? <img src={storeImageUrl} alt="Current storefront cover" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">Your brand image will appear here</div>}
+              <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">
+                {uploadingImage ? 'Uploading image…' : storeImageUrl ? 'Replace cover image' : 'Upload cover image'}
+                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreImage(file) }} />
+              </label>
+            </div>}
             <Input label="Category" value={category} onChange={(event) => setCategory(event.target.value)} required maxLength={100} />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={5000} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-primary" /></label>
             {isService && <Input label="Price range or starting price" value={priceRange} onChange={(event) => setPriceRange(event.target.value)} placeholder="e.g. From ₦15,000" />}
@@ -171,7 +233,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
             </div>
-            <Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>
+            <div className="flex flex-wrap items-center gap-3"><Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>{!isService && listing.slug && <a href={'/store/' + listing.slug} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">View public store ↗</a>}</div>
           </form>
         </CardContent>
       </Card>

@@ -129,7 +129,7 @@ export function StoreShowcase() {
             id: store.id,
             type: 'store',
             title: store.store_name || 'Local store',
-            href: '/marketplace/stores/' + store.slug,
+            href: '/store/' + store.slug,
             image: store.store_image_url || undefined,
             detail: store.location_text || undefined,
           })
@@ -193,6 +193,11 @@ export function StoreShowcase() {
         seen.add(key)
         return true
       })
+      // Randomize the mixed source list once per load, before splitting it into lanes.
+      for (let index = uniqueCards.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1))
+        ;[uniqueCards[index], uniqueCards[swapIndex]] = [uniqueCards[swapIndex], uniqueCards[index]]
+      }
       if (!cancelled) {
         setCards(uniqueCards)
         setLoading(false)

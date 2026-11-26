@@ -176,7 +176,7 @@ export default function MarketplacePage() {
                 )}
               </CardContent>
               <CardFooter className="pt-0">
-                <Link href={`/marketplace/stores/${store.slug}`}>
+                <Link href={`/store/${store.slug}`}>
                   <Button variant="outline" className="w-full group-hover:border-coral group-hover:text-coral transition-colors">
                     View store
                     <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

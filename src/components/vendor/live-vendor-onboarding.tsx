@@ -33,16 +33,41 @@ async function fileToBase64(file: File) {
     throw new Error('Choose a JPEG, PNG or WebP image.')
   }
   if (file.size > 5 * 1024 * 1024) throw new Error('Each image must be 5 MB or smaller.')
+
+  // Resize and encode locally before sending base64 through the API. This keeps
+  // large phone-camera images from making the onboarding request unnecessarily heavy.
+  let uploadBlob: Blob = file
+  let mimeType = file.type
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const context = canvas.getContext('2d')
+    if (context) {
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      const optimized = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82))
+      if (optimized && optimized.size < file.size) {
+        uploadBlob = optimized
+        mimeType = optimized.type || 'image/webp'
+      }
+    }
+    bitmap.close()
+  } catch {
+    // Keep the original image if browser decoding or WebP encoding is unavailable.
+  }
+
   return new Promise<{ base64: string; mime_type: string }>((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : ''
       const base64 = result.split(',')[1]
       if (!base64) reject(new Error('Could not read the selected image.'))
-      else resolve({ base64, mime_type: file.type || 'image/jpeg' })
+      else resolve({ base64, mime_type: mimeType })
     }
     reader.onerror = () => reject(new Error('Could not read the selected image.'))
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(uploadBlob)
   })
 }
 
@@ -56,6 +81,7 @@ export function LiveVendorOnboarding() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
   const [homeAddress, setHomeAddress] = useState('')
   const [privateAddressSameAsBusiness, setPrivateAddressSameAsBusiness] = useState(false)
@@ -175,7 +201,7 @@ export function LiveVendorOnboarding() {
     }
     setSubmitting(true); setError(''); setSuccess('')
     try {
-      await apiJson('/vendors/onboard/store', {
+      const created = await apiJson<{ store?: { slug?: string } }>('/vendors/onboard/store', {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
@@ -189,6 +215,7 @@ export function LiveVendorOnboarding() {
         }),
       })
       const statusLoaded = await loadStatus()
+      if (created.store?.slug) setCreatedStoreSlug(created.store.slug)
       setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
@@ -313,12 +340,13 @@ export function LiveVendorOnboarding() {
   const stage = status.stage || 'not_eligible'
   const needsStore = status?.next_step === 'create_store'
   const needsService = status?.next_step === 'create_service'
+  const previewStoreSlug = (storeForm.slug || storeForm.store_name).toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-').replace(/[_-]+/g, '-').replace(/^-|-$/g, '') || 'your-store-name'
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 px-4 py-8 lg:py-12">
       <header className="space-y-2"><p className="text-sm font-semibold uppercase tracking-wider text-primary">Sell or offer services on Kamba</p><h1 className="font-display text-3xl font-bold text-text-primary">Vendor onboarding</h1><p className="text-sm leading-6 text-text-secondary">Complete the required account and business steps. Your verification status remains pending until Kamba reviews the submitted information.</p></header>
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
-      {success && <p role="status" className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{success}</p>}
+      {success && <div role="status" className="space-y-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><p>{success}</p>{createdStoreSlug && <a href={'/store/' + createdStoreSlug} target="_blank" rel="noreferrer" className="inline-flex font-semibold underline underline-offset-4">View your public storefront: kamba.ng/store/{createdStoreSlug} ↗</a>}</div>}
 
       {(stage === 'not_eligible' || (stage === 'liveness_required' && !eligibility.eligible)) && (
         <Card variant="outlined"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-gold" /> Complete these account requirements first</CardTitle></CardHeader><CardContent className="space-y-3">
@@ -349,21 +377,40 @@ export function LiveVendorOnboarding() {
       )}
 
       {stage === 'profile_setup' && needsStore && (
-        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5 text-primary" /> Create your storefront</CardTitle></CardHeader><CardContent>
-          <form onSubmit={createStore} className="space-y-4">
-            <Input label="Business name" value={storeForm.business_name} onChange={(event) => updateStore('business_name', event.target.value)} required />
-            <Input label="Store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
-            <Input label="Store URL slug (editable)" value={storeForm.slug} onChange={(event) => updateStore('slug', event.target.value)} placeholder="Leave blank to generate from store name" />
-            <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
-            <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
-            <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
-            {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
-            {showOperationalFields()}
-            {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={storeForm.same_as_business_address} onChange={(event) => updateStore('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
-            <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
-            <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
-          </form>
-        </CardContent></Card>
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5 text-primary" /> Create your storefront</CardTitle><p className="text-sm text-text-secondary">Give your shop a name and identity. You can add a cover image and refine the storefront after creation.</p></CardHeader><CardContent>
+            <form onSubmit={createStore} className="space-y-4">
+              <Input label="Business name" value={storeForm.business_name} onChange={(event) => updateStore('business_name', event.target.value)} required />
+              <Input label="Store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
+              <Input label="Store URL slug (editable)" value={storeForm.slug} onChange={(event) => updateStore('slug', event.target.value.toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-').replace(/[_-]+/g, '-').replace(/^-|-$/g, ''))} placeholder="Leave blank to generate from store name" />
+              <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
+              <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
+              <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
+              {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
+              {showOperationalFields()}
+              {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={storeForm.same_as_business_address} onChange={(event) => updateStore('same_as_business_address', event.target.checked)} className="mt-1" /><span>My home address is the same as this business address</span></label>}
+              <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
+              <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
+            </form>
+          </CardContent></Card>
+
+          <aside className="overflow-hidden rounded-2xl bg-[#171a16] text-[#f6f2e9] shadow-xl xl:sticky xl:top-24">
+            <div className="border-b border-white/15 px-5 py-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">Your storefront preview</p>
+              <p className="mt-1 text-xs text-white/70">This is the look and address customers will start from.</p>
+            </div>
+            <div className="flex min-h-[310px] flex-col justify-end bg-[radial-gradient(ellipse_at_80%_15%,#77715e_0%,#343b31_42%,#171a16_80%)] p-6">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d5c39b]">{storeForm.category || 'Independent store'}</p>
+              <p className="mt-4 font-serif font-normal leading-[0.94] tracking-tight text-white" style={{ fontSize: 'clamp(2.4rem, 5vw, 3.6rem)' }}>{storeForm.store_name || 'Your store name'}</p>
+              <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/70">{storeForm.description || 'A short introduction to what makes your store worth discovering.'}</p>
+              <div className="mt-8 border-t border-white/20 pt-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">Your public address</p>
+                <p className="mt-2 break-all text-sm font-medium text-white">kamba.ng/store/{previewStoreSlug}</p>
+              </div>
+            </div>
+            <div className="px-5 py-4 text-xs leading-5 text-white/60">After creating your store, upload a cover image from Storefront settings to complete the editorial look.</div>
+          </aside>
+        </div>
       )}
 
       {stage === 'profile_setup' && needsService && (

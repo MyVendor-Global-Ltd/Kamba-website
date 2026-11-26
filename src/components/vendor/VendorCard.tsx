@@ -26,7 +26,7 @@ export function VendorCard({ store }: VendorCardProps) {
           {store.city && <span>{store.city}</span>}
           {store.state && <span>{store.state}</span>}
         </div>
-        <Link href={`/marketplace/stores/${store.slug}`}>
+        <Link href={`/store/${store.slug}`}>
           <a className="w-full py-2 border rounded-lg text-sm font-medium text-center hover:bg-accent">
             View store
           </a>

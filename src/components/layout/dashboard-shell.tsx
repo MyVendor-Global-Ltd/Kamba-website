@@ -27,10 +27,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     {
       label: 'Workspace',
       items: [
-        { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
         ...(isVendor
-          ? [{ label: 'Vendor workspace', href: '/vendor/dashboard', icon: Store }]
-          : [{ label: 'Become a vendor', href: '/vendor/onboard', icon: Store }]),
+          ? [
+              { label: 'Vendor dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+              { label: 'Storefront', href: '/vendor/store', icon: Store },
+              { label: 'Products & stock', href: '/vendor/products', icon: Package },
+              { label: 'Vendor orders', href: '/vendor/orders', icon: ShoppingBag },
+              { label: 'Service page', href: '/vendor/service', icon: Activity },
+              { label: 'Vendor profile', href: '/vendor/profile', icon: UserRound },
+            ]
+          : [
+              { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
+              { label: 'Become a vendor', href: '/vendor/onboard', icon: Store },
+            ]),
       ],
     },
     {
@@ -79,7 +88,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Dashboard navigation">
         {groups.map((group) => (
           <section key={group.label}>
-            {expanded && <h2 className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-text-tertiary">{group.label}</h2>}
+            {expanded && <p className="mb-2 px-3 text-[10px] leading-4 font-bold uppercase tracking-[0.14em] text-text-tertiary">{group.label}</p>}
             <div className="space-y-1">
               {group.items.map((item) => {
                 const Icon = item.icon
@@ -154,9 +163,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-text-tertiary">Kamba dashboard</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-text-tertiary">{pathname.startsWith('/vendor') ? 'Vendor workspace' : 'Your account'}</p>
                 <h1 className="truncate text-base font-semibold text-text-primary sm:text-lg">
-                  {pathname === '/account' ? (searchParams.get('tab') === 'profile' ? 'Profile & personal details' : searchParams.get('tab') === 'addresses' ? 'Delivery addresses' : searchParams.get('tab') === 'payment' ? 'Payment preferences' : searchParams.get('tab') === 'settings' ? 'Preferences & security' : 'Your dashboard') : pathname.startsWith('/orders') ? 'Your orders' : pathname.startsWith('/service-requests') ? 'Service requests' : pathname.startsWith('/notifications') ? 'Notifications' : 'Your workspace'}
+                  {pathname === '/account' ? (searchParams.get('tab') === 'profile' ? 'Profile & personal details' : searchParams.get('tab') === 'addresses' ? 'Delivery addresses' : searchParams.get('tab') === 'payment' ? 'Payment preferences' : searchParams.get('tab') === 'settings' ? 'Preferences & security' : 'Your dashboard') : pathname.startsWith('/vendor/dashboard') ? 'Vendor overview' : pathname.startsWith('/vendor/store') ? 'Storefront settings' : pathname.startsWith('/vendor/products') ? 'Products' : pathname.startsWith('/vendor/orders') ? 'Vendor orders' : pathname.startsWith('/orders') ? 'Your orders' : pathname.startsWith('/service-requests') ? 'Service requests' : pathname.startsWith('/notifications') ? 'Notifications' : pathname.startsWith('/vendor') ? 'Vendor workspace' : 'Your workspace'}
                 </h1>
               </div>
             </div>

@@ -442,7 +442,7 @@ function StoreCategoryCard({ store }: { store: StoreProfile }) {
   const imageUrl = store.logo_url || '/placeholder-store.jpg'
   
   return (
-    <Link href={`/marketplace/stores/${store.slug}`} className="group">
+    <Link href={`/store/${store.slug}`} className="group">
       <Card variant="elevated" className="h-full group-hover:border-coral/30 transition-colors">
         <div className="relative aspect-square overflow-hidden rounded-xl bg-ink-raised/30">
           <img
