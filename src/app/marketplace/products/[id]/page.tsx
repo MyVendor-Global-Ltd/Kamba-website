@@ -121,300 +121,67 @@ export default function ProductDetailPage() {
   }
 
   if (loading) {
-    return (
-      <main className="min-h-[80vh] bg-[#0D0D0D] px-4 py-6 text-white">
-        <div className="mx-auto max-w-7xl animate-pulse">
-          <div className="h-8 w-28 rounded-full bg-white/10" />
-          <div className="mt-6 h-[68vh] rounded-[2rem] bg-white/[0.06]" />
-          <div className="mt-8 h-8 w-1/3 rounded bg-white/10" />
-          <div className="mt-3 h-5 w-1/4 rounded bg-white/10" />
-        </div>
-      </main>
-    )
+    return <main className="min-h-screen bg-[#F6F5EF] px-4 py-8 text-[#1C2A21] sm:px-8"><div className="mx-auto max-w-[1440px] animate-pulse"><div className="h-4 w-36 rounded bg-[#E7E5DA]" /><div className="mt-8 grid gap-8 lg:grid-cols-[1.15fr_.85fr]"><div className="aspect-[4/5] rounded-[2rem] bg-[#E7E5DA]" /><div className="space-y-5 py-8"><div className="h-5 w-28 rounded bg-[#E7E5DA]" /><div className="h-14 w-4/5 rounded bg-[#E7E5DA]" /><div className="h-8 w-1/3 rounded bg-[#E7E5DA]" /><div className="mt-12 h-14 rounded-full bg-[#E7E5DA]" /></div></div></div></main>
   }
 
   if (!product) {
-    return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-[#0D0D0D] px-6 text-center text-white">
-        <div className="max-w-md">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
-            <ShoppingBag className="h-7 w-7 text-white/60" />
-          </div>
-          <h1 className="text-2xl font-semibold">Product unavailable</h1>
-          <p className="mt-3 text-sm leading-6 text-white/55">{error || "The product you're looking for doesn't exist or has been removed."}</p>
-          <Link href="/marketplace/products" className="mt-7 inline-flex h-12 items-center rounded-full bg-white px-6 text-sm font-semibold text-[#111] transition hover:bg-white/85">
-            Browse products
-          </Link>
-        </div>
-      </main>
-    )
+    return <main className="flex min-h-[70vh] items-center justify-center bg-[#F6F5EF] px-6 text-center text-[#1C2A21]"><div className="max-w-md"><div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#E8F0E9]"><ShoppingBag className="h-7 w-7 text-[#24543B]" /></div><h1 className="text-3xl font-semibold">Product unavailable</h1><p className="mt-3 text-sm leading-6 text-[#56645A]">{error || "The product you're looking for doesn't exist or has been removed."}</p><Link href="/marketplace/products" className="mt-7 inline-flex h-12 items-center rounded-full bg-[#24543B] px-6 text-sm font-semibold text-white transition hover:bg-[#173D2A]">Browse products</Link></div></main>
   }
 
   const images = product.images?.length ? product.images : product.image_url ? [product.image_url] : []
   const hasDiscount = Boolean(product.compare_at_price && product.compare_at_price > product.price)
-  const discountPercent = hasDiscount
-    ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)
-    : 0
+  const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100) : 0
   const inStock = Boolean(product.is_active && (product.in_stock ?? product.stock_quantity > 0))
   const maxQuantity = Math.max(1, product.stock_quantity || 1)
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#0D0D0D] text-white">
-      {/* Editorial image stage. The image and gradient are one continuous surface. */}
-      <section className="relative isolate min-h-[790px] h-[min(94svh,1040px)] bg-[#0D0D0D] sm:min-h-[850px]">
-        {images.length > 0 ? (
-          <img
-            src={images[Math.min(selectedImage, images.length - 1)]}
-            alt={product.name}
-            fetchPriority="high"
-            className="absolute inset-0 h-full w-full object-cover object-center"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_50%_35%,#344238_0%,#17221b_42%,#0D0D0D_78%)]">
-            <ShoppingBag className="h-16 w-16 text-white/20" />
-          </div>
-        )}
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(13,13,13,.22) 0%, transparent 24%, rgba(13,13,13,.08) 42%, rgba(13,13,13,.78) 68%, #0D0D0D 94%)',
-          }}
-        />
-
-        {/* Floating image controls */}
-        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8 lg:px-12">
-          <Link
-            href="/marketplace/products"
-            aria-label="Back to products"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+    <main className="min-h-screen overflow-hidden bg-[#F6F5EF] text-[#1C2A21]">
+      <div className="mx-auto max-w-[1600px] px-4 pt-5 sm:px-8 lg:px-12">
+        <div className="flex items-center justify-between border-b border-[#DCD9CE] pb-4">
+          <Link href="/marketplace/products" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[.13em] text-[#56645A] transition hover:text-[#24543B]"><ArrowLeft className="h-4 w-4" /> Back to products</Link>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share product"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
-            >
-              <Share2 className="h-[18px] w-[18px]" />
-            </button>
-            <button
-              type="button"
-              onClick={handleToggleWishlist}
-              aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
-              aria-pressed={isSaved}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
-            >
-              <Heart className={`h-[18px] w-[18px] ${isSaved ? 'fill-current text-rose-300' : ''}`} />
-            </button>
-            <Link
-              href="/cart"
-              aria-label="Open cart"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/45"
-            >
-              <ShoppingBag className="h-[18px] w-[18px]" />
-            </Link>
+            <button type="button" onClick={handleShare} aria-label="Share product" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#DCD9CE] text-[#24543B] transition hover:bg-[#E8F0E9]"><Share2 className="h-[17px] w-[17px]" /></button>
+            <button type="button" onClick={handleToggleWishlist} aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={isSaved} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#DCD9CE] text-[#24543B] transition hover:bg-[#E8F0E9]"><Heart className={'h-[17px] w-[17px] ' + (isSaved ? 'fill-current text-[#A94338]' : '')} /></button>
+            <Link href="/cart" aria-label="Open cart" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#DCD9CE] text-[#24543B] transition hover:bg-[#E8F0E9]"><ShoppingBag className="h-[17px] w-[17px]" /></Link>
           </div>
-        </div>
-
-        {hasDiscount && (
-          <div className="absolute left-5 top-24 z-10 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-white backdrop-blur-xl sm:left-9">
-            Save {discountPercent}%
-          </div>
-        )}
-
-        {/* Product card floats across the gradient boundary */}
-        <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-[1440px] px-4 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-12">
-          <div className="max-w-2xl rounded-[1.75rem] border border-white/[0.14] bg-[rgba(255,255,255,0.085)] p-5 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-2xl sm:p-7 lg:p-8">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              {product.category && (
-                <span className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/65">{product.category}</span>
-              )}
-              {product.category && <span className="h-1 w-1 rounded-full bg-white/35" />}
-              <span className={`text-[10px] font-semibold uppercase tracking-[.18em] ${inStock ? 'text-[#B8D8C1]' : 'text-white/45'}`}>
-                {inStock ? 'Available now' : 'Currently unavailable'}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <h1 className="max-w-xl text-[clamp(2rem,6vw,4.15rem)] font-bold uppercase leading-[.94] tracking-[-.055em] text-white [font-family:var(--font-display)]">
-                {product.name}
-              </h1>
-              <div className="shrink-0 pb-1 text-right">
-                <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{formatKobo(product.price)}</p>
-                {hasDiscount && <p className="mt-0.5 text-xs text-white/45 line-through">{formatKobo(product.compare_at_price!)}</p>}
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex h-12 w-fit items-center rounded-full border border-white/15 bg-black/15 px-1">
-                <button
-                  type="button"
-                  aria-label="Decrease quantity"
-                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                  disabled={quantity <= 1}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/10 disabled:opacity-30"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{quantity}</span>
-                <button
-                  type="button"
-                  aria-label="Increase quantity"
-                  onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}
-                  disabled={quantity >= maxQuantity || !inStock}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/10 disabled:opacity-30"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={addingToCart || !inStock}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#F5F2E9] px-7 text-xs font-extrabold uppercase tracking-[.16em] text-[#17251C] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-w-[220px]"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                {addingToCart ? 'Adding to cart…' : inStock ? 'Add to cart' : 'Out of stock'}
-              </button>
-            </div>
-            <div className="mt-4 flex items-center justify-between gap-4 text-[10px] uppercase tracking-[.14em] text-white/45">
-              <span>{product.stock_quantity > 0 ? `${product.stock_quantity} available` : 'Limited availability'}</span>
-              <span className="flex items-center gap-1.5"><PackageCheck className="h-3.5 w-3.5" /> Delivery options at checkout</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Gallery position indicator */}
-        {images.length > 1 && (
-          <div className="absolute bottom-7 right-5 z-20 hidden items-center gap-2 sm:flex lg:right-12">
-            <button
-              type="button"
-              onClick={() => setSelectedImage((value) => value === 0 ? images.length - 1 : value - 1)}
-              aria-label="Previous product image"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-xl hover:bg-black/50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-12 text-center text-xs tabular-nums text-white/75">{selectedImage + 1} / {images.length}</span>
-            <button
-              type="button"
-              onClick={() => setSelectedImage((value) => value === images.length - 1 ? 0 : value + 1)}
-              aria-label="Next product image"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-xl hover:bg-black/50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* The page continues in the same dark canvas; no hard image-to-content edge. */}
-      <div className="mx-auto max-w-[1440px] px-4 pb-20 sm:px-8 lg:px-12">
-        {images.length > 1 && (
-          <section aria-label="More product photos" className="-mt-1 flex gap-3 overflow-x-auto pb-8 pt-2">
-            {images.map((image, index) => (
-              <button
-                key={image + index}
-                type="button"
-                onClick={() => setSelectedImage(index)}
-                aria-label={`View product image ${index + 1}`}
-                aria-current={selectedImage === index ? 'true' : undefined}
-                className={`h-20 w-16 shrink-0 overflow-hidden rounded-xl border transition sm:h-24 sm:w-20 ${selectedImage === index ? 'border-white/80 opacity-100' : 'border-white/10 opacity-55 hover:opacity-90'}`}
-              >
-                <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </section>
-        )}
-
-        <div className="grid gap-12 border-t border-white/10 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.62fr)] lg:gap-24 lg:py-16">
-          <section>
-            <p className="text-[10px] font-bold uppercase tracking-[.24em] text-[#A8C6AE]">The details</p>
-            <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight tracking-[-.04em] text-white sm:text-4xl">
-              Made to stand out. Chosen to fit your life.
-            </h2>
-            {product.description ? (
-              <p className="mt-6 max-w-2xl whitespace-pre-wrap text-sm leading-8 text-white/60 sm:text-base">{product.description}</p>
-            ) : (
-              <p className="mt-6 text-sm leading-7 text-white/45">More information about this product has not been provided by the seller yet.</p>
-            )}
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-white/45">
-              {product.review_count ? (
-                <span className="flex items-center gap-2">
-                  <Star className="h-4 w-4 fill-[#D0AD68] text-[#D0AD68]" />
-                  <strong className="font-semibold text-white">{Number(product.average_rating || 0).toFixed(1)}</strong>
-                  {product.review_count} reviews
-                </span>
-              ) : <span>No reviews yet</span>}
-              {product.tags?.length ? product.tags.slice(0, 4).map((tag) => (
-                <span key={tag} className="rounded-full border border-white/10 px-3 py-1.5">{tag}</span>
-              )) : null}
-            </div>
-          </section>
-
-          <aside className="space-y-5">
-            <div className="border-t border-white/15 pt-5">
-              <p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/40">Availability</p>
-              <p className="mt-2 text-lg font-medium text-white">{inStock ? 'Ready to order' : 'Currently unavailable'}</p>
-              <p className="mt-1 text-sm leading-6 text-white/45">Delivery options, pickup availability and applicable fees are confirmed at checkout before payment.</p>
-            </div>
-            {product.store_name && (
-              <div className="border-t border-white/15 pt-5">
-                <p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/40">Sold by</p>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#26382C] text-lg font-semibold text-[#B8D8C1]">
-                    {product.store_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-white">{product.store_name}</p>
-                    <p className="mt-0.5 text-xs text-white/40">Kamba storefront</p>
-                  </div>
-                  <Link
-                    href={`/store/${product.store_slug || product.store_id}`}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-semibold text-white transition hover:bg-white/10"
-                  >
-                    <Store className="h-3.5 w-3.5" /> Visit
-                  </Link>
-                </div>
-              </div>
-            )}
-          </aside>
-        </div>
-
-        {product.videos && product.videos.length > 0 && (
-          <section className="border-t border-white/10 py-10 sm:py-14">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#A8C6AE]">Watch it</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Product in motion</h2>
-              </div>
-              <Play className="mb-1 h-5 w-5 text-white/40" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {product.videos.map((videoUrl) => (
-                <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-2xl border border-white/10 bg-black">
-                  <source src={videoUrl} />
-                  Your browser does not support embedded videos.
-                </video>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="flex flex-col items-start justify-between gap-4 border-t border-white/10 py-8 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-sm font-semibold text-white">Still looking?</p>
-            <p className="mt-1 text-xs text-white/45">Explore more finds from Kamba sellers.</p>
-          </div>
-          <Link href="/marketplace/products" className="inline-flex h-11 items-center rounded-full border border-white/20 px-5 text-xs font-semibold uppercase tracking-[.12em] text-white transition hover:bg-white/10">
-            Explore products <ChevronRight className="ml-2 h-4 w-4" />
-          </Link>
         </div>
       </div>
+
+      <section className="mx-auto grid max-w-[1600px] items-start gap-8 px-4 pb-14 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,.82fr)] lg:gap-12 lg:px-12 lg:pb-24 lg:pt-10">
+        <div className="min-w-0">
+          <div className="relative overflow-hidden rounded-[1.5rem] bg-[#EAE8DE] sm:rounded-[2rem]">
+            <div className="absolute left-5 top-5 z-10 flex flex-wrap items-center gap-2 sm:left-7 sm:top-7">
+              {product.category && <span className="rounded-full border border-white/70 bg-[#F6F5EF]/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#24543B] backdrop-blur">{product.category}</span>}
+              {hasDiscount && <span className="rounded-full bg-[#24543B] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.13em] text-white">Save {discountPercent}%</span>}
+            </div>
+            {images.length > 0 ? <img src={images[Math.min(selectedImage, images.length - 1)]} alt={product.name} fetchPriority="high" className="aspect-[4/5] max-h-[78svh] w-full object-cover object-center sm:aspect-[5/5.5] lg:aspect-[.91/1] lg:max-h-[none]" /> : <div className="flex aspect-[4/5] items-center justify-center bg-[radial-gradient(ellipse_at_50%_40%,#F7F5EC_0%,#E4E5D9_72%)]"><ShoppingBag className="h-16 w-16 text-[#24543B]/20" /></div>}
+            {images.length > 1 && <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-[#1C2A21]/45 to-transparent px-5 pb-5 pt-14 sm:px-7 sm:pb-7"><span className="text-xs font-medium tracking-[.12em] text-white">{String(selectedImage + 1).padStart(2, '0')} <span className="text-white/60">/ {String(images.length).padStart(2, '0')}</span></span><div className="flex gap-2"><button type="button" onClick={() => setSelectedImage((value) => value === 0 ? images.length - 1 : value - 1)} aria-label="Previous product image" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/55 bg-white/15 text-white backdrop-blur transition hover:bg-white/30"><ChevronLeft className="h-4 w-4" /></button><button type="button" onClick={() => setSelectedImage((value) => value === images.length - 1 ? 0 : value + 1)} aria-label="Next product image" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/55 bg-white/15 text-white backdrop-blur transition hover:bg-white/30"><ChevronRight className="h-4 w-4" /></button></div></div>}
+          </div>
+          {images.length > 1 && <div aria-label="More product photos" className="mt-4 flex gap-3 overflow-x-auto pb-2">{images.map((image, index) => <button key={image + index} type="button" onClick={() => setSelectedImage(index)} aria-label={'View product image ' + (index + 1)} aria-current={selectedImage === index ? 'true' : undefined} className={'h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-24 sm:w-20 ' + (selectedImage === index ? 'border-[#24543B]' : 'border-transparent opacity-65 hover:opacity-100')}><img src={image} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}</div>}
+        </div>
+
+        <div className="min-w-0 lg:sticky lg:top-8 lg:pt-5">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#8A7650]"><span className="h-px w-7 bg-[#B68B3B]" /> A considered find</div>
+          <div className="mt-5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.16em] text-[#56645A]"><span className={'h-2 w-2 rounded-full ' + (inStock ? 'bg-[#347354]' : 'bg-[#A94338]')} />{inStock ? 'Available to order' : 'Currently unavailable'}</div>
+          <h1 className="mt-4 max-w-2xl text-[clamp(2.5rem,5.4vw,5.4rem)] font-medium leading-[.98] tracking-[-.055em] text-[#173D2A] [font-family:Georgia,'Times_New_Roman',serif]">{product.name}</h1>
+          <div className="mt-7 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-[#DCD9CE] pb-7"><p className="text-2xl font-semibold tracking-tight text-[#24543B] sm:text-[2rem]">{formatKobo(product.price)}</p>{hasDiscount && <p className="text-sm text-[#7D897F] line-through">{formatKobo(product.compare_at_price!)}</p>}</div>
+          {product.description && <p className="mt-7 max-w-xl whitespace-pre-wrap text-sm leading-8 text-[#56645A] sm:text-[15px]">{product.description}</p>}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="flex h-14 w-fit items-center rounded-full border border-[#D5D2C5] bg-[#FFFDF8] px-1"><button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} disabled={quantity <= 1} className="flex h-12 w-11 items-center justify-center rounded-full text-[#24543B] transition hover:bg-[#E8F0E9] disabled:opacity-30"><Minus className="h-4 w-4" /></button><span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{quantity}</span><button type="button" aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))} disabled={quantity >= maxQuantity || !inStock} className="flex h-12 w-11 items-center justify-center rounded-full text-[#24543B] transition hover:bg-[#E8F0E9] disabled:opacity-30"><Plus className="h-4 w-4" /></button></div>
+            <button type="button" onClick={handleAddToCart} disabled={addingToCart || !inStock} className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-[#24543B] px-7 text-xs font-bold uppercase tracking-[.15em] text-white transition hover:bg-[#173D2A] disabled:cursor-not-allowed disabled:opacity-45 sm:min-w-[210px]"><ShoppingBag className="h-4 w-4" />{addingToCart ? 'Adding to cart…' : inStock ? 'Add to bag' : 'Out of stock'}</button>
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-[#7D897F]">Delivery options and applicable fees are confirmed at checkout before payment.</p>
+          <div className="mt-9 grid grid-cols-2 gap-3 border-y border-[#DCD9CE] py-5"><div><p className="text-[9px] font-bold uppercase tracking-[.17em] text-[#7D897F]">Stock</p><p className="mt-1.5 text-sm font-semibold text-[#24543B]">{inStock ? product.stock_quantity + ' available' : 'Unavailable'}</p></div><div><p className="text-[9px] font-bold uppercase tracking-[.17em] text-[#7D897F]">Shopping with</p><p className="mt-1.5 text-sm font-semibold text-[#24543B]">Kamba marketplace</p></div></div>
+          {product.store_name && <div className="mt-7 flex items-center justify-between gap-4 rounded-2xl border border-[#E2DFD4] bg-[#FFFDF8] p-4 sm:p-5"><div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E8F0E9] text-lg font-semibold text-[#24543B]">{product.store_name.charAt(0).toUpperCase()}</div><div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[.16em] text-[#7D897F]">Sold by</p><p className="mt-1 truncate text-sm font-semibold text-[#1C2A21]">{product.store_name}</p></div></div><Link href={'/store/' + (product.store_slug || product.store_id)} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#D5D2C5] px-4 text-[10px] font-bold uppercase tracking-[.1em] text-[#24543B] transition hover:bg-[#E8F0E9]"><Store className="h-3.5 w-3.5" /> Visit shop</Link></div>}
+          {product.review_count ? <div className="mt-6 flex items-center gap-2 text-xs text-[#56645A]"><Star className="h-4 w-4 fill-[#B68B3B] text-[#B68B3B]" /><strong className="text-[#24543B]">{Number(product.average_rating || 0).toFixed(1)}</strong><span>{product.review_count} reviews</span></div> : <p className="mt-6 text-xs text-[#7D897F]">No reviews yet</p>}
+        </div>
+      </section>
+
+      <section className="border-y border-[#E3E0D6] bg-[#EFEEE6]"><div className="mx-auto grid max-w-[1600px] gap-8 px-4 py-12 sm:px-8 sm:py-16 lg:grid-cols-[.7fr_1.3fr] lg:gap-20 lg:px-12 lg:py-24"><div><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#8A7650]"><span className="h-px w-7 bg-[#B68B3B]" /> Product notes</p><h2 className="mt-4 max-w-md text-4xl font-medium leading-[1.04] tracking-[-.045em] text-[#173D2A] sm:text-5xl [font-family:Georgia,'Times_New_Roman',serif]">The details matter.</h2></div><div className="max-w-3xl">{product.description ? <p className="whitespace-pre-wrap text-sm leading-8 text-[#56645A] sm:text-base">{product.description}</p> : <p className="text-sm leading-8 text-[#56645A]">More information about this product has not been provided by the seller yet.</p>}{product.tags?.length ? <div className="mt-7 flex flex-wrap gap-2">{product.tags.slice(0, 8).map((tag) => <span key={tag} className="rounded-full border border-[#D5D2C5] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.08em] text-[#56645A]">{tag}</span>)}</div> : null}</div></div></section>
+
+      {product.videos && product.videos.length > 0 && <section className="mx-auto max-w-[1600px] px-4 py-12 sm:px-8 sm:py-16 lg:px-12"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#8A7650]">See it closer</p><h2 className="mt-2 text-3xl font-medium text-[#173D2A] [font-family:Georgia,'Times_New_Roman',serif]">Product in motion</h2></div><Play className="mb-1 h-5 w-5 text-[#8A7650]" /></div><div className="grid gap-4 sm:grid-cols-2">{product.videos.map((videoUrl) => <video key={videoUrl} controls preload="metadata" playsInline className="w-full rounded-2xl border border-[#DCD9CE] bg-[#EAE8DE]"><source src={videoUrl} />Your browser does not support embedded videos.</video>)}</div></section>}
+
+      <div className="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-4 border-t border-[#DCD9CE] px-4 py-8 sm:flex-row sm:items-center sm:px-8 lg:px-12"><div><p className="text-sm font-semibold text-[#1C2A21]">Something else caught your eye?</p><p className="mt-1 text-xs text-[#7D897F]">Explore more finds from independent Kamba sellers.</p></div><Link href="/marketplace/products" className="inline-flex h-11 items-center rounded-full border border-[#BFC5B9] px-5 text-xs font-bold uppercase tracking-[.12em] text-[#24543B] transition hover:bg-[#E8F0E9]">Explore products <ChevronRight className="ml-2 h-4 w-4" /></Link></div>
     </main>
   )
 }
