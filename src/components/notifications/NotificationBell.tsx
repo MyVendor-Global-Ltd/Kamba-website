@@ -81,7 +81,6 @@ export function NotificationBell() {
   useEffect(() => {
     if (!state.isAuthenticated) {
       previousCount.current = null
-      setUnreadCount(0)
       return
     }
     void refreshCount()
@@ -96,21 +95,23 @@ export function NotificationBell() {
     }
   }, [state.isAuthenticated, refreshCount])
 
+  const visibleUnreadCount = state.isAuthenticated ? unreadCount : 0
+
   return (
     <Link
       href="/notifications"
-      aria-label={unreadCount > 0 ? 'Notifications, ' + unreadCount + ' unread' : 'Notifications'}
-      title={unreadCount > 0 ? unreadCount + ' unread notifications' : 'Notifications'}
+      aria-label={visibleUnreadCount > 0 ? 'Notifications, ' + visibleUnreadCount + ' unread' : 'Notifications'}
+      title={visibleUnreadCount > 0 ? visibleUnreadCount + ' unread notifications' : 'Notifications'}
       className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary"
     >
       <Bell className="h-5 w-5" />
-      {unreadCount > 0 && (
+      {visibleUnreadCount > 0 && (
         <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5 items-center justify-center" aria-hidden="true">
           <span className="absolute h-full w-full animate-ping rounded-full bg-destructive/60" />
           <span className="relative h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />
         </span>
       )}
-      <span className="sr-only" aria-live="polite">{unreadCount > 0 ? unreadCount + ' unread notifications' : 'No unread notifications'}</span>
+      <span className="sr-only" aria-live="polite">{visibleUnreadCount > 0 ? visibleUnreadCount + ' unread notifications' : 'No unread notifications'}</span>
     </Link>
   )
 }
