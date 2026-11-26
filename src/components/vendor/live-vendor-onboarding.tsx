@@ -99,11 +99,11 @@ export function LiveVendorOnboarding() {
   const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
   useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
   const [storeForm, setStoreForm] = useState({
-    store_name: '', slug: '', category: '', description: '',
+    store_name: '', slug: '', category: '', tagline: '', description: '',
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
-    service_title: '', slug: '', category: '', description: '', price_range: '',
+    service_title: '', slug: '', category: '', tagline: '', description: '', price_range: '',
     location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public',
     contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
   })
@@ -183,10 +183,11 @@ export function LiveVendorOnboarding() {
         body: JSON.stringify({
           ...storeForm,
           operating_hours: operatingHours,
-          delivery_setup: { management_method: deliveryMethod, delivery_areas: deliveryMethod === 'vendor_managed' ? deliveryAreas.split(',').map((area) => area.trim()).filter(Boolean) : [], vendor_delivery_fee: deliveryMethod === 'vendor_managed' ? Number(vendorDeliveryFee) : null },
+          delivery_setup: { management_method: 'kamba_managed', delivery_areas: [], vendor_delivery_fee: null },
           business_name: storeForm.store_name.trim(),
           store_name: storeForm.store_name.trim(),
           category: storeForm.category.trim(),
+          tagline: storeForm.tagline.trim(),
           description: storeForm.description.trim(),
         }),
       })
@@ -218,6 +219,7 @@ export function LiveVendorOnboarding() {
           slug: vendorType === 'both' && storeForm.store_name.trim() ? makeSlug(storeForm.store_name) : serviceForm.slug,
           service_title: serviceForm.service_title.trim(),
           category: serviceForm.category.trim(),
+          tagline: serviceForm.tagline.trim(),
           description: serviceForm.description.trim(),
           price_range: serviceForm.price_range.trim(),
         }),
@@ -346,11 +348,11 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createBasicProfile} className="space-y-4">
             <label className="block text-sm font-medium text-text-secondary">What will you offer on Kamba?
               <select value={vendorType} onChange={(event) => setVendorType(event.target.value as VendorType)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
-                <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
+                <option value="products">Products</option><option value="services">Services</option>
               </select>
             </label>
             <p className="text-xs leading-5 text-text-tertiary">You will enter one business location in the next step. This is the saved location for your business and the planned pickup point once Kamba's pickup collection flow is connected. You choose whether the exact address appears publicly.</p>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue'}</Button>
           </form>
         </CardContent></Card>
       )}
