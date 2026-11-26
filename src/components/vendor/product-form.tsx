@@ -59,7 +59,7 @@ export function VendorProductForm({
     if (!files.length) return
     setError('')
     setUploading(true)
-    setUploadProgress(\`Preparing \${files.length} files…\`)
+    setUploadProgress('Preparing ' + files.length + ' files…')
 
     const uploadedUrls: string[] = []
     const failures: string[] = []
@@ -76,10 +76,10 @@ export function VendorProductForm({
           if (uploaded.kind !== expectedKind) throw new Error('The selected file does not match this media field.')
           uploadedUrls[index] = uploaded.url
         } catch (err) {
-          failures.push(err instanceof Error ? err.message : \`\${file.name} failed to upload.\`)
+          failures.push(err instanceof Error ? err.message : file.name + ' failed to upload.')
         } finally {
           completed += 1
-          setUploadProgress(\`Uploading \${completed} of \${files.length}…\`)
+          setUploadProgress('Uploading ' + completed + ' of ' + files.length + '…')
         }
       }
     }
@@ -96,10 +96,10 @@ export function VendorProductForm({
         }
       }
       if (failures.length) {
-        setError(\`\${successfulUrls.length} of \${files.length} files uploaded. \${failures[0]}\`)
-        setUploadProgress(\`Uploaded \${successfulUrls.length} of \${files.length} files. You can retry the failed files.\`)
+        setError(successfulUrls.length + ' of ' + files.length + ' files uploaded. ' + failures[0])
+        setUploadProgress('Uploaded ' + successfulUrls.length + ' of ' + files.length + ' files. You can retry the failed files.')
       } else {
-        setUploadProgress(\`\${successfulUrls.length} file\${successfulUrls.length === 1 ? '' : 's'} uploaded.\`)
+        setUploadProgress(successfulUrls.length + ' file' + (successfulUrls.length === 1 ? '' : 's') + ' uploaded.')
       }
     } finally {
       setUploading(false)
