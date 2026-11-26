@@ -6,6 +6,7 @@ export interface User {
   phone?: string
   display_name?: string
   phone_verified?: boolean
+  email_verified?: boolean
   is_complete?: boolean
   is_active?: boolean
   role: 'buyer' | 'vendor' | 'admin' | 'agent'
