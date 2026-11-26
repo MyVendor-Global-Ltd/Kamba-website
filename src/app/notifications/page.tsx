@@ -198,7 +198,7 @@ function NotificationsContent() {
               <div className="mb-6 flex items-center gap-3 text-xs font-medium text-text-tertiary"><Clock3 className="h-4 w-4 text-primary" />{formatNotificationDate(openedNotification.created_at)}<span className="rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Message</span></div>
               <h2 id="notification-dialog-title" className="break-words text-2xl font-bold leading-tight tracking-tight text-text-primary sm:text-3xl">{openedNotification.title}</h2>
               <div className="mt-6 whitespace-pre-wrap break-words text-sm leading-7 text-text-secondary sm:mt-8 sm:text-base sm:leading-8">{openedNotification.body || 'There is no additional message content.'}</div>
-              <div className="mt-8 border-t border-border pt-5 text-xs text-text-tertiary">This message is now marked as read.</div>
+              <div className="mt-8 border-t border-border pt-5 text-xs text-text-tertiary">{openedNotification.read_at ? 'This message has been marked as read.' : 'Opening this message marks it as read.'}</div>
             </div>
             <div className="flex justify-end border-t border-border bg-muted/35 px-5 py-4 sm:px-8"><Button onClick={() => setOpenedNotification(null)}>Close message</Button></div>
           </section>
