@@ -22,6 +22,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const isVendor = state.user?.role === 'vendor'
+  const needsAccountVerification = Boolean(state.user && (!state.user.email_verified || !state.user.phone_verified))
 
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Discover', items: [{ label: 'Search Kamba', href: '/search', icon: Search }] },
@@ -112,7 +113,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       isActive ? 'bg-primary-soft text-primary' : 'text-text-secondary hover:bg-ink-raised/70 hover:text-text-primary'
                     )}
                   >
-                    <Icon className="h-[18px] w-[18px] shrink-0" />
+                    <span className="relative shrink-0"><Icon className="h-[18px] w-[18px]" />{needsAccountVerification && isAccountItem && requestedTab === 'profile' && <span aria-label="Email or phone verification incomplete" title="Email or phone verification incomplete" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />}</span>
                     {expanded && <span className="truncate">{item.label}</span>}
                   </button>
                 )
