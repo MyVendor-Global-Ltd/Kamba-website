@@ -203,7 +203,16 @@ export function StoreShowcase() {
     return () => { cancelled = true }
   }, [])
 
-  const lanes = useMemo(() => rows.map((_, rowIndex) => cards.filter((__, index) => index % rows.length === rowIndex)), [cards])
+  const lanes = useMemo(() => {
+    // Mix every listing type before distributing cards across the moving rows.
+    // The old source-order split grouped stores, then categories, then products.
+    const shuffled = [...cards]
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1))
+      ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
+    }
+    return rows.map((_, rowIndex) => shuffled.filter((__, index) => index % rows.length === rowIndex))
+  }, [cards])
 
   return (
     <section className="store-showcase" aria-labelledby="store-showcase-title">
