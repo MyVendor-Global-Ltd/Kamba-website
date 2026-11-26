@@ -182,58 +182,27 @@ function SearchPageContent() {
     { id: 'services', label: 'Services', icon: Briefcase, count: results.services.length },
   ]
 
-  if (!query && !loading) {
-    return (
-      <div className="container mx-auto px-4 py-16 lg:py-24 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center max-w-2xl">
-          <div className="w-20 h-20 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-6 text-coral">
-            <Search className="w-10 h-10" />
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary mb-4">Search Kamba Marketplace</h1>
-          <p className="text-text-secondary mb-8 text-lg">Find products, stores, and services from local vendors near you</p>
-          
-          <form onSubmit={handleSearch} className="relative max-w-xl mx-auto">
-            <Input
-              type="search"
-              placeholder="What are you looking for?"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="pl-12 pr-16 h-14 text-lg"
-              autoFocus
-            />
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-text-tertiary" />
-            <Button type="submit" variant="default" className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-6">
-              Search
-            </Button>
-          </form>
-
-          {/* Popular Categories */}
-          <div className="mt-12">
-            <p className="text-text-tertiary text-sm mb-4">Popular searches:</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Food', 'Services'].map((cat) => (
-                <Button key={cat} variant="ghost" size="sm" onClick={() => { setQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
-                  {cat}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
-      {/* Search Header */}
+      {/* Search Header: keep this form mounted so typing never replaces the focused input. */}
       <header className="animate-fade-in">
-        <form onSubmit={handleSearch} className="relative max-w-3xl mx-auto mb-8">
+        {!query.trim() && (
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <div className="w-20 h-20 rounded-full bg-ink-raised/50 flex items-center justify-center mx-auto mb-6 text-coral">
+              <Search className="w-10 h-10" />
+            </div>
+            <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary mb-4">Search Kamba Marketplace</h1>
+            <p className="text-text-secondary text-lg">Find products, stores, and services from local vendors near you</p>
+          </div>
+        )}
+        <form onSubmit={handleSearch} className={`relative ${!query.trim() ? 'max-w-xl' : 'max-w-3xl'} mx-auto mb-8`}>
           <Input
             type="search"
-            placeholder="Search products, stores, services..."
+            placeholder={query.trim() ? "Search products, stores, services..." : "What are you looking for?"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-12 pr-16 h-14 text-lg"
+            autoFocus={!query.trim()}
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-text-tertiary" />
           {query && (
@@ -246,7 +215,19 @@ function SearchPageContent() {
           </Button>
         </form>
 
-        {query && (
+        {!query.trim() && (
+          <div className="mt-4 mb-8 text-center">
+            <p className="text-text-tertiary text-sm mb-4">Popular searches:</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Food', 'Services'].map((cat) => (
+                <Button key={cat} variant="ghost" size="sm" onClick={() => { setQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        {query.trim() && (
           <p className="text-center text-text-secondary">
             Showing results for <span className="font-medium text-text-primary">&quot;{query}&quot;</span>
             {results.total > 0 && <span className="ml-2">({results.total} result{results.total !== 1 ? 's' : ''})</span>}
@@ -260,6 +241,8 @@ function SearchPageContent() {
         </div>
       )}
 
+      {query.trim() && (
+        <>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 animate-slide-up" style={{ animationDelay: '100ms' }} role="tablist">
         {tabs.map((tab) => (
@@ -359,6 +342,8 @@ function SearchPageContent() {
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
+      )}
+        </>
       )}
     </div>
   )
