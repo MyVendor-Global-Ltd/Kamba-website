@@ -10,7 +10,7 @@ import { useCart } from '@/hooks/useCart'
 import { useToast } from '@/components/ui/toast'
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Heart, Share2, ShoppingBag,
-  Star, Plus, Minus, Store, Play, PackageCheck,
+  Star, Plus, Minus, Store, Play,
 } from 'lucide-react'
 
 type ProductResponse = Product & {
