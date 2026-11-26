@@ -86,7 +86,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     }
   }, [endpoint, isService])
 
-  useEffect(() => { void loadListing() }, [loadListing])
+  useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
 
   const uploadStoreImage = async (file: File) => {
     if (isService) return
