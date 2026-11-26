@@ -164,6 +164,12 @@ function SearchPageContent() {
   }, [query, performSearch])
 
 
+  const updateQuery = (nextQuery: string) => {
+    // Invalidate any in-flight request as soon as the user changes the query.
+    searchSequenceRef.current += 1
+    setQuery(nextQuery)
+  }
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
@@ -173,9 +179,8 @@ function SearchPageContent() {
   }
 
   const handleClear = () => {
-    searchSequenceRef.current += 1
+    updateQuery('')
     setLoading(false)
-    setQuery('')
     router.push('/search')
     setResults({ products: [], stores: [], services: [], total: 0 })
   }
@@ -205,7 +210,7 @@ function SearchPageContent() {
             type="search"
             placeholder={query.trim() ? "Search products, stores, services..." : "What are you looking for?"}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => updateQuery(e.target.value)}
             className="pl-12 pr-16 h-14 text-lg"
             autoFocus={!query.trim()}
           />
@@ -224,7 +229,7 @@ function SearchPageContent() {
             <p className="text-text-tertiary text-sm mb-4">Popular searches:</p>
             <div className="flex flex-wrap justify-center gap-2">
               {['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Food', 'Services'].map((cat) => (
-                <Button key={cat} variant="ghost" size="sm" onClick={() => { setQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
+                <Button key={cat} variant="ghost" size="sm" onClick={() => { updateQuery(cat); router.push(`/search?q=${encodeURIComponent(cat)}`); }}>
                   {cat}
                 </Button>
               ))}
