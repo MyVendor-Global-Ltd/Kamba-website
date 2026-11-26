@@ -7,6 +7,7 @@ import { formatDateTime, formatKobo, formatOrderStatus } from '@/lib/formatting'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { StoreLaunchProgress } from '@/components/vendor/store-launch-progress'
 import { AlertCircle, Package, RefreshCw, ShoppingBag } from 'lucide-react'
 
 interface DashboardOrder {
@@ -73,6 +74,8 @@ export function LiveVendorDashboard() {
       </header>
 
       {error && <div role="alert" className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
+
+      <StoreLaunchProgress />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card variant="outlined"><CardContent className="p-5"><p className="text-sm text-text-secondary">Gross order value</p><p className="mt-2 font-display text-2xl font-bold text-text-primary">{formatKobo(grossOrderValue)}</p><p className="mt-1 text-xs text-text-tertiary">Not vendor payout or net earnings</p></CardContent></Card>
