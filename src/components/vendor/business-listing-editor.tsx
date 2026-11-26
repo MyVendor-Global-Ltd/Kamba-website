@@ -39,6 +39,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const endpoint = isService ? '/vendors/service' : '/vendors/store'
   const [listing, setListing] = useState<ExistingListing | null>(null)
   const [title, setTitle] = useState('')
+  const [slug, setSlug] = useState('')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [priceRange, setPriceRange] = useState('')
@@ -64,6 +65,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       const business = firstBusiness(current.business_profiles)
       setListing(current)
       setTitle((isService ? current.service_title : current.store_name) || '')
+      setSlug(current.slug || '')
       setCategory(current.category || '')
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
@@ -96,6 +98,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     try {
       const payload = {
         [isService ? 'service_title' : 'store_name']: title.trim(),
+        ...(!isService ? { slug: slug.trim() } : {}),
         category: category.trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
@@ -113,6 +116,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       const updated = isService ? response.service_profile : response.store
       if (!updated) throw new Error('The server did not confirm the listing update.')
       setListing(updated)
+      if (updated.slug) setSlug(updated.slug)
       setSuccess(isService ? 'Your service page has been updated.' : 'Your storefront has been updated.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save your listing.')
@@ -148,6 +152,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         <CardContent>
           <form onSubmit={save} className="space-y-4">
             <Input label={titleLabel} value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
+            {!isService && <div className="space-y-2"><Input label="Store URL" value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase().trim().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''))} required minLength={3} maxLength={60} /><p className="text-xs text-text-tertiary">Your public storefront address: <span className="font-medium text-text-secondary">kamba.ng/store/{slug || 'your-store-name'}</span></p></div>}
             <Input label="Category" value={category} onChange={(event) => setCategory(event.target.value)} required maxLength={100} />
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={5000} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-primary" /></label>
             {isService && <Input label="Price range or starting price" value={priceRange} onChange={(event) => setPriceRange(event.target.value)} placeholder="e.g. From ₦15,000" />}
@@ -171,7 +176,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
             </div>
-            <Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>
+            <div className="flex flex-wrap items-center gap-3"><Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>{!isService && listing.slug && <a href={'/store/' + listing.slug} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">View public store ↗</a>}</div>
           </form>
         </CardContent>
       </Card>
