@@ -14,14 +14,16 @@ import { isMockMode } from '@/lib/mock-api'
 import { formatKobo } from '@/lib/formatting'
 import { StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2, MapPin, LocateFixed } from 'lucide-react'
+import { useLocation } from '@/hooks/useLocation'
 
-type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[] }
+type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[]; distance_km?: number }
+type SearchService = ServiceProfile & { distance_km?: number }
 
 interface SearchResult {
   products: Product[]
   stores: SearchStore[]
-  services: ServiceProfile[]
+  services: SearchService[]
   total: number
 }
 
@@ -29,6 +31,8 @@ function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { coords, error: locationError, loading: locating, getLocation } = useLocation()
+  const [radius, setRadius] = useState(15)
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [activeTab, setActiveTab] = useState<'all' | 'stores' | 'services'>('all')
@@ -56,13 +60,13 @@ function SearchPageContent() {
       } else {
         const [productResponse, storeResponse, serviceResponse] = await Promise.all([
           apiJson<{ products: Array<Product & { original_price?: number }>; total_count: number }>('/commerce/products', {
-            params: { search: term, limit: 100, offset: 0, stock_status: 'all' },
+            params: { search: term, limit: 100, offset: 0, stock_status: 'all', sort: coords ? 'nearest' : 'newest', lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
           apiJson<{ stores: Array<StoreProfile & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores', {
-            params: { page: 1, limit: 100 },
+            params: { page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
           apiJson<{ services: Array<ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/services', {
-            params: { page: 1, limit: 100 },
+            params: { page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
         ])
 
@@ -150,7 +154,7 @@ function SearchPageContent() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, coords, radius])
 
   // Keep URL-driven searches responsive without issuing a request for every keystroke.
   useEffect(() => {
@@ -214,6 +218,33 @@ function SearchPageContent() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Search'}
           </Button>
         </form>
+
+        <div className="max-w-3xl mx-auto -mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant={coords ? "default" : "outline"} size="sm" onClick={getLocation} disabled={locating}>
+              {locating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LocateFixed className="w-4 h-4 mr-2" />}
+              {coords ? "Using my location" : "Use my location"}
+            </Button>
+            {coords && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => window.location.assign('/search')} className="text-text-tertiary">
+                <X className="w-3.5 h-3.5 mr-1" /> Clear location
+              </Button>
+            )}
+          </div>
+          {coords && (
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              Search radius
+              <select value={radius} onChange={(event) => setRadius(Number(event.target.value))} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-text-primary">
+                <option value={5}>5 km</option>
+                <option value={15}>15 km</option>
+                <option value={30}>30 km</option>
+                <option value={50}>50 km</option>
+              </select>
+            </label>
+          )}
+          {coords && <p className="w-full text-xs text-text-tertiary"><MapPin className="inline w-3 h-3 mr-1" />Showing nearby matches first, within {radius} km where coordinates are available.</p>}
+          {locationError && <p role="status" className="w-full text-xs text-text-tertiary">Location unavailable: {locationError}. You can still search without sharing your location.</p>}
+        </div>
 
         {!query.trim() && (
           <div className="mt-4 mb-8 text-center">
@@ -369,6 +400,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
           <Link href={`/store/${store.slug}`} className="font-semibold text-text-primary group-hover:text-coral transition-colors">{store.name}</Link>
           {store.category && <p className="text-xs text-text-tertiary mt-1">{store.category}</p>}
           {store.city && store.state && <p className="text-xs text-text-tertiary mt-1">{store.city}, {store.state}</p>}
+          {typeof store.distance_km === 'number' && <p className="text-xs text-text-tertiary mt-1">{store.distance_km.toFixed(1)} km away</p>}
         </div>
         {store.matching_products.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
@@ -394,7 +426,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
 }
 
 // Service Search Card
-function ServiceSearchCard({ service }: { service: ServiceProfile }) {
+function ServiceSearchCard({ service }: { service: SearchService }) {
   const imageUrl = service.logo_url || '/placeholder-service.jpg'
   
   return (
@@ -418,6 +450,7 @@ function ServiceSearchCard({ service }: { service: ServiceProfile }) {
           {service.category && (
             <Badge variant="secondary" size="sm">{service.category}</Badge>
           )}
+          {typeof service.distance_km === 'number' && <p className="text-xs text-text-tertiary">{service.distance_km.toFixed(1)} km away</p>}
           {service.city && service.state && (
             <p className="text-sm text-text-tertiary flex items-center gap-1">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
