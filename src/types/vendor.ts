@@ -47,7 +47,7 @@ export interface ServiceProfile {
   price_range?: string
   location_text?: string
   service_area_text?: string
-  business_profiles?: { business_name?: string; business_slug?: string; location_text?: string; service_area_text?: string }
+  business_profiles?: { business_name?: string; business_slug?: string; tagline?: string; location_text?: string; service_area_text?: string }
   vendor_profiles?: { verification_tier?: string; is_verified?: boolean }
 }
 
