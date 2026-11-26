@@ -205,6 +205,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         <CardContent>
           <form onSubmit={save} className="space-y-4">
             <Input label={titleLabel} value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
+            {isService && vendorType === 'both' && <p className="text-xs leading-5 text-text-tertiary">This is the service listing title, not a second business name. Your store and service share one business identity and URL base.</p>}
             <div className="space-y-2"><Input label={isService ? 'Service URL slug' : 'Store URL slug'} value={slugPreview} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. This URL cannot be edited separately.</p></div>
             {!isService && <div className="space-y-3 rounded-xl border border-border p-4">
               <div>
