@@ -11,6 +11,9 @@ import { formatKobo } from '@/lib/formatting'
 type PublicStore = Store & {
   store_name?: string
   store_image_url?: string | null
+  store_logo_url?: string | null
+  store_slideshow_images?: string[] | null
+  store_logo_in_slideshow?: boolean
   location_photos?: string[] | null
   location_text?: string | null
   follower_count?: number
@@ -51,6 +54,7 @@ export default function StoreDetailPage() {
   const [productsError, setProductsError] = useState('')
   const [highlightedProductId, setHighlightedProductId] = useState('')
   const [failedCoverUrl, setFailedCoverUrl] = useState('')
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +92,17 @@ export default function StoreDetailPage() {
   }, [slug])
 
   useEffect(() => {
+    if (!store) return
+    const images = [store.store_image_url, ...(store.store_slideshow_images || [])].filter((image): image is string => !!image)
+    const slides = [...images, ...(store.store_logo_in_slideshow && store.store_logo_url ? [store.store_logo_url] : [])]
+    if (slides.length < 2) return
+    const logoIndex = images.length
+    const duration = store.store_logo_in_slideshow && activeSlideIndex === logoIndex ? 10000 : 3000
+    const timeout = window.setTimeout(() => setActiveSlideIndex((index) => (index + 1) % slides.length), duration)
+    return () => window.clearTimeout(timeout)
+  }, [store, activeSlideIndex])
+
+  useEffect(() => {
     if (loading || !highlightedProductId) return
     document.getElementById('store-product-' + highlightedProductId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [loading, highlightedProductId, products])
@@ -111,7 +126,13 @@ export default function StoreDetailPage() {
 
   const name = store.store_name || store.name || 'Independent store'
   const categoryCover: Record<string, string> = { 'Electronics & Gadgets': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1800&auto=format&fit=crop&q=85', 'Fashion & Clothing': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800&auto=format&fit=crop&q=85', 'Beauty & Personal Care': 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1800&auto=format&fit=crop&q=85', 'Home & Living': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1800&auto=format&fit=crop&q=85', 'Food & Groceries': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1800&auto=format&fit=crop&q=85', 'Health & Wellness': 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=1800&auto=format&fit=crop&q=85', 'Automotive': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1800&auto=format&fit=crop&q=85', 'Sports & Fitness': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1800&auto=format&fit=crop&q=85', 'Books & Stationery': 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1800&auto=format&fit=crop&q=85', 'Home Services': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1800&auto=format&fit=crop&q=85', 'Repairs & Maintenance': 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?w=1800&auto=format&fit=crop&q=85', 'Professional Services': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85', 'Education & Tutoring': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1800&auto=format&fit=crop&q=85', 'Events & Photography': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1800&auto=format&fit=crop&q=85' };
-  const cover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url || categoryCover[store.category || ''] || 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85'
+  const fallbackCover = store.store_image_url || store.location_photos?.[0] || products.find((product) => product.images?.[0] || product.image_url)?.images?.[0] || products.find((product) => product.image_url)?.image_url || categoryCover[store.category || ''] || 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1800&auto=format&fit=crop&q=85'
+  const slideshowImages = store.store_slideshow_images || []
+  const slideshow = [store.store_image_url, ...slideshowImages].filter((image): image is string => !!image)
+  const logoSlideIndex = slideshow.length
+  if (store.store_logo_in_slideshow && store.store_logo_url) slideshow.push(store.store_logo_url)
+  const activeSlide = slideshow.length ? slideshow[activeSlideIndex % slideshow.length] : fallbackCover
+  const activeSlideIsLogo = !!store.store_logo_in_slideshow && !!store.store_logo_url && activeSlideIndex % slideshow.length === logoSlideIndex
   const location = store.location_text || store.business_profiles?.location_text || store.business_profiles?.service_area_text || store.city
   const username = store.users?.username ? '@' + store.users.username.replace(/^@/, '') : null
   const isVerified = store.vendor_profiles?.is_verified === true
@@ -132,6 +153,7 @@ export default function StoreDetailPage() {
                 <span>Made close to home</span>
                 {isVerified && <span className="inline-flex items-center gap-1 text-gold"><ShieldCheck className="h-3.5 w-3.5" />Verified seller</span>}
               </div>
+              {store.store_logo_url && <div className="mb-6 flex items-center gap-3"><img src={store.store_logo_url} alt={name + ' logo'} className="h-12 w-12 rounded-full border border-border bg-white object-contain p-1.5" /><span className="text-[10px] font-bold uppercase tracking-[0.16em] text-text-secondary">Official storefront</span></div>}
               <h1 className="max-w-full break-words [overflow-wrap:anywhere] font-display text-[clamp(2.7rem,8vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.065em] text-text-primary">{name}</h1>
               {store.business_profiles?.tagline && <p className="mt-5 max-w-xl break-words text-sm font-semibold leading-6 text-primary sm:text-base">{store.business_profiles.tagline}</p>}
               {store.description && <p className="mt-3 max-w-xl break-words text-sm leading-7 text-text-secondary sm:text-base">{store.description}</p>}
@@ -145,7 +167,10 @@ export default function StoreDetailPage() {
             <div className="mt-10 flex items-center justify-between gap-4 border-t border-border pt-5 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted lg:mt-0"><span>Independent business</span><span>Discover local, shop Kamba</span></div>
           </div>
           <div className="relative min-h-[360px] min-w-0 overflow-hidden bg-primary sm:min-h-[480px] lg:min-h-full">
-            {cover && failedCoverUrl !== cover ? <img src={cover} alt={name + ' storefront'} onError={() => setFailedCoverUrl(cover)} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_25%,var(--gold)_0%,var(--primary)_42%,var(--primary-strong)_100%)]" />}
+            {activeSlide && failedCoverUrl !== activeSlide ? (activeSlideIsLogo
+              ? <div className="absolute inset-0 grid place-items-center bg-white/95 p-12"><img src={activeSlide} alt={name + ' logo'} onError={() => setFailedCoverUrl(activeSlide)} className="max-h-full max-w-full object-contain" /></div>
+              : <img src={activeSlide} alt={name + ' storefront'} onError={() => setFailedCoverUrl(activeSlide)} className="absolute inset-0 h-full w-full object-cover" />)
+              : <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_25%,var(--gold)_0%,var(--primary)_42%,var(--primary-strong)_100%)]" />}
             <div className="absolute inset-0 bg-gradient-to-t from-primary-strong/55 via-transparent to-primary-strong/10" />
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-8 sm:left-8 sm:right-8">
               <div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/70">The Kamba directory</p><p className="mt-1 break-words font-display text-xl font-semibold text-white sm:text-2xl">{name}</p></div>
