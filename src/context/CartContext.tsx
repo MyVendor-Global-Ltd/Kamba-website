@@ -318,7 +318,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, persistLocalCart, refresh])
+  }, [isAuthenticatedBuyer, usesLocalCart, persistLocalCart, refresh])
 
   const clear = useCallback(async () => {
     try {
