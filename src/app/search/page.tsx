@@ -68,10 +68,10 @@ function SearchPageContent() {
             params: { search: term, limit: 100, offset: 0, stock_status: 'all', sort: coords ? 'nearest' : 'newest', lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
           apiJson<{ stores: Array<StoreProfile & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores', {
-            params: { page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
+            params: { search: term, page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
           apiJson<{ services: Array<ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/services', {
-            params: { page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
+            params: { search: term, page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
         ])
 
