@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { KambaLogo } from '@/components/layout/kamba-logo'
 import { cn } from '@/lib/utils'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 type NavItem = { label: string; href: string; icon: typeof Search }
 
@@ -174,9 +175,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Search className="h-4 w-4" /> <span>Back to search</span>
               </button>
               <ThemeToggle compact />
-              <button type="button" onClick={() => navigate('/notifications')} className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary hover:bg-ink-raised hover:text-text-primary" aria-label="Notifications" title="Notifications">
-                <Bell className="h-5 w-5" />
-              </button>
+              <NotificationBell />
             </div>
           </header>
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">

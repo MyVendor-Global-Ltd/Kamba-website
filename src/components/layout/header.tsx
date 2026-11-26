@@ -9,6 +9,7 @@ import { Bell, ChevronDown, LogOut, Menu, Search, ShoppingCart, UserRound, X } f
 import { KambaLogo } from '@/components/layout/kamba-logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { isMockMode } from '@/lib/mock-api'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Header() {
   const { state, logout } = useAuth()
@@ -49,9 +50,7 @@ export function Header() {
               {cart.itemCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">{cart.itemCount > 99 ? '99+' : cart.itemCount}</span>}
             </Link>
 
-            <Link href="/notifications" aria-label="Notifications" title="Notifications" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary">
-              <Bell className="h-5 w-5" />
-            </Link>
+            <NotificationBell />
 
             {state.isAuthenticated && (
               <Link href="/account" aria-label="Dashboard" title="Dashboard" className="hidden h-10 w-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-ink-raised hover:text-text-primary sm:inline-flex">

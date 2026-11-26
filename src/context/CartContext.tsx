@@ -157,7 +157,8 @@ function setStoredCart(cart: CartState) {
 export function CartProvider({ children }: { children: ReactNode }) {
   const { state: authState } = useAuth()
   const isAuthenticatedBuyer = authState.isAuthenticated && authState.user?.role === 'buyer'
-  const isGuest = !isMockMode && !isAuthenticatedBuyer
+  const isGuest = !isMockMode && !authState.isAuthenticated
+  const usesLocalCart = !isMockMode && !isAuthenticatedBuyer
   const [cart, setCart] = useState<CartState>(emptyCart)
   const cartRef = useRef(cart)
   const guestMergeInProgressRef = useRef(false)
@@ -235,17 +236,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!authState.isLoading && (isMockMode || (authState.isAuthenticated && authState.user?.role === 'buyer'))) void Promise.resolve().then(refresh)
   }, [authState.isAuthenticated, authState.isLoading, refresh])
 
-  const persistGuestCart = useCallback((next: CartState) => {
+  const persistLocalCart = useCallback((next: CartState) => {
     cartRef.current = next
     setCart(next)
-    setStoredGuestCart(next)
+    if (isGuest) setStoredGuestCart(next)
     setStoredCart(next)
-  }, [])
+  }, [isGuest])
 
   const addItem = useCallback(async (item: Omit<CartItem, 'id'>) => {
     try {
       setError(null)
-      if (isGuest) {
+      if (usesLocalCart) {
         const existing = cartRef.current.items.find((candidate) => candidate.product_id === item.product_id)
         const product = item.product || ({
           id: item.product_id,
@@ -263,7 +264,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
               ? { ...candidate, quantity: candidate.quantity + item.quantity }
               : candidate)
           : [...cartRef.current.items, { ...item, id: `guest-${item.product_id}`, product }]
-        persistGuestCart(createGuestCart(nextItems))
+        persistLocalCart(createGuestCart(nextItems))
         return
       }
       if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can add products to the cart.')
@@ -277,15 +278,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
+  }, [isAuthenticatedBuyer, usesLocalCart, persistLocalCart, refresh])
 
   const updateItem = useCallback(async (productId: string, quantity: number) => {
     try {
       setError(null)
-      if (isGuest) {
+      if (usesLocalCart) {
         const nextItems = cartRef.current.items
           .map((item) => item.product_id === productId ? { ...item, quantity: Math.max(1, quantity) } : item)
-        persistGuestCart(createGuestCart(nextItems))
+        persistLocalCart(createGuestCart(nextItems))
         return
       }
       if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can update the cart.')
@@ -299,14 +300,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
+  }, [isAuthenticatedBuyer, usesLocalCart, persistLocalCart, refresh])
 
   const removeItem = useCallback(async (productId: string) => {
     try {
       setError(null)
-      if (isGuest) {
+      if (usesLocalCart) {
         const nextItems = cartRef.current.items.filter((item) => item.product_id !== productId)
-        persistGuestCart(createGuestCart(nextItems))
+        persistLocalCart(createGuestCart(nextItems))
         return
       }
       if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can remove cart items.')
@@ -317,14 +318,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
+  }, [isAuthenticatedBuyer, usesLocalCart, persistLocalCart, refresh])
 
   const clear = useCallback(async () => {
     try {
       setError(null)
-      if (isGuest) {
+      if (usesLocalCart) {
         const empty = emptyCart()
-        persistGuestCart(empty)
+        persistLocalCart(empty)
         return
       }
       if (!isMockMode && !isAuthenticatedBuyer) throw new Error('Only buyer accounts can clear the cart.')
@@ -337,7 +338,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(message)
       throw err
     }
-  }, [isAuthenticatedBuyer, isGuest, persistGuestCart, refresh])
+  }, [isAuthenticatedBuyer, usesLocalCart, persistLocalCart, refresh])
 
   return (
     <CartContext.Provider value={{ cart, isGuest, isLoading, error, addItem, updateItem, removeItem, clear, refresh }}>

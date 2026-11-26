@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Bell, ArrowRight, LockKeyhole, CheckCheck, Package, Truck, ShieldCheck, Info, RefreshCw } from 'lucide-react'
+import { Bell, ArrowRight, LockKeyhole, CheckCheck, Package, Truck, ShieldCheck, Info, RefreshCw, X, Clock3 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,7 +18,6 @@ interface InboxNotification {
   read_at: string | null
   created_at: string
 }
-
 interface InboxResult {
   notifications: InboxNotification[]
   unread_count: number
@@ -53,6 +52,10 @@ function notificationIcon(type: string) {
   return Info
 }
 
+function formatNotificationDate(value: string) {
+  return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 function NotificationsContent() {
   const { addToast } = useToast()
   const [items, setItems] = useState<InboxNotification[]>([])
@@ -63,22 +66,20 @@ function NotificationsContent() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [markingAll, setMarkingAll] = useState(false)
   const [error, setError] = useState('')
+  const [openedNotification, setOpenedNotification] = useState<InboxNotification | null>(null)
 
   const loadNotifications = useCallback(async (cursor?: string, append = false) => {
     if (append) setLoadingMore(true)
     else setLoading(true)
     setError('')
     try {
-      const result = await apiJson<InboxResult>('/notifications', {
-        params: { limit: 20, before: cursor || undefined },
-      })
+      const result = await apiJson<InboxResult>('/notifications', { params: { limit: 20, before: cursor || undefined } })
       setItems((current) => append ? [...current, ...result.notifications] : result.notifications)
       setUnreadCount(result.unread_count)
       setNextCursor(result.next_cursor)
       setHasMore(result.has_more)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not load notifications.'
-      setError(message)
+      setError(err instanceof Error ? err.message : 'Could not load notifications.')
     } finally {
       setLoading(false)
       setLoadingMore(false)
@@ -87,15 +88,35 @@ function NotificationsContent() {
 
   useEffect(() => { void loadNotifications() }, [loadNotifications])
 
+  useEffect(() => {
+    if (!openedNotification) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenedNotification(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [openedNotification])
+
   const markRead = async (notification: InboxNotification) => {
     if (notification.read_at) return
     try {
-      const saved = await apiJson<InboxNotification>(`/notifications/${notification.id}/read`, { method: 'PATCH' })
+      const saved = await apiJson<InboxNotification>('/notifications/' + encodeURIComponent(notification.id) + '/read', { method: 'PATCH' })
       setItems((current) => current.map((item) => item.id === saved.id ? saved : item))
+      setOpenedNotification((current) => current?.id === saved.id ? saved : current)
       setUnreadCount((count) => Math.max(0, count - 1))
     } catch (err) {
       addToast({ type: 'error', title: 'Could not update notification', message: err instanceof Error ? err.message : 'Please try again.' })
     }
+  }
+
+  const openNotification = (notification: InboxNotification) => {
+    setOpenedNotification(notification)
+    void markRead(notification)
   }
 
   const markAllRead = async () => {
@@ -115,15 +136,15 @@ function NotificationsContent() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">Your activity</p>
-          <h2 className="mt-2 text-2xl font-bold text-text-primary sm:text-3xl">Notifications</h2>
-          <p className="mt-2 text-text-secondary">Order updates and important account activity.</p>
-          <p className="mt-2 text-sm text-text-tertiary">{unreadCount} unread</p>
+    <div className="mx-auto w-full max-w-4xl space-y-8 py-3 sm:space-y-10 sm:py-5">
+      <header className="flex flex-col justify-between gap-5 border-b border-border pb-6 sm:flex-row sm:items-end sm:pb-8">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Your activity</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">Notifications</h2>
+          <p className="mt-2 text-sm leading-6 text-text-secondary">Order updates and important account activity.</p>
+          <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-text-tertiary"><span className="h-2 w-2 rounded-full bg-destructive" />{unreadCount} unread</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => void loadNotifications()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
           <Button variant="outline" onClick={() => void markAllRead()} disabled={!unreadCount || markingAll}><CheckCheck className="mr-2 h-4 w-4" />Mark all read</Button>
         </div>
@@ -132,37 +153,57 @@ function NotificationsContent() {
       {error && <Card variant="elevated"><CardContent className="flex flex-col gap-3 p-5"><p className="text-sm text-text-secondary">{error}</p><Button variant="outline" onClick={() => void loadNotifications()}>Try again</Button></CardContent></Card>}
 
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map((item) => <Card key={item} variant="elevated"><CardContent className="flex gap-4 p-5"><div className="h-11 w-11 animate-pulse rounded-xl bg-ink-raised/60" /><div className="flex-1 space-y-2"><div className="h-4 w-1/3 animate-pulse rounded bg-ink-raised/60" /><div className="h-4 w-3/4 animate-pulse rounded bg-ink-raised/60" /></div></CardContent></Card>)}</div>
+        <div className="space-y-4">{[1, 2, 3].map((item) => <Card key={item} variant="elevated"><CardContent className="flex gap-4 p-5 sm:p-6"><div className="h-12 w-12 animate-pulse rounded-xl bg-ink-raised/60" /><div className="flex-1 space-y-3 py-1"><div className="h-4 w-1/3 animate-pulse rounded bg-ink-raised/60" /><div className="h-4 w-3/4 animate-pulse rounded bg-ink-raised/60" /></div></CardContent></Card>)}</div>
       ) : items.length ? (
-        <div className="space-y-3">
+        <div className="space-y-3 sm:space-y-4">
           {items.map((item) => {
             const Icon = notificationIcon(item.type)
+            const unread = !item.read_at
             return (
-              <Card key={item.id} variant="elevated" className={item.read_at ? '' : 'border-primary/30'}>
-                <CardContent className="flex gap-4 p-4 sm:p-5">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"><Icon className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <h3 className="font-semibold text-text-primary">{item.title}</h3>
-                      {!item.read_at && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />}
-                    </div>
-                    {item.body && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-text-secondary">{item.body}</p>}
-                    <p className="mt-3 text-xs text-text-tertiary">{new Date(item.created_at).toLocaleString()}</p>
-                    {!item.read_at && <button type="button" onClick={() => void markRead(item)} className="mt-3 text-sm font-semibold text-primary hover:underline">Mark as read</button>}
-                  </div>
+              <Card key={item.id} variant="elevated" className={unread ? 'border-l-[3px] border-l-primary bg-primary-soft/35 shadow-sm' : 'border-l-[3px] border-l-transparent opacity-75'}>
+                <CardContent className="p-0">
+                  <button type="button" onClick={() => openNotification(item)} className="flex w-full min-w-0 items-start gap-3 p-4 text-left transition-colors hover:bg-ink-raised/45 focus-visible:rounded-xl sm:gap-4 sm:p-6">
+                    <span className={'mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ' + (unread ? 'bg-primary-soft text-primary' : 'bg-muted text-text-tertiary')}><Icon className="h-5 w-5" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-3">
+                        <span className={'break-words text-sm leading-6 ' + (unread ? 'font-bold text-text-primary' : 'font-medium text-text-secondary')}>{item.title}</span>
+                        {unread && <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-destructive" aria-label="Unread" />}
+                      </span>
+                      {item.body && <span className={'mt-1 block line-clamp-2 whitespace-pre-wrap break-words text-sm leading-6 ' + (unread ? 'text-text-secondary' : 'text-text-tertiary')}>{item.body}</span>}
+                      <span className="mt-3 flex items-center gap-2 text-[11px] font-medium text-text-tertiary"><Clock3 className="h-3.5 w-3.5" />{formatNotificationDate(item.created_at)}<span className="ml-auto text-primary">Open message <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></span></span>
+                    </span>
+                  </button>
                 </CardContent>
               </Card>
             )
           })}
-          {hasMore && <div className="flex justify-center pt-3"><Button variant="outline" onClick={() => nextCursor && void loadNotifications(nextCursor, true)} disabled={loadingMore}>{loadingMore ? 'Loading…' : 'Load older notifications'}</Button></div>}
+          {hasMore && <div className="flex justify-center pt-4"><Button variant="outline" onClick={() => nextCursor && void loadNotifications(nextCursor, true)} disabled={loadingMore}>{loadingMore ? 'Loading…' : 'Load older notifications'}</Button></div>}
         </div>
       ) : (
-        <Card variant="elevated"><CardContent className="flex flex-col items-center px-6 py-14 text-center">
-          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary"><Bell className="h-7 w-7" /></span>
+        <Card variant="elevated"><CardContent className="flex flex-col items-center px-6 py-16 text-center sm:py-20">
+          <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary"><Bell className="h-7 w-7" /></span>
           <h3 className="text-lg font-semibold text-text-primary">You're all caught up</h3>
           <p className="mt-2 max-w-md text-sm leading-6 text-text-secondary">When there are updates about your orders, deliveries or account, they'll appear here.</p>
-          <Link href="/account?tab=settings" className="mt-5"><Button variant="outline">Manage notification preferences <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+          <Link href="/account?tab=settings" className="mt-6"><Button variant="outline">Manage notification preferences <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
         </CardContent></Card>
+      )}
+
+      {openedNotification && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-primary-strong/55 p-0 backdrop-blur-sm sm:items-center sm:p-5" onClick={() => setOpenedNotification(null)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="notification-dialog-title" className="max-h-[min(88dvh,760px)] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-border bg-surface shadow-2xl sm:rounded-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-8 sm:py-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Kamba notification</p>
+              <button type="button" onClick={() => setOpenedNotification(null)} aria-label="Close message" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-text-secondary hover:bg-muted hover:text-text-primary"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="px-5 py-7 sm:px-8 sm:py-10">
+              <div className="mb-6 flex items-center gap-3 text-xs font-medium text-text-tertiary"><Clock3 className="h-4 w-4 text-primary" />{formatNotificationDate(openedNotification.created_at)}<span className="rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Message</span></div>
+              <h2 id="notification-dialog-title" className="break-words text-2xl font-bold leading-tight tracking-tight text-text-primary sm:text-3xl">{openedNotification.title}</h2>
+              <div className="mt-6 whitespace-pre-wrap break-words text-sm leading-7 text-text-secondary sm:mt-8 sm:text-base sm:leading-8">{openedNotification.body || 'There is no additional message content.'}</div>
+              <div className="mt-8 border-t border-border pt-5 text-xs text-text-tertiary">{openedNotification.read_at ? 'This message has been marked as read.' : 'Opening this message marks it as read.'}</div>
+            </div>
+            <div className="flex justify-end border-t border-border bg-muted/35 px-5 py-4 sm:px-8"><Button onClick={() => setOpenedNotification(null)}>Close message</Button></div>
+          </section>
+        </div>
       )}
     </div>
   )
