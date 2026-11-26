@@ -647,3 +647,16 @@ button:active:not(:disabled), a:active { transform: translateY(1px); }
   .store-showcase-category-images img { animation: none; opacity: 0; }
   .store-showcase-category-images img:first-child { opacity: 1; }
 }
+
+
+/* Notification message dialog: settle centrally after a short upward slide. */
+@keyframes notification-dialog-enter {
+  from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.notification-dialog-enter {
+  animation: notification-dialog-enter 320ms cubic-bezier(.22, .61, .36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-dialog-enter { animation: none !important; }
+}
