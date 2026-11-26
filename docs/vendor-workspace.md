@@ -20,9 +20,9 @@ For vendors offering both products and services, the storefront's business name,
 
 ## Business location and privacy
 
-The physical business location is captured once and can serve as the default pickup location. Exact-address visibility defaults to private. A vendor may explicitly publish it; public store and service responses omit the exact address while it remains private.
+The physical business location is captured once and is the saved business location for the planned pickup flow. Exact-address visibility defaults to private. A vendor may explicitly publish it; public store and service responses omit the exact address while it remains private.
 
-The private/public setting controls public display only. It does not remove the location from authenticated vendor and order-fulfilment workflows.
+The private/public setting controls public display only. The saved location remains available to the vendor record and future fulfilment integration. Buyer-facing pickup-address reveal is not live while pickup collection remains a prototype.
 
 ## URL slugs
 
