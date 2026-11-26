@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiJson } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -98,6 +98,8 @@ export function LiveVendorOnboarding() {
   const [deliveryAreas, setDeliveryAreas] = useState('')
   const [vendorDeliveryFee, setVendorDeliveryFee] = useState('0')
   const [storePhotos, setStorePhotos] = useState<File[]>([])
+  const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
+  useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
   const [storeForm, setStoreForm] = useState({
     store_name: '', slug: '', category: '', description: '',
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', contact_whatsapp: '',
@@ -465,7 +467,13 @@ export function LiveVendorOnboarding() {
               <h3 className="font-semibold text-text-primary">Upload store location photos</h3>
               <p className="text-sm text-text-secondary">Choose 2–6 photos of your actual business location. These are used for the store-location verification step.</p>
               <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setStorePhotos(Array.from(event.target.files || []).slice(0, 6))} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" />
-              <p className="text-xs text-text-tertiary">{storePhotos.length} photo(s) selected</p>
+              {storePhotoPreviews.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{storePhotoPreviews.map(({ file, url }, index) => (
+                <div key={url} className="overflow-hidden rounded-lg border border-border">
+                  <img src={url} alt={file.name} className="h-28 w-full object-cover" />
+                  <div className="flex items-center justify-between gap-2 p-2"><span className="min-w-0 truncate text-xs text-text-secondary">{file.name}</span><button type="button" onClick={() => setStorePhotos((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="shrink-0 text-xs font-semibold text-destructive">Remove</button></div>
+                </div>
+              ))}</div>}
+              <p className="text-xs text-text-tertiary">{storePhotos.length} photo(s) selected. Preview and remove any image before uploading.</p>
               <Button type="submit" variant="outline" disabled={submitting || storePhotos.length < 2}>{submitting ? 'Uploading…' : 'Upload location photos'}</Button>
             </form>
           )}
