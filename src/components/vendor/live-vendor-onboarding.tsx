@@ -56,6 +56,7 @@ export function LiveVendorOnboarding() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
   const [homeAddress, setHomeAddress] = useState('')
   const [privateAddressSameAsBusiness, setPrivateAddressSameAsBusiness] = useState(false)
@@ -175,7 +176,7 @@ export function LiveVendorOnboarding() {
     }
     setSubmitting(true); setError(''); setSuccess('')
     try {
-      await apiJson('/vendors/onboard/store', {
+      const created = await apiJson<{ store?: { slug?: string } }>('/vendors/onboard/store', {
         method: 'POST',
         body: JSON.stringify({
           ...storeForm,
@@ -189,6 +190,7 @@ export function LiveVendorOnboarding() {
         }),
       })
       const statusLoaded = await loadStatus()
+      if (created.store?.slug) setCreatedStoreSlug(created.store.slug)
       setServiceForm((previous) => ({ ...previous, business_name: storeForm.business_name.trim() }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
@@ -318,7 +320,7 @@ export function LiveVendorOnboarding() {
     <div className="container mx-auto max-w-3xl space-y-6 px-4 py-8 lg:py-12">
       <header className="space-y-2"><p className="text-sm font-semibold uppercase tracking-wider text-primary">Sell or offer services on Kamba</p><h1 className="font-display text-3xl font-bold text-text-primary">Vendor onboarding</h1><p className="text-sm leading-6 text-text-secondary">Complete the required account and business steps. Your verification status remains pending until Kamba reviews the submitted information.</p></header>
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
-      {success && <p role="status" className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{success}</p>}
+      {success && <div role="status" className="space-y-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><p>{success}</p>{createdStoreSlug && <a href={'/store/' + createdStoreSlug} target="_blank" rel="noreferrer" className="inline-flex font-semibold underline underline-offset-4">View your public storefront: kamba.ng/store/{createdStoreSlug} ↗</a>}</div>}
 
       {(stage === 'not_eligible' || (stage === 'liveness_required' && !eligibility.eligible)) && (
         <Card variant="outlined"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-gold" /> Complete these account requirements first</CardTitle></CardHeader><CardContent className="space-y-3">
