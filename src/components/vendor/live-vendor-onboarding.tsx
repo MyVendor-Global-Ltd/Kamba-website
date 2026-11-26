@@ -83,7 +83,6 @@ export function LiveVendorOnboarding() {
   const [success, setSuccess] = useState('')
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
-  const [homeAddress, setHomeAddress] = useState('')
   const [operatingHours, setOperatingHours] = useState<OperatingHours>({
     monday: { closed: false, open: '09:00', close: '17:00' },
     tuesday: { closed: false, open: '09:00', close: '17:00' },
@@ -120,9 +119,8 @@ export function LiveVendorOnboarding() {
       setEligibility(eligibilityData)
       setStatus(statusData)
       try {
-        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; home_address?: string; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours; deliveryMethod?: 'vendor_managed' | 'kamba_managed'; deliveryAreas?: string; vendorDeliveryFee?: string } }>('/vendors/onboard/draft')
+        const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm>; operatingHours?: OperatingHours; deliveryMethod?: 'vendor_managed' | 'kamba_managed'; deliveryAreas?: string; vendorDeliveryFee?: string } }>('/vendors/onboard/draft')
         if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
-        if (saved.draft?.home_address) setHomeAddress(saved.draft.home_address)
         if (saved.draft?.storeForm) setStoreForm((previous) => ({ ...previous, ...saved.draft?.storeForm }))
         if (saved.draft?.serviceForm) setServiceForm((previous) => ({ ...previous, ...saved.draft?.serviceForm }))
         if (saved.draft?.operatingHours) setOperatingHours(saved.draft.operatingHours)
@@ -155,7 +153,7 @@ export function LiveVendorOnboarding() {
     const timeout = window.setTimeout(() => {
       void apiJson('/vendors/onboard/draft', {
         method: 'PUT',
-        body: JSON.stringify({ draft: { vendor_type: vendorType, home_address: homeAddress, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee } }),
+        body: JSON.stringify({ draft: { vendor_type: vendorType, storeForm, serviceForm, operatingHours, deliveryMethod, deliveryAreas, vendorDeliveryFee } }),
       }).catch(() => { /* Draft saving is best-effort; the user can continue onboarding. */ })
     }, 700)
     return () => window.clearTimeout(timeout)
@@ -163,10 +161,9 @@ export function LiveVendorOnboarding() {
 
   const createBasicProfile = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (homeAddress.trim().length < 5) { setError('Enter your residential address. This address is private and is not shown on your public store.'); return }
     setSubmitting(true); setError(''); setSuccess('')
     try {
-      await apiJson('/vendors/onboard/basic', { method: 'POST', body: JSON.stringify({ vendor_type: vendorType, home_address: homeAddress.trim() }) })
+      await apiJson('/vendors/onboard/basic', { method: 'POST', body: JSON.stringify({ vendor_type: vendorType }) })
       const statusLoaded = await loadStatus()
       try { await refreshProfile() } catch { /* Status is authoritative for onboarding continuation. */ }
       setSuccess(statusLoaded ? 'Basic vendor profile created. Continue with your business details.' : 'Profile created, but status could not refresh. Retry to continue.')
@@ -216,9 +213,9 @@ export function LiveVendorOnboarding() {
         method: 'POST',
         body: JSON.stringify({
           ...serviceForm,
-          home_address: homeAddress.trim(),
           operating_hours: operatingHours,
-          business_name: serviceForm.service_title.trim(),
+          business_name: (storeForm.store_name || serviceForm.service_title).trim(),
+          slug: vendorType === 'both' && storeForm.store_name.trim() ? makeSlug(storeForm.store_name) : serviceForm.slug,
           service_title: serviceForm.service_title.trim(),
           category: serviceForm.category.trim(),
           description: serviceForm.description.trim(),
@@ -259,9 +256,9 @@ export function LiveVendorOnboarding() {
     } finally { setSubmitting(false) }
   }
 
-  const makeSlug = (value: string) => value.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
+  const makeSlug = (value: string) => value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
   const updateStore = <K extends keyof typeof storeForm>(field: K, value: (typeof storeForm)[K]) => setStoreForm((previous) => ({ ...previous, [field]: value, ...(field === 'store_name' ? { slug: makeSlug(String(value)) } : {}) }))
-  const updateService = <K extends keyof typeof serviceForm>(field: K, value: (typeof serviceForm)[K]) => setServiceForm((previous) => ({ ...previous, [field]: value, ...(field === 'service_title' ? { slug: makeSlug(String(value)) } : {}) }))
+  const updateService = <K extends keyof typeof serviceForm>(field: K, value: (typeof serviceForm)[K]) => setServiceForm((previous) => ({ ...previous, [field]: value, ...(field === 'service_title' ? { slug: makeSlug(vendorType === 'both' && storeForm.store_name.trim() ? storeForm.store_name : String(value)) } : {}) }))
   const showLocationFields = (mode: LocationMode, update: (field: 'location_text' | 'service_area_text' | 'online_url', value: string) => void, values: { location_text: string; service_area_text: string; online_url: string }) => (
     <div className="space-y-3">
       {(mode === 'physical' || mode === 'hybrid') && <Input label="Business location" value={values.location_text} onChange={(event) => update('location_text', event.target.value)} required={mode === 'physical'} placeholder="Street, area, city and state" />}
@@ -321,10 +318,18 @@ export function LiveVendorOnboarding() {
   const needsStore = status?.next_step === 'create_store'
   const needsService = status?.next_step === 'create_service'
   const previewStoreSlug = storeForm.slug || makeSlug(storeForm.store_name) || 'your-store-name'
+  const timelineStep = stage === 'not_eligible' ? 0 : stage === 'vendor_profile_required' || stage === 'liveness_required' ? 1 : stage === 'profile_setup' ? 2 : 3
+  const timelineSteps = [
+    { title: 'Verify account', detail: 'Email and phone' },
+    { title: 'Choose business type', detail: 'Products, services or both' },
+    { title: 'Business details', detail: 'Name, location and operations' },
+    { title: 'Review and finish', detail: 'Location evidence and status' },
+  ]
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 px-4 py-8 lg:py-12">
       <header className="space-y-2"><p className="text-sm font-semibold uppercase tracking-wider text-primary">Sell or offer services on Kamba</p><h1 className="font-display text-3xl font-bold text-text-primary">Vendor onboarding</h1><p className="text-sm leading-6 text-text-secondary">Complete the required account and business steps. Your verification status remains pending until Kamba reviews the submitted information.</p></header>
+      <Card variant="outlined"><CardContent className="p-4 sm:p-5"><ol className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-label="Vendor onboarding progress">{timelineSteps.map((step, index) => { const done = index < timelineStep; const current = index === timelineStep; return <li key={step.title} className="relative flex min-w-0 items-start gap-2"><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${done ? 'bg-primary text-white' : current ? 'border-2 border-primary text-primary' : 'border border-border text-text-tertiary'}`}>{done ? '✓' : index + 1}</span><span className="min-w-0"><span className={`block text-xs font-semibold sm:text-sm ${current || done ? 'text-text-primary' : 'text-text-tertiary'}`}>{step.title}</span><span className="mt-0.5 block text-[11px] leading-4 text-text-tertiary">{step.detail}</span></span></li> })}</ol></CardContent></Card>
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
       {success && <div role="status" className="space-y-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><p>{success}</p>{createdStoreSlug && <a href={'/store/' + createdStoreSlug} target="_blank" rel="noreferrer" className="inline-flex font-semibold underline underline-offset-4">View your public storefront: kamba.ng/store/{createdStoreSlug} ↗</a>}</div>}
 
@@ -344,8 +349,7 @@ export function LiveVendorOnboarding() {
                 <option value="products">Products and storefront</option><option value="services">Services</option><option value="both">Products and services</option>
               </select>
             </label>
-            <Input label="Private residential address (not your business or pickup address)" value={homeAddress} onChange={(event) => setHomeAddress(event.target.value)} required placeholder="Your residential address" />
-            <p className="text-xs leading-5 text-text-tertiary">This is only for private account records. Your business location is entered separately below and is used as the default pickup location when applicable.</p>
+            <p className="text-xs leading-5 text-text-tertiary">You will enter your business location once in the next step. That location can also be used as your pickup address. You will be able to control whether the exact address appears publicly.</p>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue without NIN or selfie'}</Button>
           </form>
         </CardContent></Card>
