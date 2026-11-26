@@ -14,15 +14,17 @@ import { isMockMode } from '@/lib/mock-api'
 import { formatKobo } from '@/lib/formatting'
 import { StoreCardSkeleton, ServiceCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Search, X, Store, Briefcase, ChevronLeft, ChevronRight, Loader2, MapPin, LocateFixed } from 'lucide-react'
+import { useLocation } from '@/hooks/useLocation'
 import { ProductSearchShowcase } from '@/components/marketplace/product-search-showcase'
 
-type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[] }
+type SearchStore = StoreProfile & { has_matching_products?: boolean; matching_products: Product[]; distance_km?: number }
+type SearchService = ServiceProfile & { distance_km?: number }
 
 interface SearchResult {
   products: Product[]
   stores: SearchStore[]
-  services: ServiceProfile[]
+  services: SearchService[]
   total: number
 }
 
@@ -30,6 +32,10 @@ function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { coords, locationLabel, error: locationError, loading: locating, getLocation, setLocation, clearLocation } = useLocation()
+  const [radius, setRadius] = useState(15)
+  const [manualLocation, setManualLocation] = useState('')
+  const [resolvingLocation, setResolvingLocation] = useState(false)
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [activeTab, setActiveTab] = useState<'all' | 'stores' | 'services'>('all')
@@ -59,13 +65,13 @@ function SearchPageContent() {
       } else {
         const [productResponse, storeResponse, serviceResponse] = await Promise.all([
           apiJson<{ products: Array<Product & { original_price?: number }>; total_count: number }>('/commerce/products', {
-            params: { search: term, limit: 100, offset: 0, stock_status: 'all' },
+            params: { search: term, limit: 100, offset: 0, stock_status: 'all', sort: coords ? 'nearest' : 'newest', lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
           apiJson<{ stores: Array<StoreProfile & { store_name?: string; location_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/stores', {
-            params: { page: 1, limit: 100 },
+            params: { page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
           apiJson<{ services: Array<ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }> }>('/vendors/services', {
-            params: { page: 1, limit: 100 },
+            params: { page: 1, limit: 100, lat: coords?.lat, lng: coords?.lng, radius: coords ? radius : undefined },
           }),
         ])
 
@@ -155,7 +161,7 @@ function SearchPageContent() {
     } finally {
       if (requestId === searchSequenceRef.current) setLoading(false)
     }
-  }, [toast])
+  }, [toast, coords, radius])
 
   // Keep URL-driven searches responsive without issuing a request for every keystroke.
   useEffect(() => {
@@ -168,6 +174,39 @@ function SearchPageContent() {
     // Invalidate any in-flight request as soon as the user changes the query.
     searchSequenceRef.current += 1
     setQuery(nextQuery)
+  }
+
+  const handleManualLocation = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const locationText = manualLocation.trim()
+    if (locationText.length < 3) {
+      toast({ type: 'error', title: 'Enter an area', description: 'Add a neighbourhood, town or city to find nearby results.' })
+      return
+    }
+
+    setResolvingLocation(true)
+    try {
+      const response = await apiJson<{ location: { location_text: string; lat: number; lng: number } }>('/vendors/location/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ location_text: locationText }),
+      })
+      if (!Number.isFinite(response.location?.lat) || !Number.isFinite(response.location?.lng)) {
+        throw new Error('The selected area could not be located.')
+      }
+      setLocation(
+        { lat: response.location.lat, lng: response.location.lng },
+        response.location.location_text || locationText
+      )
+      setManualLocation(response.location.location_text || locationText)
+    } catch (err) {
+      toast({
+        type: 'error',
+        title: 'Location not found',
+        description: err instanceof Error ? err.message : 'Try adding the city and state.',
+      })
+    } finally {
+      setResolvingLocation(false)
+    }
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -224,6 +263,46 @@ function SearchPageContent() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Search'}
           </Button>
         </form>
+
+        <div className="max-w-3xl mx-auto -mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant={coords ? "default" : "outline"} size="sm" onClick={getLocation} disabled={locating}>
+              {locating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LocateFixed className="w-4 h-4 mr-2" />}
+              {coords ? "Using my location" : "Use my location"}
+            </Button>
+            {coords && (
+              <Button type="button" variant="ghost" size="sm" onClick={clearLocation} className="text-text-tertiary">
+                <X className="w-3.5 h-3.5 mr-1" /> Clear location
+              </Button>
+            )}
+          </div>
+          {coords && (
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              Search radius
+              <select value={radius} onChange={(event) => setRadius(Number(event.target.value))} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-text-primary">
+                <option value={5}>5 km</option>
+                <option value={15}>15 km</option>
+                <option value={30}>30 km</option>
+                <option value={50}>50 km</option>
+              </select>
+            </label>
+          )}
+          {coords && <p className="w-full text-xs text-text-tertiary"><MapPin className="inline w-3 h-3 mr-1" />Around {locationLabel || "your selected location"} · showing matches within {radius} km where coordinates are available.</p>}
+          {locationError && <p role="status" className="w-full text-xs text-text-tertiary">Location unavailable: {locationError}. You can still search without sharing your location.</p>}
+          <form onSubmit={handleManualLocation} className="w-full flex flex-col sm:flex-row gap-2">
+            <Input
+              value={manualLocation}
+              onChange={(event) => setManualLocation(event.target.value)}
+              placeholder="Or enter an area, town or city (e.g. GRA, Port Harcourt)"
+              aria-label="Search around an area"
+              className="h-10"
+            />
+            <Button type="submit" variant="outline" size="sm" disabled={resolvingLocation || manualLocation.trim().length < 3}>
+              {resolvingLocation ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MapPin className="w-4 h-4 mr-2" />}
+              Use this area
+            </Button>
+          </form>
+        </div>
 
         <div className={`mt-4 mb-8 text-center ${query.trim() ? 'hidden' : ''}`}>
             <p className="text-text-tertiary text-sm mb-4">Popular searches:</p>
@@ -379,6 +458,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
           <Link href={`/store/${store.slug}`} className="font-semibold text-text-primary group-hover:text-coral transition-colors">{store.name}</Link>
           {store.category && <p className="text-xs text-text-tertiary mt-1">{store.category}</p>}
           {store.city && store.state && <p className="text-xs text-text-tertiary mt-1">{store.city}, {store.state}</p>}
+          {typeof store.distance_km === 'number' && <p className="text-xs text-text-tertiary mt-1">{store.distance_km.toFixed(1)} km away</p>}
         </div>
         {store.matching_products.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
@@ -404,7 +484,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
 }
 
 // Service Search Card
-function ServiceSearchCard({ service }: { service: ServiceProfile }) {
+function ServiceSearchCard({ service }: { service: SearchService }) {
   const imageUrl = service.logo_url || '/placeholder-service.jpg'
   
   return (
@@ -425,6 +505,7 @@ function ServiceSearchCard({ service }: { service: ServiceProfile }) {
         </div>
         <CardContent className="p-4 pt-3 space-y-2">
           <h3 className="font-semibold text-text-primary line-clamp-1 group-hover:text-coral transition-colors">{service.name}</h3>
+          {typeof service.distance_km === 'number' && <p className="text-xs text-text-tertiary">{service.distance_km.toFixed(1)} km away</p>}
           {service.category && (
             <Badge variant="secondary" size="sm">{service.category}</Badge>
           )}
@@ -470,7 +551,7 @@ function StoreResults({ stores, loading }: { stores: SearchStore[]; loading: boo
   )
 }
 
-function ServiceResults({ services, loading }: { services: ServiceProfile[]; loading: boolean }) {
+function ServiceResults({ services, loading }: { services: SearchService[]; loading: boolean }) {
   if (loading && services.length === 0) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
