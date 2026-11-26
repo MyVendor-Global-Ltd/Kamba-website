@@ -6,7 +6,7 @@ import { apiJson } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowUpRight, CheckCircle2, Circle, Clock3, ImageIcon, Package, Store } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, Clock3, ImageIcon, Package, Store } from 'lucide-react'
 
 type DayHours = { closed: boolean; open: string | null; close: string | null }
 type OperatingHours = Record<string, DayHours>
