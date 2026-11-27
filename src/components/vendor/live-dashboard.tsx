@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StoreLaunchProgress } from '@/components/vendor/store-launch-progress'
-import { ArrowUpRight, BriefcaseBusiness, MapPin, Package, RefreshCw, ShoppingBag, Star, Users, Heart, Settings2 } from 'lucide-react'
+import { ArrowUpRight, BarChart3, BriefcaseBusiness, MapPin, Package, RefreshCw, ShoppingBag, Star, Store, Users, Heart, Settings2 } from 'lucide-react'
 
 type VendorType = 'products' | 'services' | 'both'
 interface BusinessProfile {
@@ -143,9 +143,9 @@ export function LiveVendorDashboard() {
       {isProducts && <StoreLaunchProgress />}
 
       <section className="space-y-3">
-        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Community & trust</p><h2 className="mt-1 font-display text-2xl font-bold text-text-primary">Your audience, in one place.</h2><p className="mt-1 text-sm text-text-secondary">These indicators will only show once verified engagement data is available.</p></div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[{label:'Customer ratings',icon:Star},{label:'Followers',icon:Users},{label:'Likes',icon:Heart}].map(item => { const Icon=item.icon; return <Card key={item.label} variant="outlined"><CardContent className="flex items-center gap-3 p-4"><span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-muted text-text-tertiary"><Icon className="h-5 w-5" /></span><div><p className="text-sm font-semibold text-text-primary">{item.label}</p><p className="mt-0.5 text-xs text-text-tertiary">Not connected yet</p></div></CardContent></Card> })}
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Business insights & community</p><h2 className="mt-1 font-display text-2xl font-bold text-text-primary">Your performance and audience, in one place.</h2><p className="mt-1 text-sm text-text-secondary">Live orders and requests appear above. Deeper analytics and verified engagement will appear when their data features are connected.</p></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[{label:'Customer ratings',icon:Star},{label:'Followers',icon:Users},{label:'Likes',icon:Heart},{label:'Performance analytics',icon:BarChart3}].map(item => { const Icon=item.icon; return <Card key={item.label} variant="outlined"><CardContent className="flex items-center gap-3 p-4"><span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-muted text-text-tertiary"><Icon className="h-5 w-5" /></span><div><p className="text-sm font-semibold text-text-primary">{item.label}</p><p className="mt-0.5 text-xs text-text-tertiary">Not connected yet</p></div></CardContent></Card> })}
         </div>
       </section>
     </main>
