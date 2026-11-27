@@ -13,6 +13,8 @@ interface BusinessDetails {
   business_name?: string | null
   location_mode?: LocationMode | null
   location_visibility?: 'private' | 'public' | null
+  is_home_based?: boolean | null
+  public_location_text?: string | null
   location_text?: string | null
   service_area_text?: string | null
   online_url?: string | null
@@ -81,6 +83,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [serviceAreaText, setServiceAreaText] = useState('')
   const [onlineUrl, setOnlineUrl] = useState('')
   const [locationVisibility, setLocationVisibility] = useState<'private' | 'public'>('private')
+  const [isHomeBased, setIsHomeBased] = useState(false)
+  const [publicLocationText, setPublicLocationText] = useState('')
   const [vendorType, setVendorType] = useState<'products' | 'services' | 'both'>('products')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -118,6 +122,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setServiceAreaText(business?.service_area_text || '')
       setOnlineUrl(business?.online_url || '')
       setLocationVisibility(business?.location_visibility === 'public' ? 'public' : 'private')
+      setIsHomeBased(business?.is_home_based === true)
+      setPublicLocationText(business?.public_location_text || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this business listing.')
     } finally {
@@ -263,7 +269,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         category: (category === 'Other' ? customCategory : category).trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility } : {}),
+        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility, is_home_based: isHomeBased, public_location_text: publicLocationText.trim() } : {}),
         ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
       }
       const response = await apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint, {
@@ -400,7 +406,11 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               {(locationMode === 'physical' || locationMode === 'hybrid') && <Input label="Business address or location" value={locationText} onChange={(event) => setLocationText(event.target.value)} required={locationMode === 'physical'} placeholder="Street, area, city and state" />}
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
-              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="mt-3 rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={locationVisibility === 'public'} onChange={(event) => setLocationVisibility(event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you provide can still be shown. This remains your saved business location and will be the pickup point once the pickup collection flow is connected.</span></span></label></div>}
+              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
+                <label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={isHomeBased} onChange={(event) => setIsHomeBased(event.target.checked)} className="mt-1" /><span><strong>This is a home-based business</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Your full residential address stays private. Kamba will only show a separate street or nearby landmark label if you choose to make your location public.</span></span></label>
+                {isHomeBased && <Input label="Public street or nearby landmark" value={publicLocationText} onChange={(event) => setPublicLocationText(event.target.value)} placeholder="e.g. Near Umudike junction" maxLength={160} />}
+                <label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={locationVisibility === 'public'} onChange={(event) => setLocationVisibility(event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>{isHomeBased ? 'Show public area label on your store' : 'Show exact business address publicly'}</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">{isHomeBased ? 'Only the street or landmark label above is shown. Your exact home address is never published.' : 'Off by default. When off, public pages hide your street address. Any service area you provide can still be shown.'}</span></span></label>
+              </div>}
             </div>}
             <div className="flex flex-wrap items-center gap-3"><Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>{!isService && listing.slug && <a href={'/store/' + listing.slug} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">View public store ↗</a>}</div>
           </form>
