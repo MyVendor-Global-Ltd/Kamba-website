@@ -40,6 +40,8 @@ function firstBusiness(value: ExistingListing['business_profiles']): BusinessDet
   return Array.isArray(value) ? value[0] || null : value || null
 }
 
+const BUSINESS_CATEGORIES = ["Electronics & Gadgets","Fashion & Clothing","Beauty & Personal Care","Food & Groceries","Home & Living","Health & Wellness","Books & Stationery","Sports & Fitness","Automotive","Home Services","Repairs & Maintenance","Professional Services","Education & Tutoring","Events & Photography","Repairs","Photography","Cleaning","Other"]
+
 export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const isService = kind === 'service'
   const endpoint = isService ? '/vendors/service' : '/vendors/store'
@@ -92,7 +94,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setSameCoverAsLogo(!!current.store_image_url && current.store_image_url === current.store_logo_url)
       setSlideshowImages(current.store_slideshow_images || [])
       setLogoInSlideshow(current.store_logo_in_slideshow === true)
-      setCategory(cats.includes(current.category || '') ? (current.category || '') : current.category ? 'Other' : '')
+      setCategory(BUSINESS_CATEGORIES.includes(current.category || '') ? (current.category || '') : current.category ? 'Other' : '')
       setCustomCategory(cats.includes(current.category || '') ? '' : (current.category || ''))
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
