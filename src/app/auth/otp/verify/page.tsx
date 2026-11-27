@@ -67,9 +67,8 @@ export default function VerifyOTPPage() {
     setResending(true)
     try {
       const userId = sessionStorage.getItem('kamba_phone_verification_user_id') || ''
-      const savedPhone = sessionStorage.getItem('kamba_phone_verification_phone') || phone
-      if (!userId || !savedPhone) throw new Error('Your verification session has expired. Request a new code.')
-      await resendPhoneOTP(userId, savedPhone)
+      if (!userId) throw new Error('Your verification session has expired. Request a new code.')
+      await resendPhoneOTP()
       setOtp('')
       setCooldown(30)
       setNotice('A new verification code has been sent.')
