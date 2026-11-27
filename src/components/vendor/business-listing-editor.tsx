@@ -125,9 +125,6 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [locationText, setLocationText] = useState('')
   const [locationLat, setLocationLat] = useState<number | null>(null)
   const [locationLng, setLocationLng] = useState<number | null>(null)
-  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ description: string; place_id: string }>>([])
-  const [locationSuggestionsLoading, setLocationSuggestionsLoading] = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState(false)
   const [serviceAreaText, setServiceAreaText] = useState('')
   const [onlineUrl, setOnlineUrl] = useState('')
   const [locationVisibility, setLocationVisibility] = useState<'private' | 'public'>('private')
@@ -183,46 +180,28 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
 
-  useEffect(() => {
-    if (selectedLocation || locationText.trim().length < 3) {
-      setLocationSuggestions([])
+  const resolveBusinessLocation = async () => {
+    const address = locationText.trim()
+    if (address.length < 3) {
+      setError('Enter a more specific street, landmark or area before finding it on the map.')
       return
     }
-    let active = true
-    const timer = window.setTimeout(async () => {
-      setLocationSuggestionsLoading(true)
-      try {
-        const result = await apiJson<{ suggestions: Array<{ description: string; place_id: string }> }>(
-          `/vendors/location/suggestions?q=${encodeURIComponent(locationText.trim())}`
-        )
-        if (active) setLocationSuggestions(result.suggestions || [])
-      } catch {
-        if (active) setLocationSuggestions([])
-      } finally {
-        if (active) setLocationSuggestionsLoading(false)
-      }
-    }, 350)
-    return () => {
-      active = false
-      window.clearTimeout(timer)
-    }
-  }, [locationText, selectedLocation])
-
-  const chooseBusinessLocation = async (suggestion: { description: string; place_id: string }) => {
-    setSelectedLocation(true)
-    setLocationText(suggestion.description)
-    setLocationSuggestions([])
+    setError('')
+    setSuccess('')
     setLocationLat(null)
     setLocationLng(null)
     try {
       const result = await apiJson<{ location: { lat: number; lng: number } }>('/vendors/location/resolve', {
         method: 'POST',
-        body: JSON.stringify({ location_text: suggestion.description }),
+        body: JSON.stringify({ location_text: address }),
       })
+      if (!Number.isFinite(result.location?.lat) || !Number.isFinite(result.location?.lng)) {
+        throw new Error('The map service returned an invalid position. Try adding the city and state.')
+      }
       setLocationLat(result.location.lat)
       setLocationLng(result.location.lng)
-    } catch {
-      setError('The address was selected, but its map position could not be resolved. You can still save the address and try again later.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'This location could not be found. Add the city and state, then try again.')
     }
   }
 
@@ -496,10 +475,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                   <option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option>
                 </select>
               </label>
-              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="relative">
-                <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setSelectedLocation(false); setLocationLat(null); setLocationLng(null) }} required={locationMode === 'physical'} placeholder="Start typing a street, landmark, area or city" autoComplete="off" />
-                {locationSuggestionsLoading && <p className="mt-1 text-xs text-text-tertiary">Finding Nigerian locations…</p>}
-                {locationSuggestions.length > 0 && <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-border bg-surface shadow-xl">{locationSuggestions.map((suggestion) => <button key={suggestion.place_id} type="button" onClick={() => void chooseBusinessLocation(suggestion)} className="block w-full border-b border-border px-3 py-3 text-left text-sm text-text-primary last:border-0 hover:bg-ink-raised">{suggestion.description}</button>)}</div>}
+              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="space-y-2">
+                <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setLocationLat(null); setLocationLng(null) }} required={locationMode === 'physical'} placeholder="Street, landmark, area or city" autoComplete="street-address" />
+                <Button type="button" variant="outline" onClick={() => void resolveBusinessLocation()} disabled={locationText.trim().length < 3}>Find location on map</Button>
                 {locationLat !== null && locationLng !== null && <><p className="mt-1 text-xs text-success">Map position found. Drag the pin to fine-tune the exact point.</p><BusinessLocationMap lat={locationLat} lng={locationLng} onChange={(lat, lng) => { setLocationLat(lat); setLocationLng(lng); setError(""); setSuccess("") }} /></>}
               </div>}
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
