@@ -259,8 +259,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         ? { service_images: [upload.public_url, ...(listing?.service_images || []).slice(1)] }
         : target === 'slideshow' ? { [field]: value } : sameCoverAsLogo ? { store_image_url: upload.public_url, store_logo_url: upload.public_url } : { [field]: value }
       const updated = isService
-        ? await apiJson<{ service_profile: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
-        : await apiJson<{ store: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
+        ? await apiJson<{ service_profile?: ExistingListing; store?: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
+        : await apiJson<{ service_profile?: ExistingListing; store?: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
       const savedListing = isService ? updated.service_profile : updated.store
       if (!savedListing) throw new Error('The server did not confirm your business image.')
       setListing((current) => current ? { ...current, ...savedListing } : savedListing)
