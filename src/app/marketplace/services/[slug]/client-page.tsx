@@ -38,7 +38,7 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
         if (!raw) throw new Error('This service is not available.')
         const tier = raw.vendor_profiles?.verification_tier
         const verificationStatus: ServiceProfile['verification_status'] = raw.verification_status || (raw.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
-        setService({ ...raw, name: raw.name || raw.service_title || 'Service', city: raw.city || raw.location_text || raw.service_area_text, vendor_id: raw.vendor_id || '', is_active: raw.is_active ?? true, created_at: raw.created_at || '', updated_at: raw.updated_at || '', verification_status: verificationStatus })
+        setService({ ...raw, phone: raw.contact_phone || raw.phone || undefined, name: raw.name || raw.service_title || 'Service', city: raw.city || raw.location_text || raw.service_area_text, vendor_id: raw.vendor_id || '', is_active: raw.is_active ?? true, created_at: raw.created_at || '', updated_at: raw.updated_at || '', verification_status: verificationStatus })
         setLoading(false)
       })
       .catch((err) => {
