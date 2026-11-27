@@ -147,7 +147,7 @@ export default function StoreDetailPage() {
   const name = store.store_name || store.name || 'Independent store'
   const categoryImages = CATEGORY_COVER_IMAGES[store.category || ''] || DEFAULT_COVER_IMAGES
   const configuredImages = [store.store_image_url, ...(store.store_slideshow_images || [])].filter((image): image is string => !!image)
-  const slideshow = configuredImages.length ? configuredImages : categoryImages
+  const slideshow = [...(configuredImages.length ? configuredImages : categoryImages)]
   const logoSlideIndex = slideshow.length
   if (store.store_logo_in_slideshow && store.store_logo_url) slideshow.push(store.store_logo_url)
   const activeSlide = slideshow[activeSlideIndex % slideshow.length] || DEFAULT_COVER_IMAGES[0]
