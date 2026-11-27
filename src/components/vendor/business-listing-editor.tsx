@@ -316,9 +316,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
             {!isService && <div className="space-y-3 rounded-xl border border-border p-4">
               <div>
                 <h2 className="text-sm font-semibold text-text-primary">Storefront cover</h2>
-                <p className="mt-1 text-xs leading-5 text-text-tertiary">Choose a strong landscape or portrait image that represents your brand. JPEG, PNG or WebP · up to 10 MB.</p>
+                <p className="mt-1 text-xs leading-5 text-text-tertiary">Choose a strong landscape or portrait image that represents your brand. JPEG, PNG or WebP · up to 10 MB. Cover and logo images are optional; you can remove them whenever you want.</p>
               </div>
-              {(pendingImage?.target === 'cover' ? pendingImage.previewUrl : storeImageUrl) ? <img src={pendingImage?.target === 'cover' ? pendingImage.previewUrl : storeImageUrl} alt="Storefront cover preview" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">Your brand image will appear here</div>}
+              {(pendingImage?.target === 'cover' ? pendingImage.previewUrl : storeImageUrl) ? <img src={pendingImage?.target === 'cover' ? pendingImage.previewUrl : storeImageUrl} alt="Storefront cover preview" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">No cover image</div>}
               <div className="flex flex-wrap gap-2">
                 {pendingImage?.target !== 'cover' && <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">
                   {storeImageUrl ? 'Replace cover image' : 'Choose cover image'}
