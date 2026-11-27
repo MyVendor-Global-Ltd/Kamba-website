@@ -256,7 +256,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       const field = target === 'cover' ? 'store_image_url' : target === 'logo' ? 'store_logo_url' : 'store_slideshow_images'
       const value = target === 'slideshow' ? [...slideshowImages, upload.public_url] : upload.public_url
       const payload = isService
-        ? { service_images: [upload.public_url] }
+        ? { service_images: [upload.public_url, ...(listing?.service_images || []).slice(1)] }
         : target === 'slideshow' ? { [field]: value } : sameCoverAsLogo ? { store_image_url: upload.public_url, store_logo_url: upload.public_url } : { [field]: value }
       const updated = isService
         ? await apiJson<{ service_profile: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
@@ -267,7 +267,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       if (target === 'cover') { setStoreImageUrl(upload.public_url); if (!isService && sameCoverAsLogo) setStoreLogoUrl(upload.public_url) }
       if (target === 'logo') { setStoreLogoUrl(upload.public_url); if (sameCoverAsLogo) setStoreImageUrl(upload.public_url) }
       if (target === 'slideshow') setSlideshowImages((current) => [...current, upload.public_url])
-      setSuccess(target === 'cover' ? 'Your storefront cover has been updated.' : target === 'logo' ? 'Your business logo has been updated.' : 'Slideshow image added.')
+      setSuccess(target === 'cover' ? (isService ? 'Your service cover image has been updated.' : 'Your storefront cover has been updated.') : target === 'logo' ? 'Your business logo has been updated.' : 'Slideshow image added.')
       URL.revokeObjectURL(pendingImage.previewUrl)
       setPendingImage(null)
       setUploadFailed(false)
@@ -283,7 +283,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     if (saving || uploadingImage) return
     const clearBoth = !isService && sameCoverAsLogo
     const payload = isService
-      ? { service_images: [] }
+      ? { service_images: (listing?.service_images || []).slice(1) }
       : clearBoth ? { store_image_url: null, store_logo_url: null }
       : target === 'cover' ? { store_image_url: null } : { store_logo_url: null }
     setSaving(true)
