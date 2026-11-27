@@ -23,31 +23,31 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ['400', '500', '600', '700'],
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kamba.ng'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.kamba.ng'
 
 const siteStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://kamba.ng/#organization',
+      '@id': 'https://www.kamba.ng/#organization',
       name: 'Kamba',
-      url: 'https://kamba.ng',
+      url: 'https://www.kamba.ng',
       description: 'A Nigerian hyperlocal marketplace for discovering products, independent stores and local services.',
       areaServed: { '@type': 'Country', name: 'Nigeria' },
     },
     {
       '@type': 'WebSite',
-      '@id': 'https://kamba.ng/#website',
+      '@id': 'https://www.kamba.ng/#website',
       name: 'Kamba',
-      url: 'https://kamba.ng',
-      publisher: { '@id': 'https://kamba.ng/#organization' },
+      url: 'https://www.kamba.ng',
+      publisher: { '@id': 'https://www.kamba.ng/#organization' },
       inLanguage: 'en-NG',
       potentialAction: {
         '@type': 'SearchAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: 'https://kamba.ng/search?q={search_term_string}',
+          urlTemplate: 'https://www.kamba.ng/search?q={search_term_string}',
         },
         'query-input': 'required name=search_term_string',
       },
