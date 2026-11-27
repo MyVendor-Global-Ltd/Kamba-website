@@ -477,7 +477,7 @@ function StoreSearchCard({ store }: { store: SearchStore }) {
         {store.matching_products.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {store.matching_products.slice(0, 4).map((product) => (
-              <Link key={product.id} href={`/store/${store.slug}?product=${encodeURIComponent(product.id)}`} className="min-w-0 rounded-lg border border-border/60 p-2 hover:border-coral/50 transition-colors" aria-label={`Explore ${store.name} and view ${product.name}`}>
+              <Link key={product.id} href={`/marketplace/products/${product.id}`} className="min-w-0 rounded-lg border border-border/60 p-2 hover:border-coral/50 transition-colors" aria-label={`Explore ${store.name} and view ${product.name}`}>
                 <div className="aspect-square rounded-md overflow-hidden bg-ink-raised/30 mb-2">
                   <img src={product.images?.[0] || product.image_url || '/placeholder-product.jpg'} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
                 </div>
