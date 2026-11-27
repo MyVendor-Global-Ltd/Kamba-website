@@ -32,13 +32,13 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
       setLoading(false)
       return
     }
-    apiJson<{ service_profile?: ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }; service?: ServiceProfile }>(`/vendors/services/${slug}`)
+    apiJson<{ service_profile?: ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; contact_phone?: string | null; contact_phone_verified_method?: 'sms' | null; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }; service?: ServiceProfile }>(`/vendors/services/${slug}`)
       .then((data) => {
         const raw = (data.service_profile || data.service) as (ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }) | undefined
         if (!raw) throw new Error('This service is not available.')
         const tier = raw.vendor_profiles?.verification_tier
         const verificationStatus: ServiceProfile['verification_status'] = raw.verification_status || (raw.vendor_profiles?.is_verified ? (tier === 'business' ? 'business' : tier === 'nin' ? 'nin' : 'basic') : 'pending')
-        setService({ ...raw, name: raw.name || raw.service_title || 'Service', city: raw.city || raw.location_text || raw.service_area_text, vendor_id: raw.vendor_id || '', is_active: raw.is_active ?? true, created_at: raw.created_at || '', updated_at: raw.updated_at || '', verification_status: verificationStatus })
+        setService({ ...raw, phone: raw.contact_phone || raw.phone || undefined, name: raw.name || raw.service_title || 'Service', city: raw.city || raw.location_text || raw.service_area_text, vendor_id: raw.vendor_id || '', is_active: raw.is_active ?? true, created_at: raw.created_at || '', updated_at: raw.updated_at || '', verification_status: verificationStatus })
         setLoading(false)
       })
       .catch((err) => {
@@ -242,7 +242,7 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
                         <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
                           <Phone className="w-5 h-5 text-coral" />
                           <div>
-                            <p className="text-xs text-text-tertiary">Phone</p>
+                            <p className="text-xs text-text-tertiary">Phone · SMS verified</p>
                             <a href={`tel:${service.phone}`} className="font-medium text-coral hover:text-coral/80 transition-colors">
                               {service.phone}
                             </a>
@@ -425,12 +425,20 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
               </CardHeader>
               <CardContent className="space-y-3">
                 {service.phone && (
-                  <a href={`tel:${service.phone}`}>
-                    <Button variant="default" className="w-full justify-start gap-3">
-                      <Phone className="w-5 h-5" />
-                      <span>Call Now</span>
-                    </Button>
-                  </a>
+                  <>
+                    <a href={`tel:${service.phone}`}>
+                      <Button variant="default" className="w-full justify-start gap-3">
+                        <Phone className="w-5 h-5" />
+                        <span>Call Now</span>
+                      </Button>
+                    </a>
+                    <a href={`sms:${service.phone}`}>
+                      <Button variant="outline" className="w-full justify-start gap-3">
+                        <MessageSquare className="w-5 h-5" />
+                        <span>Send SMS</span>
+                      </Button>
+                    </a>
+                  </>
                 )}
                 {service.email && (
                   <a href={`mailto:${service.email}`}>
