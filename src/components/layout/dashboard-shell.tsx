@@ -117,7 +117,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       isActive ? 'bg-primary-soft text-primary' : 'text-text-secondary hover:bg-ink-raised/70 hover:text-text-primary'
                     )}
                   >
-                    <span className="relative shrink-0"><Icon className="h-[18px] w-[18px]" />{needsAccountVerification && isAccountItem && requestedTab === 'profile' && <span aria-label="Email or phone verification incomplete" title="Email or phone verification incomplete" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />}</span>
+                    <span className="relative shrink-0"><Icon className="h-[18px] w-[18px]" />{vendorWorkspaceEnabled && !expanded && (item.href === '/vendor/dashboard' || item.href === '/vendor/profile') && <span aria-label="New vendor workspace tab" className="absolute -right-1 -top-1 h-2 w-2 rounded-full border border-surface bg-primary/70" />}{needsAccountVerification && isAccountItem && requestedTab === 'profile' && <span aria-label="Email or phone verification incomplete" title="Email or phone verification incomplete" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />}</span>
                     {expanded && <><span className="min-w-0 flex-1 truncate text-left">{item.label}</span>{vendorWorkspaceEnabled && (item.href === '/vendor/dashboard' || item.href === '/vendor/profile') && <span className="rounded-md border border-primary/15 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary/80">New</span>}</>}
                   </button>
                 )
