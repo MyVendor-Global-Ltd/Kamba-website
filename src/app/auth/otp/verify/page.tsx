@@ -33,7 +33,12 @@ export default function VerifyOTPPage() {
     setPhone(savedPhone)
     setReturnTo(savedReturnTo.startsWith('/') && !savedReturnTo.startsWith('//') ? savedReturnTo : '/account')
     setHasSession(Boolean(userId && savedPhone))
-    if (userId && savedPhone) setCooldown(30)
+    if (userId && savedPhone) {
+      const storedAvailableAt = Number(sessionStorage.getItem('kamba_phone_verification_resend_available_at'))
+      const availableAt = storedAvailableAt || Date.now() + 30_000
+      sessionStorage.setItem('kamba_phone_verification_resend_available_at', String(availableAt))
+      setCooldown(Math.max(0, Math.ceil((availableAt - Date.now()) / 1000)))
+    }
   }, [])
 
   useEffect(() => {
@@ -52,6 +57,7 @@ export default function VerifyOTPPage() {
       sessionStorage.removeItem('kamba_phone_verification_user_id')
       sessionStorage.removeItem('kamba_phone_verification_phone')
       sessionStorage.removeItem('kamba_phone_verification_return_to')
+      sessionStorage.removeItem('kamba_phone_verification_resend_available_at')
       router.replace(returnTo)
     } catch (err: any) {
       setError(err.message || 'OTP verification failed')
@@ -70,12 +76,18 @@ export default function VerifyOTPPage() {
       if (!userId) throw new Error('Your verification session has expired. Request a new code.')
       await resendPhoneOTP()
       setOtp('')
+      const availableAt = Date.now() + 30_000
+      sessionStorage.setItem('kamba_phone_verification_resend_available_at', String(availableAt))
       setCooldown(30)
       setNotice('A new verification code has been sent.')
     } catch (err: any) {
       const message = err.message || 'Unable to resend verification code.'
       const wait = message.match(/wait\s+(\d+)\s+seconds?/i)
-      if (wait) setCooldown(Math.max(1, Number(wait[1])))
+      if (wait) {
+        const seconds = Math.max(1, Number(wait[1]))
+        sessionStorage.setItem('kamba_phone_verification_resend_available_at', String(Date.now() + seconds * 1000))
+        setCooldown(seconds)
+      }
       setError(message)
     } finally {
       setResending(false)
