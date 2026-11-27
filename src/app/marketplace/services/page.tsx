@@ -36,32 +36,30 @@ function ServiceListingCard({ service }: { service: Service }) {
   const isVerified = service.verification_status !== 'pending' && service.verification_status !== 'rejected'
   return (
     <Card variant="outlined" className="group h-full overflow-hidden border-border/80 bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg">
-      <Link href={`/marketplace/services/${service.slug}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <div className="relative">
-          <ServiceGallery images={images} name={businessName} />
-          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-            {service.category && <Badge variant="secondary" className="border border-background/60 bg-background/90 text-text-primary backdrop-blur">{service.category}</Badge>}
-            {isVerified && <Badge variant="success" className="shadow-sm">{service.verification_status === 'business' ? 'Business verified' : 'Verified'}</Badge>}
-          </div>
+      <div className="relative">
+        <ServiceGallery images={images} name={businessName} />
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          {service.category && <Badge variant="secondary" className="border border-background/60 bg-background/90 text-text-primary backdrop-blur">{service.category}</Badge>}
+          {isVerified && <Badge variant="success" className="shadow-sm">{service.verification_status === 'business' ? 'Business verified' : 'Verified'}</Badge>}
         </div>
-        <CardContent className="flex min-h-[230px] flex-col p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-[11px] font-bold uppercase tracking-[0.16em] text-text-tertiary">{businessName}</p>
-              <h2 className="mt-2 line-clamp-2 font-display text-xl font-bold leading-tight text-text-primary transition-colors group-hover:text-primary">{service.name}</h2>
-            </div>
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-text-secondary transition-colors group-hover:border-primary group-hover:text-primary"><ArrowUpRight className="h-4 w-4" /></span>
+      </div>
+      <CardContent className="flex min-h-[230px] flex-col p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-bold uppercase tracking-[0.16em] text-text-tertiary">{businessName}</p>
+            <Link href={`/marketplace/services/${service.slug}`} className="mt-2 block rounded-sm font-display text-xl font-bold leading-tight text-text-primary transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{service.name}</Link>
           </div>
-          {service.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-secondary">{service.description}</p>}
-          <div className="mt-auto space-y-3 pt-5">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-              <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-tertiary"><MapPin className="h-3.5 w-3.5 shrink-0 text-primary" /><span className="truncate">{[service.city, service.state].filter(Boolean).join(', ') || 'Location shared on request'}</span></span>
-              {service.price_range && <span className="shrink-0 text-sm font-semibold text-text-primary">{service.price_range}</span>}
-            </div>
-            <div className="flex items-center justify-between gap-2 text-xs text-text-tertiary"><span className="inline-flex items-center gap-1.5"><Star className="h-3.5 w-3.5" /> Not rated yet</span><span>Explore provider <ArrowUpRight className="ml-1 inline h-3 w-3" /></span></div>
+          <Link href={`/marketplace/services/${service.slug}`} aria-label={`Explore ${businessName}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-text-secondary transition-colors group-hover:border-primary group-hover:text-primary"><ArrowUpRight className="h-4 w-4" /></Link>
+        </div>
+        {service.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-secondary">{service.description}</p>}
+        <div className="mt-auto space-y-3 pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+            <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-tertiary"><MapPin className="h-3.5 w-3.5 shrink-0 text-primary" /><span className="truncate">{[service.city, service.state].filter(Boolean).join(', ') || 'Location shared on request'}</span></span>
+            {service.price_range && <span className="shrink-0 text-sm font-semibold text-text-primary">{service.price_range}</span>}
           </div>
-        </CardContent>
-      </Link>
+          <div className="flex items-center justify-between gap-2 text-xs text-text-tertiary"><span className="inline-flex items-center gap-1.5"><Star className="h-3.5 w-3.5" /> Not rated yet</span><Link href={`/marketplace/services/${service.slug}`} className="font-semibold text-primary hover:underline">Explore provider <ArrowUpRight className="ml-1 inline h-3 w-3" /></Link></div>
+        </div>
+      </CardContent>
     </Card>
   )
 }
