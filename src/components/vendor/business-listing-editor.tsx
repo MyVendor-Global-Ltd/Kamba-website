@@ -116,8 +116,11 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   const uploadStoreAsset = async (file: File, target: 'cover' | 'logo' | 'slideshow') => {
     if (isService) return
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('Choose a JPEG, PNG or WebP image.')
+    // Some browsers/devices report an empty MIME type for otherwise valid JPG files.
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    const mimeType = file.type || (extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : '')
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+      setError('This file format is not supported. Choose a JPG, PNG or WebP image.')
       return
     }
     if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
@@ -138,14 +141,18 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     try {
       const upload = await apiJson<{ signed_url: string; public_url: string }>('/vendors/store/image-upload-url', {
         method: 'POST',
-        body: JSON.stringify({ mime_type: file.type }),
+        body: JSON.stringify({ mime_type: mimeType }),
       })
+      // Supabase signed-upload endpoints require POST (not PUT).
       const response = await fetch(upload.signed_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
+        method: 'POST',
+        headers: { 'Content-Type': mimeType, 'x-upsert': 'false' },
         body: file,
       })
-      if (!response.ok) throw new Error('The image upload failed. Please try again.')
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '')
+        throw new Error(detail ? `Image upload failed: ${detail.slice(0, 240)}` : `Image upload failed (HTTP ${response.status}). Please try again.`)
+      }
 
       const field = target === 'cover' ? 'store_image_url' : target === 'logo' ? 'store_logo_url' : 'store_slideshow_images'
       const value = target === 'slideshow' ? [...slideshowImages, upload.public_url] : upload.public_url
@@ -266,7 +273,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               {(coverPreview || storeImageUrl) ? <img src={coverPreview || storeImageUrl} alt="Current storefront cover" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">Your brand image will appear here</div>}
               <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">
                 {uploadingImage ? 'Uploading image…' : storeImageUrl ? 'Replace cover image' : 'Upload cover image'}
-                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'cover') }} />
+                <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'cover') }} />
               </label>
               <label className="flex items-start gap-2 rounded-lg bg-secondary/50 p-3 text-sm text-text-secondary">
                 <input type="checkbox" checked={sameCoverAsLogo} onChange={async (event) => {
@@ -291,7 +298,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                   {(logoPreview || storeLogoUrl) ? <img src={logoPreview || storeLogoUrl} alt="Business logo" className="h-20 w-20 rounded-full border border-border bg-white object-contain p-2" /> : <div className="grid h-20 w-20 place-items-center rounded-full border border-dashed border-border text-xs text-text-tertiary">No logo</div>}
                   <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-ink-raised">
                     {uploadingImage ? 'Uploading…' : storeLogoUrl ? 'Replace logo' : 'Upload logo'}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'logo') }} />
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'logo') }} />
                   </label>
                 </div>
               </div>
@@ -300,7 +307,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 {slideshowImages.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{slideshowImages.map((url, index) => <div key={url} className="relative overflow-hidden rounded-lg border border-border"><img src={url} alt={'Slideshow image ' + (index + 1)} className="h-28 w-full object-cover" /><button type="button" onClick={() => void removeSlideshowImage(url)} disabled={saving || uploadingImage} className="absolute right-2 top-2 rounded bg-black/75 px-2 py-1 text-xs font-semibold text-white">Remove</button></div>)}</div>}
                 <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-ink-raised">
                   {uploadingImage ? 'Uploading…' : 'Add slideshow image'}
-                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving || slideshowImages.length >= 10} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'slideshow') }} />
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={uploadingImage || saving || slideshowImages.length >= 10} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'slideshow') }} />
                 </label>
                 <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={logoInSlideshow} disabled={!storeLogoUrl || saving || uploadingImage} onChange={async (event) => { const checked = event.target.checked; setLogoInSlideshow(checked); try { await apiJson('/vendors/store', { method: 'PATCH', body: JSON.stringify({ store_logo_in_slideshow: checked }) }); setSuccess(checked ? 'Your logo will display for 10 seconds in the slideshow.' : 'Your logo will remain as the storefront mark, outside the slideshow.') } catch (err) { setLogoInSlideshow(!checked); setError(err instanceof Error ? err.message : 'Could not save slideshow settings.') } }} className="mt-1" /><span>Include my logo in the slideshow for 10 seconds</span></label>
               </div>
