@@ -25,6 +25,7 @@ interface BusinessDetails {
 interface ExistingListing {
   slug?: string | null
   store_image_url?: string | null
+  service_images?: string[] | null
   store_logo_url?: string | null
   store_slideshow_images?: string[] | null
   store_logo_in_slideshow?: boolean
@@ -149,7 +150,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setListing(current)
       setTitle((isService ? current.service_title : current.store_name) || '')
       setSlug(current.slug || '')
-      setStoreImageUrl(current.store_image_url || '')
+      setStoreImageUrl(isService ? current.service_images?.[0] || '' : current.store_image_url || '')
       setStoreLogoUrl(current.store_logo_url || '')
       setSameCoverAsLogo(!!current.store_image_url && current.store_image_url === current.store_logo_url)
       setSlideshowImages(current.store_slideshow_images || [])
@@ -203,14 +204,15 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   }
 
   const selectStoreAsset = async (file: File | undefined, target: 'cover' | 'logo' | 'slideshow') => {
-    if (!file || isService) return
+    if (!file) return
     setError('')
     setSuccess('')
-    if (file.size <= 0 || file.size > MAX_BRAND_IMAGE_SIZE) {
-      setError('Each brand image must be 10 MB or smaller.')
+    const maxSize = isService ? 5 * 1024 * 1024 : MAX_BRAND_IMAGE_SIZE
+    if (file.size <= 0 || file.size > maxSize) {
+      setError(`Each ${isService ? 'service' : 'brand'} image must be ${isService ? '5' : '10'} MB or smaller.`)
       return
     }
-    if (target === 'slideshow' && slideshowImages.length >= 10) {
+    if (!isService && target === 'slideshow' && slideshowImages.length >= 10) {
       setError('You can add up to 10 slideshow images.')
       return
     }
@@ -231,14 +233,14 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   }
 
   const uploadStoreAsset = async () => {
-    if (!pendingImage || isService || uploadingImage) return
+    if (!pendingImage || uploadingImage) return
     const { file, target, mimeType } = pendingImage
     setUploadingImage(true)
     setUploadFailed(false)
     setError('')
     setSuccess('')
     try {
-      const upload = await apiJson<{ signed_url: string; public_url: string }>('/vendors/store/image-upload-url', {
+      const upload = await apiJson<{ signed_url: string; public_url: string }>(isService ? '/vendors/service/image-upload-url' : '/vendors/store/image-upload-url', {
         method: 'POST',
         body: JSON.stringify({ mime_type: mimeType }),
       })
@@ -253,14 +255,19 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       }
       const field = target === 'cover' ? 'store_image_url' : target === 'logo' ? 'store_logo_url' : 'store_slideshow_images'
       const value = target === 'slideshow' ? [...slideshowImages, upload.public_url] : upload.public_url
-      const payload = target === 'slideshow' ? { [field]: value } : sameCoverAsLogo ? { store_image_url: upload.public_url, store_logo_url: upload.public_url } : { [field]: value }
-      const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
-      if (!updated.store) throw new Error('The server did not confirm your brand image.')
-      setListing((current) => current ? { ...current, ...updated.store } : updated.store)
-      if (target === 'cover') { setStoreImageUrl(upload.public_url); if (sameCoverAsLogo) setStoreLogoUrl(upload.public_url) }
+      const payload = isService
+        ? { service_images: [upload.public_url, ...(listing?.service_images || []).slice(1)] }
+        : target === 'slideshow' ? { [field]: value } : sameCoverAsLogo ? { store_image_url: upload.public_url, store_logo_url: upload.public_url } : { [field]: value }
+      const updated = isService
+        ? await apiJson<{ service_profile: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
+        : await apiJson<{ store: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
+      const savedListing = isService ? updated.service_profile : updated.store
+      if (!savedListing) throw new Error('The server did not confirm your business image.')
+      setListing((current) => current ? { ...current, ...savedListing } : savedListing)
+      if (target === 'cover') { setStoreImageUrl(upload.public_url); if (!isService && sameCoverAsLogo) setStoreLogoUrl(upload.public_url) }
       if (target === 'logo') { setStoreLogoUrl(upload.public_url); if (sameCoverAsLogo) setStoreImageUrl(upload.public_url) }
       if (target === 'slideshow') setSlideshowImages((current) => [...current, upload.public_url])
-      setSuccess(target === 'cover' ? 'Your storefront cover has been updated.' : target === 'logo' ? 'Your business logo has been updated.' : 'Slideshow image added.')
+      setSuccess(target === 'cover' ? (isService ? 'Your service cover image has been updated.' : 'Your storefront cover has been updated.') : target === 'logo' ? 'Your business logo has been updated.' : 'Slideshow image added.')
       URL.revokeObjectURL(pendingImage.previewUrl)
       setPendingImage(null)
       setUploadFailed(false)
@@ -274,23 +281,24 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   const removeSavedStoreImage = async (target: 'cover' | 'logo') => {
     if (saving || uploadingImage) return
-    const clearBoth = sameCoverAsLogo
-    const payload = clearBoth
-      ? { store_image_url: null, store_logo_url: null }
+    const clearBoth = !isService && sameCoverAsLogo
+    const payload = isService
+      ? { service_images: (listing?.service_images || []).slice(1) }
+      : clearBoth ? { store_image_url: null, store_logo_url: null }
       : target === 'cover' ? { store_image_url: null } : { store_logo_url: null }
     setSaving(true)
     setError('')
     setSuccess('')
     try {
-      const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      })
-      if (!updated.store) throw new Error('The server did not confirm the image removal.')
-      setListing((current) => current ? { ...current, ...updated.store } : updated.store)
+      const updated = isService
+        ? await apiJson<{ service_profile: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
+        : await apiJson<{ store: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
+      const savedListing = isService ? updated.service_profile : updated.store
+      if (!savedListing) throw new Error('The server did not confirm the image removal.')
+      setListing((current) => current ? { ...current, ...savedListing } : savedListing)
       if (clearBoth || target === 'cover') setStoreImageUrl('')
       if (clearBoth || target === 'logo') setStoreLogoUrl('')
-      setSuccess(clearBoth
+      setSuccess(isService ? 'Your service cover image has been removed.' : clearBoth
         ? 'Your storefront cover and logo have been removed.'
         : target === 'cover' ? 'Your storefront cover has been removed.' : 'Your business logo has been removed.')
     } catch (err) {
@@ -388,6 +396,15 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
             <Input label={titleLabel} value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
             {isService && vendorType === 'both' && <p className="text-xs leading-5 text-text-tertiary">This is the service listing title, not a second business name. Your store and service share one business identity and URL base.</p>}
             <div className="space-y-2"><Input label={isService ? 'Service URL slug' : 'Store URL slug'} value={slugPreview} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. This URL cannot be edited separately.</p></div>
+            {isService && <div className="space-y-3 rounded-xl border border-border p-4">
+              <div><h2 className="text-sm font-semibold text-text-primary">Service cover image</h2><p className="mt-1 text-xs leading-5 text-text-tertiary">Choose a landscape image that represents the service you provide. JPEG, PNG or WebP · up to 5 MB.</p></div>
+              {pendingImage?.target === 'cover' ? <img src={pendingImage.previewUrl} alt="Service cover preview" className="h-48 w-full rounded-lg object-cover" /> : storeImageUrl ? <img src={storeImageUrl} alt="Service cover" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">No cover image</div>}
+              <div className="flex flex-wrap gap-2">
+                {pendingImage?.target !== 'cover' && <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-ink-raised">{storeImageUrl ? 'Replace cover image' : 'Choose cover image'}<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void selectStoreAsset(file, 'cover') }} /></label>}
+                {pendingImage?.target !== 'cover' && storeImageUrl && <Button type="button" variant="outline" onClick={() => void removeSavedStoreImage('cover')} disabled={saving || uploadingImage}>Remove image</Button>}
+                {pendingImage?.target === 'cover' && <><Button type="button" onClick={() => void uploadStoreAsset()} disabled={uploadingImage || saving}>{uploadingImage ? 'Uploading…' : uploadFailed ? 'Retry upload' : 'Upload cover'}</Button><Button type="button" variant="outline" onClick={discardPendingImage} disabled={uploadingImage}>Remove</Button></>}
+              </div>
+            </div>}
             {!isService && <div className="space-y-3 rounded-xl border border-border p-4">
               <div>
                 <h2 className="text-sm font-semibold text-text-primary">Storefront cover</h2>
