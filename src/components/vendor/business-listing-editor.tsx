@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiJson } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +59,45 @@ async function detectSupportedImageMimeType(file: File): Promise<string> {
 
 const MAX_BRAND_IMAGE_SIZE = 10 * 1024 * 1024
 
+type LeafletMap = { setView: (center: [number, number], zoom?: number) => LeafletMap; remove: () => void; invalidateSize: () => void }
+type LeafletMarker = { setLatLng: (position: [number, number]) => LeafletMarker; on: (event: string, callback: () => void) => LeafletMarker; addTo: (map: LeafletMap) => LeafletMarker; getLatLng: () => { lat: number; lng: number } }
+type LeafletApi = { map: (element: HTMLElement, options?: Record<string, unknown>) => LeafletMap; tileLayer: (url: string, options?: Record<string, unknown>) => { addTo: (map: LeafletMap) => void }; marker: (position: [number, number], options?: Record<string, unknown>) => LeafletMarker; divIcon: (options: Record<string, unknown>) => unknown }
+declare global { interface Window { L?: LeafletApi; __kambaLeafletLoading?: Promise<void> } }
+
+function loadLeaflet(): Promise<void> {
+  if (typeof window === 'undefined' || window.L) return Promise.resolve()
+  if (!window.__kambaLeafletLoading) window.__kambaLeafletLoading = new Promise((resolve, reject) => {
+    if (!document.querySelector('link[data-kamba-leaflet]')) { const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; link.dataset.kambaLeaflet = 'true'; document.head.appendChild(link) }
+    const script = document.createElement('script'); script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.async = true; script.dataset.kambaLeaflet = 'true'; script.onload = () => resolve(); script.onerror = () => reject(new Error('Map library could not be loaded.')); document.body.appendChild(script)
+  })
+  return window.__kambaLeafletLoading
+}
+
+function BusinessLocationMap({ lat, lng, onChange }: { lat: number; lng: number; onChange: (lat: number, lng: number) => void }) {
+  const elementRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
+  const markerRef = useRef<LeafletMarker | null>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  useEffect(() => {
+    let active = true
+    void loadLeaflet().then(() => {
+      if (!active || !elementRef.current || !window.L) return
+      const L = window.L
+      const position: [number, number] = [lat, lng]
+      if (!mapRef.current) {
+        const map = L.map(elementRef.current, { scrollWheelZoom: false }).setView(position, 16)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map)
+        const marker = L.marker(position, { draggable: true, icon: L.divIcon({ className: 'kamba-map-pin', html: '<span style="display:block;width:22px;height:22px;background:#315b42;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px #0005"></span>', iconSize: [28, 34], iconAnchor: [14, 30] }) }).addTo(map)
+        marker.on('dragend', () => { const point = marker.getLatLng(); onChangeRef.current(point.lat, point.lng) })
+        mapRef.current = map; markerRef.current = marker; window.setTimeout(() => map.invalidateSize(), 100)
+      } else { markerRef.current?.setLatLng(position); mapRef.current.setView(position, 16); window.setTimeout(() => mapRef.current?.invalidateSize(), 100) }
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [lat, lng])
+  useEffect(() => () => { mapRef.current?.remove(); mapRef.current = null; markerRef.current = null }, [])
+  return <div className="mt-3 overflow-hidden rounded-xl border border-border bg-surface"><div ref={elementRef} className="h-64 w-full sm:h-72" aria-label="Map. Drag the pin to adjust your business location." /><p className="border-t border-border px-3 py-2 text-xs leading-5 text-text-secondary">Drag the pin to fine-tune the location. The adjusted coordinates will be saved with your business listing.</p></div>
+}
 const BUSINESS_CATEGORIES = ["Electronics & Gadgets","Fashion & Clothing","Beauty & Personal Care","Food & Groceries","Home & Living","Health & Wellness","Books & Stationery","Sports & Fitness","Automotive","Home Services","Repairs & Maintenance","Professional Services","Education & Tutoring","Events & Photography","Repairs","Photography","Cleaning","Other"]
 
 export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
@@ -461,7 +500,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setSelectedLocation(false); setLocationLat(null); setLocationLng(null) }} required={locationMode === 'physical'} placeholder="Start typing a street, landmark, area or city" autoComplete="off" />
                 {locationSuggestionsLoading && <p className="mt-1 text-xs text-text-tertiary">Finding Nigerian locations…</p>}
                 {locationSuggestions.length > 0 && <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-border bg-surface shadow-xl">{locationSuggestions.map((suggestion) => <button key={suggestion.place_id} type="button" onClick={() => void chooseBusinessLocation(suggestion)} className="block w-full border-b border-border px-3 py-3 text-left text-sm text-text-primary last:border-0 hover:bg-ink-raised">{suggestion.description}</button>)}</div>}
-                {locationLat !== null && locationLng !== null && <p className="mt-1 text-xs text-success">Map position found. Coordinates will be saved with this location.</p>}
+                {locationLat !== null && locationLng !== null && <><p className="mt-1 text-xs text-success">Map position found. Drag the pin to fine-tune the exact point.</p><BusinessLocationMap lat={locationLat} lng={locationLng} onChange={(lat, lng) => { setLocationLat(lat); setLocationLng(lng); setError(""); setSuccess("") }} /></>}
               </div>}
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
