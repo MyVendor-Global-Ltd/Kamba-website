@@ -34,8 +34,8 @@ interface ExistingListing {
   description?: string | null
   price_range?: string | null
   tags?: string[] | null
-  contact_whatsapp?: string | null
-  contact_preference?: 'whatsapp' | 'call' | 'both'
+  contact_phone?: string | null
+  contact_preference?: 'call' | 'both'
   location_text?: string | null
   location_lat?: number | null
   location_lng?: number | null
@@ -120,7 +120,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [priceRange, setPriceRange] = useState('')
   const [tags, setTags] = useState('')
   const [tagDraft, setTagDraft] = useState('')
-  const [contactPreference, setContactPreference] = useState<'whatsapp' | 'call' | 'both'>('whatsapp')
+  const [contactPreference, setContactPreference] = useState<'call' | 'both'>('both')
   const [locationMode, setLocationMode] = useState<LocationMode>('physical')
   const [locationText, setLocationText] = useState('')
   const [locationLat, setLocationLat] = useState<number | null>(null)
@@ -161,7 +161,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
       setTags((current.tags || []).join(', '))
-      setContactPreference(current.contact_preference || 'whatsapp')
+      setContactPreference(current.contact_preference === 'call' ? 'call' : 'both')
       setLocationMode(business?.location_mode || (business?.location_text || current.location_text ? 'physical' : 'service_area'))
       setLocationText(business?.location_text || current.location_text || '')
       setLocationLat(business?.location_lat ?? current.location_lat ?? null)
@@ -462,14 +462,16 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               <p className="text-xs text-text-tertiary">Separate keywords with commas or press Enter. These help buyers find your business.</p>
             </div>
                         {isService && (
-              <label className="block text-sm font-medium text-text-secondary">Preferred contact method
+              <label className="block text-sm font-medium text-text-secondary">How customers can reach you
                 <select value={contactPreference} onChange={(event) => setContactPreference(event.target.value as typeof contactPreference)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
-                  <option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option>
+                  <option value="call">Phone call</option><option value="both">Phone call and SMS</option>
                 </select>
               </label>
             )}
             {isService && vendorType === 'both' ? <div className="rounded-lg border border-border p-4"><h2 className="font-semibold text-text-primary">Shared business location</h2><p className="mt-1 text-sm text-text-secondary">This service uses the same business and pickup location as your storefront. Edit the address and its visibility from Storefront settings so the two listings stay in sync.</p></div> : <div className="border-t border-border pt-4">
-              <h2 className="font-semibold text-text-primary">Business / pickup location</h2>
+              <h2 className="font-semibold text-text-primary">Business location and contact</h2>
+              <p className="mt-1 text-sm text-text-secondary">Your account phone number is used as the business contact only when it has been verified by SMS. Customers can then call or text it. WhatsApp verification is not currently enabled, so this number will not be labelled WhatsApp verified.</p>
+              {listing?.contact_phone && <p className="mt-2 text-sm font-medium text-text-primary">Verified contact: {listing.contact_phone} · Call and SMS</p>}
               <label className="mt-3 block text-sm font-medium text-text-secondary">Location type
                 <select value={locationMode} onChange={(event) => setLocationMode(event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                   <option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option>
