@@ -291,8 +291,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     setSuccess('')
     try {
       const updated = isService
-        ? await apiJson<{ service_profile: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
-        : await apiJson<{ store: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
+        ? await apiJson<{ service_profile?: ExistingListing; store?: ExistingListing }>('/vendors/service', { method: 'PATCH', body: JSON.stringify(payload) })
+        : await apiJson<{ service_profile?: ExistingListing; store?: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify(payload) })
       const savedListing = isService ? updated.service_profile : updated.store
       if (!savedListing) throw new Error('The server did not confirm the image removal.')
       setListing((current) => current ? { ...current, ...savedListing } : savedListing)
