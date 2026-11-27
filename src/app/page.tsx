@@ -74,7 +74,10 @@ export default function Home() {
             </Link>
             <div className="col-span-2 flex items-center justify-between rounded-2xl border border-border bg-background px-5 py-4">
               <div><p className="text-sm font-semibold text-text-primary">Have something to sell or offer?</p><p className="text-xs text-text-secondary">Bring your shop or service to Kamba.</p></div>
-              <Link href="/vendor/onboard" className="shrink-0 text-sm font-semibold text-primary hover:underline">Become a vendor</Link>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <Link href="/vendor/onboard" className="text-sm font-semibold text-primary hover:underline">Become a vendor</Link>
+                <Link href="/sell-online-in-nigeria" className="text-xs text-text-secondary underline underline-offset-4 hover:text-primary">Selling on WhatsApp? Read this guide</Link>
+              </div>
             </div>
           </div>
         </div>
