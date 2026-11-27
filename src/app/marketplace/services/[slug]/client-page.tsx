@@ -139,6 +139,7 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
       {/* Header */}
       <header className="animate-fade-in">
+        {service.service_images?.[0] && <div className="mb-6 overflow-hidden rounded-2xl border border-border bg-ink-raised"><img src={service.service_images[0]} alt={`${service.business_profiles?.business_name || service.name} service cover`} className="h-56 w-full object-cover sm:h-72" /></div>}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <Link href="/marketplace/services" className="inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-coral transition-colors mb-4">
