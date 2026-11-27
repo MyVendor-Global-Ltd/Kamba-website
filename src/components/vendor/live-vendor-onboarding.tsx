@@ -145,6 +145,9 @@ export function LiveVendorOnboarding() {
           tagline: serviceForm.tagline.trim(),
           description: serviceForm.description.trim(),
           price_range: serviceForm.price_range.trim(),
+          fulfilment_options: serviceForm.fulfilment_options,
+          contact_preference: serviceForm.contact_preference,
+          contact_whatsapp: serviceForm.contact_whatsapp.trim(),
         }),
       })
       const statusLoaded = await loadStatus()
