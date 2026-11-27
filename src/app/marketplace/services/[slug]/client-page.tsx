@@ -27,6 +27,8 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
 
   useEffect(() => {
     if (initialService?.slug === slug) {
+      setService(initialService)
+      setError('')
       setLoading(false)
       return
     }
