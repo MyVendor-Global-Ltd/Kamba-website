@@ -23,9 +23,42 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ['400', '500', '600', '700'],
 })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kamba.ng'
+
 export const metadata: Metadata = {
-  title: 'Kamba Marketplace',
-  description: 'Buy and sell products and services with Kamba',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'Kamba | Buy, Sell & Discover Local Stores in Nigeria',
+    template: '%s | Kamba',
+  },
+  description: 'Discover products, independent shops and trusted services near you in Nigeria. Compare local prices, shop from nearby sellers and arrange convenient delivery or pickup with Kamba.',
+  applicationName: 'Kamba',
+  category: 'shopping',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'Kamba',
+    title: 'Kamba | Buy, Sell & Discover Local Stores in Nigeria',
+    description: 'Shop products, discover independent stores and find useful services around you across Nigeria.',
+    url: '/',
+    locale: 'en_NG',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Kamba | Buy, Sell & Discover Local Stores in Nigeria',
+    description: 'Shop products, discover independent stores and find useful services around you across Nigeria.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
 }
 
 function HeaderSkeleton() {
