@@ -44,7 +44,7 @@ export function LiveVendorOnboarding() {
   })
   const [serviceForm, setServiceForm] = useState({
     service_title: '', slug: '', category: '', custom_category: '', tagline: '', description: '', price_range: '',
-    contact_preference: 'both', fulfilment_options: ['customer_visit'] as string[],
+    fulfilment_options: ['customer_visit'] as string[],
   })
 
   const loadStatus = useCallback(async () => {
@@ -146,7 +146,6 @@ export function LiveVendorOnboarding() {
           description: serviceForm.description.trim(),
           price_range: serviceForm.price_range.trim(),
           fulfilment_options: serviceForm.fulfilment_options,
-          contact_preference: serviceForm.contact_preference,
         }),
       })
       const statusLoaded = await loadStatus()
@@ -289,7 +288,7 @@ export function LiveVendorOnboarding() {
                 </label>
               ))}
             </fieldset>
-                        <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="call">Phone call</option><option value="both">Phone call and SMS</option></select></label>
+                        <p className="text-xs leading-5 text-text-tertiary">Customers can call or send an SMS to your account phone number after it has been verified by SMS. WhatsApp verification is not enabled.</p>
             </fieldset>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
           </form>
