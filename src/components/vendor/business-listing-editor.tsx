@@ -40,6 +40,17 @@ function firstBusiness(value: ExistingListing['business_profiles']): BusinessDet
   return Array.isArray(value) ? value[0] || null : value || null
 }
 
+async function detectSupportedImageMimeType(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+  // Validate file signatures instead of trusting inconsistent Android/browser MIME metadata.
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg'
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+      bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return 'image/png'
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
+      String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP') return 'image/webp'
+  return ''
+}
+
 const BUSINESS_CATEGORIES = ["Electronics & Gadgets","Fashion & Clothing","Beauty & Personal Care","Food & Groceries","Home & Living","Health & Wellness","Books & Stationery","Sports & Fitness","Automotive","Home Services","Repairs & Maintenance","Professional Services","Education & Tutoring","Events & Photography","Repairs","Photography","Cleaning","Other"]
 
 export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
@@ -116,11 +127,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
   const uploadStoreAsset = async (file: File, target: 'cover' | 'logo' | 'slideshow') => {
     if (isService) return
-    // Some browsers/devices report an empty MIME type for otherwise valid JPG files.
-    const extension = file.name.split('.').pop()?.toLowerCase()
-    const mimeType = file.type || (extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : '')
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
-      setError('This file format is not supported. Choose a JPG, PNG or WebP image.')
+    const mimeType = await detectSupportedImageMimeType(file)
+    if (!mimeType) {
+      setError('This file is not a supported JPEG, PNG or WebP image. HEIC/HEIF and other formats must be converted first.')
       return
     }
     if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
@@ -143,9 +152,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         method: 'POST',
         body: JSON.stringify({ mime_type: mimeType }),
       })
-      // Supabase signed-upload endpoints require POST (not PUT).
+      // Supabase signed-upload URLs accept the file with PUT.
       const response = await fetch(upload.signed_url, {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': mimeType, 'x-upsert': 'false' },
         body: file,
       })
