@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { KambaLogo } from '@/components/layout/kamba-logo'
 import { useAuth } from '@/context/AuthContext'
-import { verifyPhoneOTP } from '@/lib/auth'
+import { resendPhoneOTP, verifyPhoneOTP } from '@/lib/auth'
 
 export default function VerifyOTPPage() {
   const [phone, setPhone] = useState('')
@@ -19,6 +19,9 @@ export default function VerifyOTPPage() {
   const [hasSession, setHasSession] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [cooldown, setCooldown] = useState(30)
+  const [notice, setNotice] = useState('')
   const router = useRouter()
   const { refreshProfile } = useAuth()
   const phonePageHref = `/auth/phone?callbackUrl=${encodeURIComponent(returnTo)}`
@@ -30,7 +33,14 @@ export default function VerifyOTPPage() {
     setPhone(savedPhone)
     setReturnTo(savedReturnTo.startsWith('/') && !savedReturnTo.startsWith('//') ? savedReturnTo : '/account')
     setHasSession(Boolean(userId && savedPhone))
+    if (userId && savedPhone) setCooldown(30)
   }, [])
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = window.setTimeout(() => setCooldown((current) => Math.max(0, current - 1)), 1000)
+    return () => window.clearTimeout(timer)
+  }, [cooldown])
 
   const handleVerify = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -47,6 +57,29 @@ export default function VerifyOTPPage() {
       setError(err.message || 'OTP verification failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    if (cooldown > 0 || resending) return
+    setError('')
+    setNotice('')
+    setResending(true)
+    try {
+      const userId = sessionStorage.getItem('kamba_phone_verification_user_id') || ''
+      const savedPhone = sessionStorage.getItem('kamba_phone_verification_phone') || phone
+      if (!userId || !savedPhone) throw new Error('Your verification session has expired. Request a new code.')
+      await resendPhoneOTP(userId, savedPhone)
+      setOtp('')
+      setCooldown(30)
+      setNotice('A new verification code has been sent.')
+    } catch (err: any) {
+      const message = err.message || 'Unable to resend verification code.'
+      const wait = message.match(/wait\s+(\d+)\s+seconds?/i)
+      if (wait) setCooldown(Math.max(1, Number(wait[1])))
+      setError(message)
+    } finally {
+      setResending(false)
     }
   }
 
@@ -86,6 +119,11 @@ export default function VerifyOTPPage() {
                   {error}
                 </div>
               )}
+              {notice && (
+                <div role="status" className="rounded-xl border border-primary/20 bg-primary-soft p-3 text-sm text-primary">
+                  {notice}
+                </div>
+              )}
               {!hasSession ? (
                 <div className="space-y-4 text-sm text-text-secondary">
                   <p>Your phone verification session is missing or has expired. Go back and request a new code.</p>
@@ -113,6 +151,9 @@ export default function VerifyOTPPage() {
                   </div>
                   <Button type="submit" size="lg" className="w-full" disabled={loading || otp.length !== 6}>
                     {loading ? 'Verifying…' : 'Verify phone number'}
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={handleResend} disabled={resending || cooldown > 0}>
+                    {resending ? 'Sending new code…' : cooldown > 0 ? `Resend code in 00:${String(cooldown).padStart(2, '0')}` : 'Resend code'}
                   </Button>
                 </form>
               )}
