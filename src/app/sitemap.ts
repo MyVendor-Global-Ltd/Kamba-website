@@ -44,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absolute('/marketplace/products'), changeFrequency: 'daily', priority: 0.9 },
     { url: absolute('/marketplace/stores'), changeFrequency: 'daily', priority: 0.9 },
     { url: absolute('/marketplace/services'), changeFrequency: 'daily', priority: 0.9 },
+    { url: absolute('/sell-online-in-nigeria'), changeFrequency: 'monthly', priority: 0.8 },
   ]
 
   if (!apiBase) return entries

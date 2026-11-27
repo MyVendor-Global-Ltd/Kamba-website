@@ -25,6 +25,36 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kamba.ng'
 
+const siteStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://kamba.ng/#organization',
+      name: 'Kamba',
+      url: 'https://kamba.ng',
+      description: 'A Nigerian hyperlocal marketplace for discovering products, independent stores and local services.',
+      areaServed: { '@type': 'Country', name: 'Nigeria' },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://kamba.ng/#website',
+      name: 'Kamba',
+      url: 'https://kamba.ng',
+      publisher: { '@id': 'https://kamba.ng/#organization' },
+      inLanguage: 'en-NG',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: 'https://kamba.ng/search?q={search_term_string}',
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ],
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -83,6 +113,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col antialiased bg-background text-foreground font-ui">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData).replace(/</g, '\\u003c') }} />
         <ThemeProvider>
           <AuthProvider>
             <CartProvider>
