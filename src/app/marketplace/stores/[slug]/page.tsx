@@ -117,7 +117,7 @@ export default function StoreDetailPage() {
     const slides = [...images, ...(store.store_logo_in_slideshow && store.store_logo_url ? [store.store_logo_url] : [])]
     if (slides.length < 2) return
     const logoIndex = images.length
-    const duration = store.store_logo_in_slideshow && activeSlideIndex === logoIndex ? 10000 : 3000
+    const duration = store.store_logo_in_slideshow && activeSlideIndex % slides.length === logoIndex ? 10000 : 3000
     const timeout = window.setTimeout(() => setActiveSlideIndex((index) => (index + 1) % slides.length), duration)
     return () => window.clearTimeout(timeout)
   }, [store, activeSlideIndex])
