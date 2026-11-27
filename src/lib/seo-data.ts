@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+const apiBase = (process.env.NODE_ENV === 'production' ? 'https://kamba-api-8l80.onrender.com' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001')).replace(/\/$/, '')
 
 async function publicApi<T>(path: string): Promise<T | null> {
   if (!apiBase) return null
