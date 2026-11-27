@@ -10,9 +10,6 @@ const protectedPaths = [
 ]
 
 function apiUsesSeparateOrigin(request: NextRequest) {
-  // Production API requests are proxied through this site so auth cookies
-  // remain first-party on both the primary domain and the Vercel fallback.
-  if (process.env.NODE_ENV === 'production') return false
   const configuredApi = process.env.NEXT_PUBLIC_API_URL
   if (!configuredApi) return false
   try {
@@ -25,8 +22,10 @@ function apiUsesSeparateOrigin(request: NextRequest) {
 export function middleware(request: NextRequest) {
   if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_KAMBA_MOCK_MODE === 'true') return NextResponse.next()
 
-  // In production, the API is same-origin through the Vercel rewrite and its
-  // host-only HttpOnly cookies are visible to this middleware.
+  // The Express API owns the HttpOnly auth cookies. When it is hosted on a
+  // different origin (for example api.kamba.ng), the website middleware cannot
+  // see host-only API cookies. Let the client AuthProvider verify the session;
+  // protected API endpoints still enforce authentication and roles.
   if (apiUsesSeparateOrigin(request)) return NextResponse.next()
 
   const token = request.cookies.get('access_token')?.value

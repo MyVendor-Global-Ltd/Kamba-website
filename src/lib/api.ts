@@ -1,6 +1,6 @@
 import { isMockMode, mockApiJson } from '@/lib/mock-api'
 
-const API_BASE = process.env.NODE_ENV === 'production' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001')
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001'
 
 let refreshPromise: Promise<string | null> | null = null
 

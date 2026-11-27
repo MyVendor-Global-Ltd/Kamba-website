@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function GooglePage() {
   const handleGoogleSignIn = () => {
-    const apiBase = (process.env.NODE_ENV === 'production' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001')).replace(/\/$/, '')
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001').replace(/\/$/, '')
     window.location.assign(`${apiBase}/api/v1/auth/google`)
   }
 

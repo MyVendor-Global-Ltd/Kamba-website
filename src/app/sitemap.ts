@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.kamba.ng').replace(/\/$/, '')
-const apiBase = (process.env.NODE_ENV === 'production' ? 'https://kamba-api-8l80.onrender.com' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001')).replace(/\/$/, '')
+const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
 const maxEntriesPerType = 10000
 
 type ApiRecord = Record<string, unknown>
