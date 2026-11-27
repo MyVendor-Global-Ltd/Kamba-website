@@ -22,7 +22,7 @@ type ServiceSeo = ServiceProfile & {
 type PageProps = { params: Promise<{ slug: string }> }
 
 function serviceUrl(slug: string) {
-  return `https://kamba.ng/marketplace/services/${encodeURIComponent(slug)}`
+  return `https://www.kamba.ng/marketplace/services/${encodeURIComponent(slug)}`
 }
 
 function jsonLd(value: Record<string, unknown>) {

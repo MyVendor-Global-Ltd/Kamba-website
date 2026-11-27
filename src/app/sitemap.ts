@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://kamba.ng').replace(/\/$/, '')
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.kamba.ng').replace(/\/$/, '')
 const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
 const maxEntriesPerType = 10000
 

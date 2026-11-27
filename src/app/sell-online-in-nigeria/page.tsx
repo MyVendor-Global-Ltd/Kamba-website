@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-const pageUrl = 'https://kamba.ng/sell-online-in-nigeria'
+const pageUrl = 'https://www.kamba.ng/sell-online-in-nigeria'
 
 const faqs = [
   {
@@ -34,8 +34,8 @@ const structuredData = {
       headline: 'How to sell online in Nigeria when your customers know you on WhatsApp',
       description: 'A practical guide for Nigerian small businesses that want a shareable online storefront without abandoning WhatsApp.',
       mainEntityOfPage: pageUrl,
-      author: { '@type': 'Organization', name: 'Kamba', url: 'https://kamba.ng' },
-      publisher: { '@type': 'Organization', name: 'Kamba', url: 'https://kamba.ng' },
+      author: { '@type': 'Organization', name: 'Kamba', url: 'https://www.kamba.ng' },
+      publisher: { '@type': 'Organization', name: 'Kamba', url: 'https://www.kamba.ng' },
       inLanguage: 'en-NG',
     },
     {

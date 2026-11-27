@@ -14,7 +14,7 @@ type ProductSeo = Product & {
 type PageProps = { params: Promise<{ id: string }> }
 
 function productUrl(id: string) {
-  return `https://kamba.ng/marketplace/products/${encodeURIComponent(id)}`
+  return `https://www.kamba.ng/marketplace/products/${encodeURIComponent(id)}`
 }
 
 function jsonLd(value: Record<string, unknown>) {
@@ -75,7 +75,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       price,
       priceCurrency: 'NGN',
       availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      seller: product.store_name ? { '@type': 'Organization', name: product.store_name, url: `https://kamba.ng/store/${encodeURIComponent(product.store_slug || '')}` } : undefined,
+      seller: product.store_name ? { '@type': 'Organization', name: product.store_name, url: `https://www.kamba.ng/store/${encodeURIComponent(product.store_slug || '')}` } : undefined,
     },
   } : null
 

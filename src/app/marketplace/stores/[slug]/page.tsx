@@ -26,7 +26,7 @@ type StoreSeo = {
 type PageProps = { params: Promise<{ slug: string }> }
 
 function storeUrl(slug: string) {
-  return `https://kamba.ng/store/${encodeURIComponent(slug)}`
+  return `https://www.kamba.ng/store/${encodeURIComponent(slug)}`
 }
 
 function jsonLd(value: Record<string, unknown>) {
@@ -96,7 +96,7 @@ export default async function StoreDetailPage({ params }: PageProps) {
       itemListElement: products.slice(0, 100).map((product) => ({
         '@type': 'Product',
         name: product.name,
-        url: `https://kamba.ng/marketplace/products/${encodeURIComponent(product.id)}`,
+        url: `https://www.kamba.ng/marketplace/products/${encodeURIComponent(product.id)}`,
         image: product.images?.[0] || product.image_url || undefined,
         offers: {
           '@type': 'Offer',
