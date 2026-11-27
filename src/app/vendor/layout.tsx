@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { useAuth } from '@/context/AuthContext'
+import { VendorWorkspaceNavigation } from '@/components/vendor/workspace-navigation'
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const { state } = useAuth()
@@ -19,7 +20,10 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
   return (
     <AuthGuard>
-      {isOnboarding || state.user?.role === 'vendor' ? children : (
+      {isOnboarding || state.user?.role === 'vendor' ? <>
+        {!isOnboarding && state.user?.role === 'vendor' && <VendorWorkspaceNavigation />}
+        {children}
+      </> : (
         <div className="flex min-h-[45vh] items-center justify-center" role="status">
           Redirecting to vendor onboarding…
         </div>
