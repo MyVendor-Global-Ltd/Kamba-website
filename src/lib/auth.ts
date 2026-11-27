@@ -98,6 +98,16 @@ export async function requestPhoneOTP(phone: string) {
   return request('/auth/phone/request', { method: 'POST', body: JSON.stringify({ phone, method: 'sms' }) })
 }
 
+export async function resendPhoneOTP(userId: string, phone: string) {
+  if (isMockMode) return { success: true, prototype: true }
+  const result = await request<{ success?: boolean; message?: string }>('/auth/otp/resend', {
+    method: 'POST',
+    body: JSON.stringify({ userId, purpose: 'PHONE_VERIFICATION', endpoint: phone }),
+  })
+  if (result.success === false) throw new Error(result.message || 'Unable to resend verification code.')
+  return result
+}
+
 export async function verifyPhoneOTP(otp: string) {
   if (isMockMode) {
     if (otp !== '000000') throw new Error('For the prototype only, enter 000000. No real phone verification is performed.')
