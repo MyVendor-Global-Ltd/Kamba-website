@@ -55,6 +55,8 @@ export default function ProductDetailPage({ initialProduct }: { initialProduct?:
         const item = data.product || data
         setProduct({
           ...item,
+          // The public product endpoint only returns active products; older response shapes omit is_active.
+          is_active: item.is_active ?? true,
           image_url: item.image_url || item.images?.[0],
           compare_at_price: item.compare_at_price ?? data.original_price,
           store_slug: item.store_slug || data.store_slug,
