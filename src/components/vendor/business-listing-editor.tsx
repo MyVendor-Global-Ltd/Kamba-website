@@ -275,7 +275,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                   if (checked && (storeLogoUrl || storeImageUrl)) {
                     const sharedUrl = storeLogoUrl || storeImageUrl
                     try {
-                      const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify({ store_image_url: sharedUrl, store_logo_url: sharedUrl }) })
+                      const updated = await apiJson<{ store?: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify({ store_image_url: sharedUrl, store_logo_url: sharedUrl }) })
+                      if (!updated.store) throw new Error('The server did not confirm the shared cover and logo.')
                       setStoreImageUrl(sharedUrl); setStoreLogoUrl(sharedUrl); setListing((current) => current ? { ...current, ...updated.store } : updated.store)
                     } catch (err) { setSameCoverAsLogo(false); setError(err instanceof Error ? err.message : 'Could not link the cover and logo.') }
                   }
