@@ -248,7 +248,7 @@ export default function StoreDetailPage({ initialStore, initialProducts }: { ini
           return `${hour % 12 || 12}:${String(minute || 0).padStart(2, '0')} ${suffix}`
         }
         const dayLabels = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-        const hasBusinessDetails = !!displayLocation || hasHours
+        const hasBusinessDetails = !!displayLocation || hasHours || (store.contact_phone && store.contact_phone_verified_method === 'sms')
         if (!hasBusinessDetails) return null
         return (
           <section aria-labelledby="store-location-heading" className="mx-auto w-full max-w-[1440px] px-5 pb-14 pt-4 sm:px-8 sm:pb-20 lg:px-12 xl:px-16">
@@ -265,7 +265,7 @@ export default function StoreDetailPage({ initialStore, initialProducts }: { ini
                 {photos.length > 1 && <div className="absolute bottom-5 right-5 flex items-center gap-2 sm:bottom-7 sm:right-7">{photos.map((photo, index) => <button key={photo + index} type="button" aria-label={`Show location photo ${index + 1}`} aria-current={activeLocationPhotoIndex === index ? 'true' : undefined} onClick={() => setActiveLocationPhotoIndex(index)} className={`h-1.5 rounded-full transition-all ${activeLocationPhotoIndex === index ? 'w-8 bg-primary' : 'w-3 bg-primary/35 hover:bg-primary/70'}`} />)}</div>}
               </div>
               <div className="flex min-w-0 flex-col justify-center bg-background px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-16">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Location & opening hours</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Location, opening hours & contact</p>
                 <h3 className="mt-4 font-display text-[clamp(1.8rem,3.4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-text-primary">Plan your visit.</h3>
                 {publicLocation && <div className="mt-8 border-t border-border pt-5"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-text-muted">Business location</p><div className="mt-3 flex items-start gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" /><p className="text-sm leading-6 text-text-primary">{publicLocation}</p></div></div>}
                 {serviceArea && !publicLocation && <div className="mt-8 border-t border-border pt-5"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-text-muted">Service coverage</p><div className="mt-3 flex items-start gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" /><p className="text-sm leading-6 text-text-primary">{serviceArea}</p></div></div>}
