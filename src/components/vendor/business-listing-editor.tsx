@@ -197,6 +197,34 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
     }
   }
 
+  const removeSavedStoreImage = async (target: 'cover' | 'logo') => {
+    if (saving || uploadingImage) return
+    const clearBoth = sameCoverAsLogo
+    const payload = clearBoth
+      ? { store_image_url: null, store_logo_url: null }
+      : target === 'cover' ? { store_image_url: null } : { store_logo_url: null }
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    try {
+      const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+      if (!updated.store) throw new Error('The server did not confirm the image removal.')
+      setListing((current) => current ? { ...current, ...updated.store } : updated.store)
+      if (clearBoth || target === 'cover') setStoreImageUrl('')
+      if (clearBoth || target === 'logo') setStoreLogoUrl('')
+      setSuccess(clearBoth
+        ? 'Your storefront cover and logo have been removed.'
+        : target === 'cover' ? 'Your storefront cover has been removed.' : 'Your business logo has been removed.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove this image.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const removeSlideshowImage = async (url: string) => {
     const nextImages = slideshowImages.filter((image) => image !== url)
     setSaving(true)
@@ -296,6 +324,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                   {storeImageUrl ? 'Replace cover image' : 'Choose cover image'}
                   <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void selectStoreAsset(file, 'cover') }} />
                 </label>}
+                {pendingImage?.target !== 'cover' && storeImageUrl && <Button type="button" variant="outline" onClick={() => void removeSavedStoreImage('cover')} disabled={saving || uploadingImage}>Remove image</Button>}
                 {pendingImage?.target === 'cover' && <><Button type="button" onClick={() => void uploadStoreAsset()} disabled={uploadingImage || saving}>{uploadingImage ? 'Uploading…' : uploadFailed ? 'Retry upload' : 'Upload image'}</Button><Button type="button" variant="outline" onClick={discardPendingImage} disabled={uploadingImage}>Remove</Button></>}
               </div>
               <label className="flex items-start gap-2 rounded-lg bg-secondary/50 p-3 text-sm text-text-secondary">
@@ -324,6 +353,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                       {storeLogoUrl ? 'Replace logo' : 'Choose logo'}
                       <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void selectStoreAsset(file, 'logo') }} />
                     </label>}
+                    {pendingImage?.target !== 'logo' && storeLogoUrl && <Button type="button" variant="outline" onClick={() => void removeSavedStoreImage('logo')} disabled={saving || uploadingImage}>Remove image</Button>}
                     {pendingImage?.target === 'logo' && <><Button type="button" onClick={() => void uploadStoreAsset()} disabled={uploadingImage || saving}>{uploadingImage ? 'Uploading…' : uploadFailed ? 'Retry upload' : 'Upload logo'}</Button><Button type="button" variant="outline" onClick={discardPendingImage} disabled={uploadingImage}>Remove</Button></>}
                   </div>
                 </div>
