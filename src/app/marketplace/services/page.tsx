@@ -139,7 +139,7 @@ export default function ServicesPage() {
           </div>
 
           {loading && services.length === 0 ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">{[1,2,3,4,5,6,7,8].map(item => <div key={item} className="overflow-hidden rounded-2xl border border-border"><div className="aspect-[5/4] animate-pulse bg-surface-muted" /><div className="space-y-3 p-4"><div className="h-4 w-2/3 animate-pulse rounded bg-surface-muted" /><div className="h-6 w-4/5 animate-pulse rounded bg-surface-muted" /><div className="h-3 w-full animate-pulse rounded bg-surface-muted" /></div></div>)}</div> :
-            visibleServices.length > 0 ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">{visibleServices.map(service => <ServiceListingCard key={service.id} service={service} />)}</div> :
+            visibleServices.length > 0 ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">{visibleServices.map(service => <ServiceListingCard key={service.id} service={service} />)}</div> :
             <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center"><BriefcaseBusiness className="mx-auto h-10 w-10 text-text-tertiary" /><h3 className="mt-4 font-display text-xl font-bold text-text-primary">No services found</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-text-secondary">Try a different keyword, category or location. New local providers are added as businesses join Kamba.</p>{hasActiveFilters && <Button variant="outline" className="mt-5" onClick={clearFilters}>Clear filters</Button>}</div>
           }
 
