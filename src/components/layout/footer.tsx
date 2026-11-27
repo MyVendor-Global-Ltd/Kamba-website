@@ -39,6 +39,7 @@ export function Footer() {
       links: [
         { label: 'Terms and conditions', href: '/terms' },
         { label: 'Privacy policy', href: '/privacy' },
+        { label: 'Help & FAQs', href: '/faq' },
       ],
     },
   ]
