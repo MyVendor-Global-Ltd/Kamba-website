@@ -141,10 +141,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setError('This file is not a supported JPEG, PNG or WebP image. HEIC/HEIF and other formats must be converted first.')
       return
     }
-    setPendingImage((current) => {
-      if (current) URL.revokeObjectURL(current.previewUrl)
-      return { file, target, mimeType, previewUrl: URL.createObjectURL(file) }
-    })
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl)
+    setPendingImage({ file, target, mimeType, previewUrl: URL.createObjectURL(file) })
   }
 
   const discardPendingImage = () => {
