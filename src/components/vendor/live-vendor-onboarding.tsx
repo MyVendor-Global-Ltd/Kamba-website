@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 import { AlertCircle, CheckCircle2, Store, Wrench } from 'lucide-react'
 
 type VendorType = 'products' | 'services' | 'both'
-type LocationMode = 'physical' | 'service_area' | 'online' | 'mobile' | 'hybrid'
 interface Eligibility {
   eligible: boolean
   issues: Array<{ code: string; message: string }>
@@ -41,11 +40,10 @@ export function LiveVendorOnboarding() {
 
   const [storeForm, setStoreForm] = useState({
     store_name: '', slug: '', category: '', custom_category: '', tagline: '', description: '',
-    location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
+    contact_whatsapp: '',
   })
   const [serviceForm, setServiceForm] = useState({
     service_title: '', slug: '', category: '', custom_category: '', tagline: '', description: '', price_range: '',
-    location_mode: 'service_area' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public',
     contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
   })
 
@@ -110,16 +108,11 @@ export function LiveVendorOnboarding() {
   }
   const createStore = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (storeForm.location_mode === 'hybrid' && !storeForm.location_text.trim() && !storeForm.service_area_text.trim() && !storeForm.online_url.trim()) {
-      setError('For a hybrid business, provide at least a physical location, service area or website.')
-      return
-    }
     setSubmitting(true); setError(''); setSuccess('')
     try {
       const created = await apiJson<{ store?: { slug?: string } }>('/vendors/onboard/store', {
         method: 'POST',
         body: JSON.stringify({
-          ...storeForm,
           business_name: storeForm.store_name.trim(),
           store_name: storeForm.store_name.trim(),
           category: (storeForm.category === 'Other' ? storeForm.custom_category : storeForm.category).trim(),
@@ -140,17 +133,11 @@ export function LiveVendorOnboarding() {
 
   const createService = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (serviceForm.location_mode === 'hybrid' && !serviceForm.location_text.trim() && !serviceForm.service_area_text.trim() && !serviceForm.online_url.trim()) {
-      setError('For a hybrid business, provide at least a physical location, service area or website.')
-      return
-    }
     setSubmitting(true); setError(''); setSuccess('')
     try {
       await apiJson('/vendors/onboard/service', {
         method: 'POST',
         body: JSON.stringify({
-          ...serviceForm,
-          ...(vendorType === 'both' ? { location_mode: storeForm.location_mode, location_text: storeForm.location_text, service_area_text: storeForm.service_area_text, online_url: storeForm.online_url, location_visibility: storeForm.location_visibility } : {}),
           business_name: (storeForm.store_name || serviceForm.service_title).trim(),
           slug: makeSlug(storeForm.store_name),
           service_title: serviceForm.service_title.trim(),
@@ -158,6 +145,9 @@ export function LiveVendorOnboarding() {
           tagline: serviceForm.tagline.trim(),
           description: serviceForm.description.trim(),
           price_range: serviceForm.price_range.trim(),
+          fulfilment_options: serviceForm.fulfilment_options,
+          contact_preference: serviceForm.contact_preference,
+          contact_whatsapp: serviceForm.contact_whatsapp.trim(),
         }),
       })
       const statusLoaded = await loadStatus()
@@ -173,13 +163,7 @@ export function LiveVendorOnboarding() {
   const makeSlug = (value: string) => value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
   const updateStore = <K extends keyof typeof storeForm>(field: K, value: (typeof storeForm)[K]) => setStoreForm((previous) => ({ ...previous, [field]: value, ...(field === 'store_name' ? { slug: makeSlug(String(value)) } : {}) }))
   const updateService = <K extends keyof typeof serviceForm>(field: K, value: (typeof serviceForm)[K]) => setServiceForm((previous) => ({ ...previous, [field]: value, ...(field === 'service_title' ? { slug: makeSlug(vendorType === 'both' && storeForm.store_name.trim() ? storeForm.store_name : String(value)) } : {}) }))
-  const showLocationFields = (mode: LocationMode, update: (field: 'location_text' | 'service_area_text' | 'online_url', value: string) => void, values: { location_text: string; service_area_text: string; online_url: string }) => (
-    <div className="space-y-3">
-      {(mode === 'physical' || mode === 'hybrid') && <Input label="Business location" value={values.location_text} onChange={(event) => update('location_text', event.target.value)} required={mode === 'physical'} placeholder="Street, area, city and state" />}
-      {(mode === 'service_area' || mode === 'mobile' || mode === 'hybrid') && <Input label="Service area" value={values.service_area_text} onChange={(event) => update('service_area_text', event.target.value)} required={mode === 'service_area' || mode === 'mobile'} placeholder="Areas, neighbourhoods or delivery coverage" />}
-      {(mode === 'online' || mode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={values.online_url} onChange={(event) => update('online_url', event.target.value)} required={mode === 'online'} placeholder="https://…" />}
-    </div>
-  )
+
 
 
 
@@ -234,7 +218,7 @@ export function LiveVendorOnboarding() {
                 <option value="products">Products</option><option value="services">Services</option>
               </select>
             </label>
-            <p className="text-xs leading-5 text-text-tertiary">You will enter one business location in the next step. This is the saved location for your business and the planned pickup point once Kamba's pickup collection flow is connected. You choose whether the exact address appears publicly.</p>
+            <p className="text-xs leading-5 text-text-tertiary">You can set your business location, service coverage and opening hours from your vendor settings after creating your store.</p>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating profile…' : 'Continue'}</Button>
           </form>
         </CardContent></Card>
@@ -257,12 +241,6 @@ export function LiveVendorOnboarding() {
                 {storeForm.category === 'Other' && <Input label="Your category" value={storeForm.custom_category} onChange={(event) => updateStore('custom_category', event.target.value)} required maxLength={100} placeholder="Enter your product category" />}
                 <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
               </fieldset>
-              <fieldset className="space-y-4 rounded-xl border border-border p-4">
-                <legend className="px-1 text-sm font-semibold text-text-primary">Business location</legend>
-              <label className="block text-sm font-medium text-text-secondary">Business location type<select value={storeForm.location_mode} onChange={(event) => updateStore('location_mode', event.target.value as LocationMode)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>
-              {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
-              {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={storeForm.location_visibility === 'public'} onChange={(event) => updateStore('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you enter can still be shown. Kamba can use the saved business location for pickup and fulfilment.</span></span></label></div>}
-              </fieldset>
               <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
             </form>
           </CardContent></Card>
@@ -270,7 +248,7 @@ export function LiveVendorOnboarding() {
           <aside className="overflow-hidden rounded-2xl bg-[#171a16] text-[#f6f2e9] shadow-xl xl:sticky xl:top-24">
             <div className="border-b border-white/15 px-5 py-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">Your storefront preview</p>
-              <p className="mt-1 text-xs text-white/70">This is the look and address customers will start from.</p>
+              <p className="mt-1 text-xs text-white/70">This is how customers will first see your business.</p>
             </div>
             <div className="flex min-h-[310px] flex-col justify-end bg-[radial-gradient(ellipse_at_80%_15%,#77715e_0%,#343b31_42%,#171a16_80%)] p-6">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d5c39b]">{storeForm.category || 'Independent store'}</p>
@@ -298,9 +276,6 @@ export function LiveVendorOnboarding() {
             {serviceForm.category === 'Other' && <Input label="Your category" value={serviceForm.custom_category} onChange={(event) => updateService('custom_category', event.target.value)} required maxLength={100} placeholder="Enter your service category" />}
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
-            {vendorType !== 'both' && <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => { const mode = event.target.value as LocationMode; updateService('location_mode', mode); updateService('fulfilment_options', mode === 'physical' ? ['on_site'] : mode === 'online' ? ['online'] : mode === 'hybrid' ? ['on_site', 'customer_visit', 'online'] : ['customer_visit']); }} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>}
-            {vendorType === 'both' ? <p className="rounded-lg border border-border p-3 text-sm text-text-secondary">Your business location, address visibility, operating hours and delivery settings are shared with the storefront you created in the previous step. You do not need to enter them again.</p> : showLocationFields(serviceForm.location_mode, (field, value) => updateService(field, value), serviceForm)}
-            {vendorType !== 'both' && (serviceForm.location_mode === 'physical' || serviceForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={serviceForm.location_visibility === 'public'} onChange={(event) => updateService('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. Public pages hide your street address unless you choose to publish it. Any service area you enter can still be shown.</span></span></label></div>}
             <fieldset className="space-y-2 rounded-lg border border-border p-3">
               <legend className="px-1 text-sm font-medium text-text-secondary">How will customers receive this service?</legend>
               {[

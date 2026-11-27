@@ -38,7 +38,7 @@ export default function PhonePage() {
       sessionStorage.setItem('kamba_phone_verification_resend_available_at', String(Date.now() + 30_000))
       const params = new URLSearchParams(window.location.search)
       sessionStorage.setItem('kamba_phone_verification_return_to', safeReturnTo(params.get('callbackUrl')))
-      router.push('/auth/otp/verify')
+      router.replace('/auth/otp/verify')
     } catch (err: any) {
       setError(err.message || 'Failed to send OTP')
     } finally {

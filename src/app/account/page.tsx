@@ -57,7 +57,7 @@ const tabs = [
 type TabId = typeof tabs[number]['id']
 
 export default function AccountPage() {
-  const { updateUser, logout } = useAuth()
+  const { updateUser, refreshProfile, logout } = useAuth()
   const { addToast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -165,6 +165,9 @@ export default function AccountPage() {
       })
       setProfile((current) => current ? { ...current, email_verified: true } : current)
       updateUser({ email_verified: true })
+      // Refresh the shared auth profile so vendor navigation and verification badges
+      // stop reading the pre-verification state after this page confirms the OTP.
+      await refreshProfile().catch(() => {})
       setEmailOtp('')
       setEmailOtpSent(false)
       setEmailVerificationMessage('Your email address is verified.')

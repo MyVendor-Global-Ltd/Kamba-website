@@ -18,7 +18,7 @@ type PublicStore = Store & {
   location_text?: string | null
   follower_count?: number
   users?: { username?: string; profile_picture_url?: string | null } | null
-  business_profiles?: { business_name?: string; tagline?: string | null; location_mode?: string; location_text?: string | null; service_area_text?: string | null } | null
+  business_profiles?: { business_name?: string; tagline?: string | null; location_mode?: string; location_visibility?: 'private' | 'public'; location_text?: string | null; service_area_text?: string | null; operating_hours?: Record<string, { closed: boolean; open?: string | null; close?: string | null }> | null } | null
   vendor_profiles?: { is_verified?: boolean; verification_tier?: string } | null
 }
 
@@ -73,6 +73,7 @@ export default function StoreDetailPage({ initialStore, initialProducts }: { ini
   const [highlightedProductId, setHighlightedProductId] = useState('')
   const [failedCoverUrl, setFailedCoverUrl] = useState('')
   const [activeSlideIndex, setActiveSlideIndex] = useState(0)
+  const [activeLocationPhotoIndex, setActiveLocationPhotoIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -130,6 +131,13 @@ export default function StoreDetailPage({ initialStore, initialProducts }: { ini
     const timeout = window.setTimeout(() => setActiveSlideIndex((index) => (index + 1) % slides.length), duration)
     return () => window.clearTimeout(timeout)
   }, [store, activeSlideIndex])
+
+  useEffect(() => {
+    const photos = store?.location_photos || []
+    if (photos.length < 2) return
+    const timer = window.setTimeout(() => setActiveLocationPhotoIndex((index) => (index + 1) % photos.length), 4500)
+    return () => window.clearTimeout(timer)
+  }, [store?.location_photos, activeLocationPhotoIndex])
 
   useEffect(() => {
     if (loading || !highlightedProductId) return
@@ -219,6 +227,53 @@ export default function StoreDetailPage({ initialStore, initialProducts }: { ini
         </div> : <div className="grid min-h-[280px] place-items-center border-y border-border px-5 py-14 text-center"><div className="max-w-md"><Package className="mx-auto h-8 w-8 text-gold" /><h3 className="mt-5 font-display text-2xl font-semibold sm:text-3xl">A collection in the making.</h3><p className="mt-3 text-sm leading-6 text-text-secondary">This store is open, but its products are not listed yet. Check back soon.</p></div></div>}
       </section>
 
+      {(() => {
+        const business = store.business_profiles
+        const publicLocation = business?.location_visibility === 'public'
+          ? (business.location_text || store.location_text || null)
+          : null
+        const serviceArea = business?.service_area_text || null
+        const hours = business?.operating_hours || null
+        const hasHours = !!hours && Object.values(hours).some((entry) => entry && (entry.closed || entry.open || entry.close))
+        const photos = store.location_photos || []
+        const locationImage = photos[activeLocationPhotoIndex % Math.max(photos.length, 1)] || store.store_image_url || store.store_slideshow_images?.[0] || DEFAULT_COVER_IMAGES[0]
+        const displayLocation = publicLocation || serviceArea
+        const mapQuery = displayLocation ? encodeURIComponent(displayLocation) : ''
+        const formatTime = (value?: string | null) => {
+          if (!value) return ''
+          const [hour, minute] = value.split(':').map(Number)
+          const suffix = hour >= 12 ? 'PM' : 'AM'
+          return `${hour % 12 || 12}:${String(minute || 0).padStart(2, '0')} ${suffix}`
+        }
+        const dayLabels = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        const hasBusinessDetails = !!displayLocation || hasHours
+        if (!hasBusinessDetails) return null
+        return (
+          <section aria-labelledby="store-location-heading" className="mx-auto w-full max-w-[1440px] px-5 pb-14 pt-4 sm:px-8 sm:pb-20 lg:px-12 xl:px-16">
+            <div className="grid overflow-hidden border-y border-border lg:grid-cols-2">
+              <div className="relative min-h-[360px] overflow-hidden bg-[#eeeee8] sm:min-h-[440px] lg:min-h-[540px]">
+                <img src={locationImage} alt={name + ' business location'} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(250,250,246,0.96)_0%,rgba(250,250,246,0.78)_42%,rgba(250,250,246,0.12)_100%)]" />
+                <div className="relative flex min-h-[360px] max-w-xl flex-col justify-end p-7 sm:min-h-[440px] sm:p-10 lg:min-h-[540px] lg:p-12">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Find the business</p>
+                  <h2 id="store-location-heading" className="mt-4 max-w-lg font-display text-[clamp(2.3rem,5vw,4.6rem)] font-semibold leading-[0.96] tracking-[-0.055em] text-primary-strong">A little closer than you think.</h2>
+                  <p className="mt-4 max-w-md text-sm leading-7 text-[#4f5c52]">Get to know where {name} operates, when the business is available, and how to find the right place to connect.</p>
+                  {displayLocation && <a href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`} target="_blank" rel="noreferrer" className="mt-7 inline-flex min-h-12 w-fit items-center gap-3 border border-primary/70 bg-white/65 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-strong backdrop-blur-sm transition hover:bg-primary hover:text-white">{business?.location_mode === 'service_area' || business?.location_mode === 'mobile' ? 'Explore service area' : 'Get directions'} <ArrowUpRight className="h-4 w-4" /></a>}
+                </div>
+                {photos.length > 1 && <div className="absolute bottom-5 right-5 flex items-center gap-2 sm:bottom-7 sm:right-7">{photos.map((photo, index) => <button key={photo + index} type="button" aria-label={`Show location photo ${index + 1}`} aria-current={activeLocationPhotoIndex === index ? 'true' : undefined} onClick={() => setActiveLocationPhotoIndex(index)} className={`h-1.5 rounded-full transition-all ${activeLocationPhotoIndex === index ? 'w-8 bg-primary' : 'w-3 bg-primary/35 hover:bg-primary/70'}`} />)}</div>}
+              </div>
+              <div className="flex min-w-0 flex-col justify-center bg-background px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-16">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Location & opening hours</p>
+                <h3 className="mt-4 font-display text-[clamp(1.8rem,3.4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-text-primary">Plan your visit.</h3>
+                {publicLocation && <div className="mt-8 border-t border-border pt-5"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-text-muted">Business location</p><div className="mt-3 flex items-start gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" /><p className="text-sm leading-6 text-text-primary">{publicLocation}</p></div></div>}
+                {serviceArea && !publicLocation && <div className="mt-8 border-t border-border pt-5"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-text-muted">Service coverage</p><div className="mt-3 flex items-start gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" /><p className="text-sm leading-6 text-text-primary">{serviceArea}</p></div></div>}
+                {hasHours && <div className="mt-8 border-t border-border pt-5"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-text-muted">Opening hours</p><dl className="mt-4 space-y-3">{dayLabels.filter((day) => hours?.[day]).map((day) => { const entry = hours?.[day]; return <div key={day} className="flex items-center justify-between gap-4 text-sm"><dt className="capitalize text-text-secondary">{day}</dt><dd className="text-right font-medium tabular-nums text-text-primary">{entry?.closed ? 'Closed' : entry?.open && entry?.close ? `${formatTime(entry.open)} – ${formatTime(entry.close)}` : 'Hours not set'}</dd></div> })}</dl></div>}
+                {!publicLocation && serviceArea && <p className="mt-6 text-xs leading-5 text-text-tertiary">This business serves the areas listed above. Exact residential addresses are not displayed publicly.</p>}
+              </div>
+            </div>
+          </section>
+        )
+      })()}
       <section className="w-full border-t border-border bg-background px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
         <div className="mx-auto flex w-full max-w-[1440px] min-w-0 flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div className="min-w-0 max-w-2xl"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Independent. Local. Yours to discover.</p><h2 className="mt-4 break-words font-display text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.02] tracking-[-0.05em] text-primary-strong">Find your next favourite, closer to home.</h2></div>

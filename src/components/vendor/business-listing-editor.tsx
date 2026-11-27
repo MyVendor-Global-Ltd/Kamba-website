@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiJson } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,11 @@ interface BusinessDetails {
   business_name?: string | null
   location_mode?: LocationMode | null
   location_visibility?: 'private' | 'public' | null
+  is_home_based?: boolean | null
+  public_location_text?: string | null
   location_text?: string | null
+  location_lat?: number | null
+  location_lng?: number | null
   service_area_text?: string | null
   online_url?: string | null
 }
@@ -33,6 +37,8 @@ interface ExistingListing {
   contact_whatsapp?: string | null
   contact_preference?: 'whatsapp' | 'call' | 'both'
   location_text?: string | null
+  location_lat?: number | null
+  location_lng?: number | null
   business_profiles?: BusinessDetails | BusinessDetails[] | null
 }
 
@@ -53,6 +59,45 @@ async function detectSupportedImageMimeType(file: File): Promise<string> {
 
 const MAX_BRAND_IMAGE_SIZE = 10 * 1024 * 1024
 
+type LeafletMap = { setView: (center: [number, number], zoom?: number) => LeafletMap; remove: () => void; invalidateSize: () => void }
+type LeafletMarker = { setLatLng: (position: [number, number]) => LeafletMarker; on: (event: string, callback: () => void) => LeafletMarker; addTo: (map: LeafletMap) => LeafletMarker; getLatLng: () => { lat: number; lng: number } }
+type LeafletApi = { map: (element: HTMLElement, options?: Record<string, unknown>) => LeafletMap; tileLayer: (url: string, options?: Record<string, unknown>) => { addTo: (map: LeafletMap) => void }; marker: (position: [number, number], options?: Record<string, unknown>) => LeafletMarker; divIcon: (options: Record<string, unknown>) => unknown }
+declare global { interface Window { L?: LeafletApi; __kambaLeafletLoading?: Promise<void> } }
+
+function loadLeaflet(): Promise<void> {
+  if (typeof window === 'undefined' || window.L) return Promise.resolve()
+  if (!window.__kambaLeafletLoading) window.__kambaLeafletLoading = new Promise((resolve, reject) => {
+    if (!document.querySelector('link[data-kamba-leaflet]')) { const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; link.dataset.kambaLeaflet = 'true'; document.head.appendChild(link) }
+    const script = document.createElement('script'); script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.async = true; script.dataset.kambaLeaflet = 'true'; script.onload = () => resolve(); script.onerror = () => reject(new Error('Map library could not be loaded.')); document.body.appendChild(script)
+  })
+  return window.__kambaLeafletLoading
+}
+
+function BusinessLocationMap({ lat, lng, onChange }: { lat: number; lng: number; onChange: (lat: number, lng: number) => void }) {
+  const elementRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
+  const markerRef = useRef<LeafletMarker | null>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  useEffect(() => {
+    let active = true
+    void loadLeaflet().then(() => {
+      if (!active || !elementRef.current || !window.L) return
+      const L = window.L
+      const position: [number, number] = [lat, lng]
+      if (!mapRef.current) {
+        const map = L.map(elementRef.current, { scrollWheelZoom: false }).setView(position, 16)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map)
+        const marker = L.marker(position, { draggable: true, icon: L.divIcon({ className: 'kamba-map-pin', html: '<span style="display:block;width:22px;height:22px;background:#315b42;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px #0005"></span>', iconSize: [28, 34], iconAnchor: [14, 30] }) }).addTo(map)
+        marker.on('dragend', () => { const point = marker.getLatLng(); onChangeRef.current(point.lat, point.lng) })
+        mapRef.current = map; markerRef.current = marker; window.setTimeout(() => map.invalidateSize(), 100)
+      } else { markerRef.current?.setLatLng(position); mapRef.current.setView(position, 16); window.setTimeout(() => mapRef.current?.invalidateSize(), 100) }
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [lat, lng])
+  useEffect(() => () => { mapRef.current?.remove(); mapRef.current = null; markerRef.current = null }, [])
+  return <div className="mt-3 overflow-hidden rounded-xl border border-border bg-surface"><div ref={elementRef} className="h-64 w-full sm:h-72" aria-label="Map. Drag the pin to adjust your business location." /><p className="border-t border-border px-3 py-2 text-xs leading-5 text-text-secondary">Drag the pin to fine-tune the location. The adjusted coordinates will be saved with your business listing.</p></div>
+}
 const BUSINESS_CATEGORIES = ["Electronics & Gadgets","Fashion & Clothing","Beauty & Personal Care","Food & Groceries","Home & Living","Health & Wellness","Books & Stationery","Sports & Fitness","Automotive","Home Services","Repairs & Maintenance","Professional Services","Education & Tutoring","Events & Photography","Repairs","Photography","Cleaning","Other"]
 
 export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
@@ -78,9 +123,13 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [contactPreference, setContactPreference] = useState<'whatsapp' | 'call' | 'both'>('whatsapp')
   const [locationMode, setLocationMode] = useState<LocationMode>('physical')
   const [locationText, setLocationText] = useState('')
+  const [locationLat, setLocationLat] = useState<number | null>(null)
+  const [locationLng, setLocationLng] = useState<number | null>(null)
   const [serviceAreaText, setServiceAreaText] = useState('')
   const [onlineUrl, setOnlineUrl] = useState('')
   const [locationVisibility, setLocationVisibility] = useState<'private' | 'public'>('private')
+  const [isHomeBased, setIsHomeBased] = useState(false)
+  const [publicLocationText, setPublicLocationText] = useState('')
   const [vendorType, setVendorType] = useState<'products' | 'services' | 'both'>('products')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -115,9 +164,13 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setContactPreference(current.contact_preference || 'whatsapp')
       setLocationMode(business?.location_mode || (business?.location_text || current.location_text ? 'physical' : 'service_area'))
       setLocationText(business?.location_text || current.location_text || '')
+      setLocationLat(business?.location_lat ?? current.location_lat ?? null)
+      setLocationLng(business?.location_lng ?? current.location_lng ?? null)
       setServiceAreaText(business?.service_area_text || '')
       setOnlineUrl(business?.online_url || '')
       setLocationVisibility(business?.location_visibility === 'public' ? 'public' : 'private')
+      setIsHomeBased(business?.is_home_based === true)
+      setPublicLocationText(business?.public_location_text || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this business listing.')
     } finally {
@@ -126,6 +179,31 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   }, [endpoint, isService])
 
   useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
+
+  const resolveBusinessLocation = async () => {
+    const address = locationText.trim()
+    if (address.length < 3) {
+      setError('Enter a more specific street, landmark or area before finding it on the map.')
+      return
+    }
+    setError('')
+    setSuccess('')
+    setLocationLat(null)
+    setLocationLng(null)
+    try {
+      const result = await apiJson<{ location: { lat: number; lng: number } }>('/vendors/location/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ location_text: address }),
+      })
+      if (!Number.isFinite(result.location?.lat) || !Number.isFinite(result.location?.lng)) {
+        throw new Error('The map service returned an invalid position. Try adding the city and state.')
+      }
+      setLocationLat(result.location.lat)
+      setLocationLng(result.location.lng)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'This location could not be found. Add the city and state, then try again.')
+    }
+  }
 
   const selectStoreAsset = async (file: File | undefined, target: 'cover' | 'logo' | 'slideshow') => {
     if (!file || isService) return
@@ -263,7 +341,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         category: (category === 'Other' ? customCategory : category).trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility } : {}),
+        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), location_lat: locationLat, location_lng: locationLng, service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility, is_home_based: isHomeBased, public_location_text: publicLocationText.trim() } : {}),
         ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
       }
       const response = await apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint, {
@@ -397,10 +475,18 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                   <option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option>
                 </select>
               </label>
-              {(locationMode === 'physical' || locationMode === 'hybrid') && <Input label="Business address or location" value={locationText} onChange={(event) => setLocationText(event.target.value)} required={locationMode === 'physical'} placeholder="Street, area, city and state" />}
+              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="space-y-2">
+                <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setLocationLat(null); setLocationLng(null) }} required={locationMode === 'physical'} placeholder="Street, landmark, area or city" autoComplete="street-address" />
+                <Button type="button" variant="outline" onClick={() => void resolveBusinessLocation()} disabled={locationText.trim().length < 3}>Find location on map</Button>
+                {locationLat !== null && locationLng !== null && <><p className="mt-1 text-xs text-success">Map position found. Drag the pin to fine-tune the exact point.</p><BusinessLocationMap lat={locationLat} lng={locationLng} onChange={(lat, lng) => { setLocationLat(lat); setLocationLng(lng); setError(""); setSuccess("") }} /></>}
+              </div>}
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
-              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="mt-3 rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={locationVisibility === 'public'} onChange={(event) => setLocationVisibility(event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you provide can still be shown. This remains your saved business location and will be the pickup point once the pickup collection flow is connected.</span></span></label></div>}
+              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
+                <label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={isHomeBased} onChange={(event) => setIsHomeBased(event.target.checked)} className="mt-1" /><span><strong>This is a home-based business</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Your full residential address stays private. Kamba will only show a separate street or nearby landmark label if you choose to make your location public.</span></span></label>
+                {isHomeBased && <Input label="Public street or nearby landmark" value={publicLocationText} onChange={(event) => setPublicLocationText(event.target.value)} placeholder="e.g. Near Umudike junction" maxLength={160} />}
+                <label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={locationVisibility === 'public'} onChange={(event) => setLocationVisibility(event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>{isHomeBased ? 'Show public area label on your store' : 'Show exact business address publicly'}</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">{isHomeBased ? 'Only the street or landmark label above is shown. Your exact home address is never published.' : 'Off by default. When off, public pages hide your street address. Any service area you provide can still be shown.'}</span></span></label>
+              </div>}
             </div>}
             <div className="flex flex-wrap items-center gap-3"><Button type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</Button>{!isService && listing.slug && <a href={'/store/' + listing.slug} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">View public store ↗</a>}</div>
           </form>
