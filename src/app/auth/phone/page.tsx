@@ -35,6 +35,7 @@ export default function PhonePage() {
       if (!result.userId) throw new Error('The API did not return a verification session.')
       sessionStorage.setItem('kamba_phone_verification_user_id', result.userId)
       sessionStorage.setItem('kamba_phone_verification_phone', result.phone || phone)
+      sessionStorage.setItem('kamba_phone_verification_resend_available_at', String(Date.now() + 30_000))
       const params = new URLSearchParams(window.location.search)
       sessionStorage.setItem('kamba_phone_verification_return_to', safeReturnTo(params.get('callbackUrl')))
       router.push('/auth/otp/verify')
