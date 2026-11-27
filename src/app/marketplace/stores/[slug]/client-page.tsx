@@ -77,6 +77,10 @@ export default function StoreDetailPage({ initialStore, initialProducts }: { ini
   useEffect(() => {
     let cancelled = false
     if (initialStore?.slug === slug) {
+      setStore(initialStore)
+      setProducts(initialProducts ?? [])
+      setError('')
+      setProductsError('')
       setHighlightedProductId(new URLSearchParams(window.location.search).get('product') || '')
       setLoading(false)
       return () => { cancelled = true }
