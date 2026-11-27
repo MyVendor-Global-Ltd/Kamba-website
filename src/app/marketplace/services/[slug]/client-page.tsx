@@ -137,33 +137,32 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
 
   return (
     <div className="container mx-auto px-4 py-8 lg:py-12 space-y-8">
-      {/* Header */}
-      <header className="animate-fade-in">
-        {service.service_images?.[0] && <div className="mb-6 overflow-hidden rounded-2xl border border-border bg-ink-raised"><img src={service.service_images[0]} alt={`${service.business_profiles?.business_name || service.name} service cover`} className="h-56 w-full object-cover sm:h-72" /></div>}
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div>
-            <Link href="/marketplace/services" className="inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-coral transition-colors mb-4">
-              <ChevronLeft className="w-4 h-4" />
-              All Services
-            </Link>
-            <h1 className="text-3xl lg:text-4xl font-bold font-display text-text-primary">{service.business_profiles?.business_name || service.name}</h1>
-            {service.business_profiles?.tagline && <p className="mt-2 font-semibold text-primary">{service.business_profiles.tagline}</p>}
-            <p className="text-text-secondary mt-2">{service.description || 'No description available'}</p>
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              {service.verification_status !== 'pending' && (
-                <Badge variant="verification" size="md">
-                  <Shield className="w-3.5 h-3.5 mr-1.5" />
-                  {service.verification_status === 'business' ? 'Business Verified' : 
-                   service.verification_status === 'nin' ? 'NIN Verified' : 'Basic Verified'}
-                </Badge>
-              )}
-              {service.category && (
-                <Badge variant="secondary" size="sm">
-                  <Briefcase className="w-3.5 h-3.5 mr-1.5" />
-                  {service.category}
-                </Badge>
-              )}
-            </div>
+      <header className="grid gap-7 animate-fade-in lg:grid-cols-[1.05fr_.95fr] lg:items-stretch lg:gap-10">
+        <div className="relative min-h-[320px] overflow-hidden rounded-[1.75rem] border border-border bg-secondary sm:min-h-[420px]">
+          {service.service_images?.[0] ? <img src={service.service_images[0]} alt={`${service.business_profiles?.business_name || service.name} service portfolio`} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center text-primary/30"><Briefcase className="h-20 w-20" /></div>}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">A closer look / Kamba services</p>
+            <p className="mt-2 max-w-md font-display text-2xl font-semibold leading-tight sm:text-3xl">{service.business_profiles?.tagline || 'Local skill. Real work.'}</p>
+          </div>
+        </div>
+        <div className="flex flex-col justify-center py-1 lg:py-5">
+          <Link href="/marketplace/services" className="mb-7 inline-flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary transition-colors hover:text-primary"><ChevronLeft className="h-4 w-4" /> All services</Link>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{service.category || 'Local service provider'}</p>
+          <h1 className="mt-3 font-display text-4xl font-bold leading-[1.04] tracking-tight text-text-primary sm:text-5xl">{service.name}</h1>
+          <p className="mt-3 text-sm font-semibold text-text-secondary">{service.business_profiles?.business_name || service.name}</p>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-text-secondary">{service.description || 'Contact this provider to discuss the work you need.'}</p>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {service.verification_status !== 'pending' && <Badge variant="verification" size="md"><Shield className="mr-1.5 h-3.5 w-3.5" />{service.verification_status === 'business' ? 'Business verified' : service.verification_status === 'nin' ? 'NIN verified' : 'Basic verified'}</Badge>}
+            {service.category && <Badge variant="secondary" size="sm"><Briefcase className="mr-1.5 h-3.5 w-3.5" />{service.category}</Badge>}
+          </div>
+          <div className="mt-6 grid gap-3 border-y border-border py-4 sm:grid-cols-2">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-text-tertiary">Service area</p><p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-text-primary"><MapPin className="h-4 w-4 text-primary" />{[service.city, service.state].filter(Boolean).join(', ') || 'Shared on request'}</p></div>
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-text-tertiary">Price guide</p><p className="mt-1 text-sm font-semibold text-text-primary">{service.price_range || 'Ask for a quotation'}</p></div>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <Button onClick={() => setActiveTab('booking')}>Request this service <ChevronRight className="ml-2 h-4 w-4" /></Button>
+            <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary"><Star className="h-3.5 w-3.5" /> Reviews not available yet</span>
           </div>
         </div>
       </header>

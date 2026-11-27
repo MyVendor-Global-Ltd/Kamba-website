@@ -124,6 +124,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [locationText, setLocationText] = useState('')
   const [locationLat, setLocationLat] = useState<number | null>(null)
   const [locationLng, setLocationLng] = useState<number | null>(null)
+  const [locationSuggestion, setLocationSuggestion] = useState<{ label: string; lat: number; lng: number } | null>(null)
+  const [suggestionLoading, setSuggestionLoading] = useState(false)
   const [serviceAreaText, setServiceAreaText] = useState('')
   const [onlineUrl, setOnlineUrl] = useState('')
   const [locationVisibility, setLocationVisibility] = useState<'private' | 'public'>('private')
@@ -175,6 +177,39 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setLoading(false)
     }
   }, [endpoint, isService])
+
+  useEffect(() => {
+    const query = locationText.trim()
+    if (query.length < 8 || locationLat !== null || !['physical', 'hybrid'].includes(locationMode)) {
+      setLocationSuggestion(null)
+      setSuggestionLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setSuggestionLoading(true)
+      try {
+        const result = await apiJson<{ location?: { lat: number; lng: number } }>('/vendors/location/resolve', {
+          method: 'POST',
+          body: JSON.stringify({ location_text: query }),
+          signal: controller.signal,
+        })
+        if (Number.isFinite(result.location?.lat) && Number.isFinite(result.location?.lng)) {
+          setLocationSuggestion({ label: query, lat: result.location!.lat, lng: result.location!.lng })
+        } else {
+          setLocationSuggestion(null)
+        }
+      } catch {
+        if (!controller.signal.aborted) setLocationSuggestion(null)
+      } finally {
+        if (!controller.signal.aborted) setSuggestionLoading(false)
+      }
+    }, 1100)
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [locationText, locationLat, locationMode])
 
   useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
 
@@ -485,7 +520,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 </select>
               </label>
               {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="space-y-2">
-                <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setLocationLat(null); setLocationLng(null) }} required={locationMode === 'physical'} placeholder="Street, landmark, area or city" autoComplete="street-address" />
+                <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setLocationLat(null); setLocationLng(null); setLocationSuggestion(null) }} required={locationMode === 'physical'} placeholder="Start typing a street, landmark or area…" autoComplete="street-address" />
+                {suggestionLoading && <p role="status" className="text-xs text-text-tertiary">Checking this place on the map…</p>}
+                {locationSuggestion && <button type="button" onClick={() => { setLocationLat(locationSuggestion.lat); setLocationLng(locationSuggestion.lng); setLocationSuggestion(null); setError(''); setSuccess('') }} className="flex w-full items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">⌖</span><span className="min-w-0"><strong className="block text-sm text-text-primary">Use this map match</strong><span className="mt-0.5 block truncate text-xs text-text-secondary">{locationSuggestion.label}</span><span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-primary">Select to place the pin</span></span></button>}
                 <Button type="button" variant="outline" onClick={() => void resolveBusinessLocation()} disabled={locationText.trim().length < 3}>Find location on map</Button>
                 {locationLat !== null && locationLng !== null && <><p className="mt-1 text-xs text-success">Map position found. Drag the pin to fine-tune the exact point.</p><BusinessLocationMap lat={locationLat} lng={locationLng} onChange={(lat, lng) => { setLocationLat(lat); setLocationLng(lng); setError(""); setSuccess("") }} /></>}
               </div>}
