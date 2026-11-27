@@ -66,8 +66,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
     description: product.description || `${product.name} listed by ${product.store_name || 'a Nigerian seller'} on Kamba.`,
     sku: product.id,
     category: product.category || undefined,
-    image: (product.images?.length ? product.images : product.image_url ? [product.image_url] : []).filter(Boolean),
-    brand: product.store_name ? { '@type': 'Brand', name: product.store_name } : undefined,
+    image: (product.images?.length ? product.images : product.image_url ? [product.image_url] : []).filter(Boolean).length
+      ? (product.images?.length ? product.images : [product.image_url].filter(Boolean))
+      : undefined,
     offers: {
       '@type': 'Offer',
       url: productUrl(id),
