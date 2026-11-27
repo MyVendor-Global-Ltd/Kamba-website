@@ -16,6 +16,8 @@ interface BusinessDetails {
   is_home_based?: boolean | null
   public_location_text?: string | null
   location_text?: string | null
+  location_lat?: number | null
+  location_lng?: number | null
   service_area_text?: string | null
   online_url?: string | null
 }
@@ -35,6 +37,8 @@ interface ExistingListing {
   contact_whatsapp?: string | null
   contact_preference?: 'whatsapp' | 'call' | 'both'
   location_text?: string | null
+  location_lat?: number | null
+  location_lng?: number | null
   business_profiles?: BusinessDetails | BusinessDetails[] | null
 }
 
@@ -80,6 +84,11 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [contactPreference, setContactPreference] = useState<'whatsapp' | 'call' | 'both'>('whatsapp')
   const [locationMode, setLocationMode] = useState<LocationMode>('physical')
   const [locationText, setLocationText] = useState('')
+  const [locationLat, setLocationLat] = useState<number | null>(null)
+  const [locationLng, setLocationLng] = useState<number | null>(null)
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ description: string; place_id: string }>>([])
+  const [locationSuggestionsLoading, setLocationSuggestionsLoading] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState(false)
   const [serviceAreaText, setServiceAreaText] = useState('')
   const [onlineUrl, setOnlineUrl] = useState('')
   const [locationVisibility, setLocationVisibility] = useState<'private' | 'public'>('private')
@@ -119,6 +128,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setContactPreference(current.contact_preference || 'whatsapp')
       setLocationMode(business?.location_mode || (business?.location_text || current.location_text ? 'physical' : 'service_area'))
       setLocationText(business?.location_text || current.location_text || '')
+      setLocationLat(business?.location_lat ?? current.location_lat ?? null)
+      setLocationLng(business?.location_lng ?? current.location_lng ?? null)
       setServiceAreaText(business?.service_area_text || '')
       setOnlineUrl(business?.online_url || '')
       setLocationVisibility(business?.location_visibility === 'public' ? 'public' : 'private')
@@ -132,6 +143,49 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   }, [endpoint, isService])
 
   useEffect(() => { void Promise.resolve().then(loadListing) }, [loadListing])
+
+  useEffect(() => {
+    if (selectedLocation || locationText.trim().length < 3) {
+      setLocationSuggestions([])
+      return
+    }
+    let active = true
+    const timer = window.setTimeout(async () => {
+      setLocationSuggestionsLoading(true)
+      try {
+        const result = await apiJson<{ suggestions: Array<{ description: string; place_id: string }> }>(
+          `/vendors/location/suggestions?q=${encodeURIComponent(locationText.trim())}`
+        )
+        if (active) setLocationSuggestions(result.suggestions || [])
+      } catch {
+        if (active) setLocationSuggestions([])
+      } finally {
+        if (active) setLocationSuggestionsLoading(false)
+      }
+    }, 350)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [locationText, selectedLocation])
+
+  const chooseBusinessLocation = async (suggestion: { description: string; place_id: string }) => {
+    setSelectedLocation(true)
+    setLocationText(suggestion.description)
+    setLocationSuggestions([])
+    setLocationLat(null)
+    setLocationLng(null)
+    try {
+      const result = await apiJson<{ location: { lat: number; lng: number } }>('/vendors/location/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ location_text: suggestion.description }),
+      })
+      setLocationLat(result.location.lat)
+      setLocationLng(result.location.lng)
+    } catch {
+      setError('The address was selected, but its map position could not be resolved. You can still save the address and try again later.')
+    }
+  }
 
   const selectStoreAsset = async (file: File | undefined, target: 'cover' | 'logo' | 'slideshow') => {
     if (!file || isService) return
@@ -269,7 +323,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         category: (category === 'Other' ? customCategory : category).trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility, is_home_based: isHomeBased, public_location_text: publicLocationText.trim() } : {}),
+        ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), location_lat: locationLat, location_lng: locationLng, service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility, is_home_based: isHomeBased, public_location_text: publicLocationText.trim() } : {}),
         ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
       }
       const response = await apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint, {
@@ -403,7 +457,12 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                   <option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option>
                 </select>
               </label>
-              {(locationMode === 'physical' || locationMode === 'hybrid') && <Input label="Business address or location" value={locationText} onChange={(event) => setLocationText(event.target.value)} required={locationMode === 'physical'} placeholder="Street, area, city and state" />}
+              {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="relative">
+                <Input label="Business address or location" value={locationText} onChange={(event) => { setLocationText(event.target.value); setSelectedLocation(false); setLocationLat(null); setLocationLng(null) }} required={locationMode === 'physical'} placeholder="Start typing a street, landmark, area or city" autoComplete="off" />
+                {locationSuggestionsLoading && <p className="mt-1 text-xs text-text-tertiary">Finding Nigerian locations…</p>}
+                {locationSuggestions.length > 0 && <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-border bg-surface shadow-xl">{locationSuggestions.map((suggestion) => <button key={suggestion.place_id} type="button" onClick={() => void chooseBusinessLocation(suggestion)} className="block w-full border-b border-border px-3 py-3 text-left text-sm text-text-primary last:border-0 hover:bg-ink-raised">{suggestion.description}</button>)}</div>}
+                {locationLat !== null && locationLng !== null && <p className="mt-1 text-xs text-success">Map position found. Coordinates will be saved with this location.</p>}
+              </div>}
               {(locationMode === 'service_area' || locationMode === 'mobile' || locationMode === 'hybrid') && <Input label="Service or delivery area" value={serviceAreaText} onChange={(event) => setServiceAreaText(event.target.value)} required={locationMode === 'service_area' || locationMode === 'mobile'} placeholder="Areas or neighbourhoods covered" />}
               {(locationMode === 'online' || locationMode === 'hybrid') && <Input label="Website or online storefront URL" type="url" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} required={locationMode === 'online'} placeholder="https://…" />}
               {(locationMode === 'physical' || locationMode === 'hybrid') && <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
