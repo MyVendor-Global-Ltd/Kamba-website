@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://kamba-api-8l80.onrender.com/api/v1/:path*"
+    }
+  ],
   "git": {
     "deploymentEnabled": {
       "main": true,
