@@ -45,6 +45,7 @@ export interface ServiceProfile {
   distance_km?: number
   logo_url?: string
   price_range?: string
+  service_images?: string[]
   location_text?: string
   service_area_text?: string
   business_profiles?: { business_name?: string; business_slug?: string; tagline?: string; location_text?: string; service_area_text?: string }
