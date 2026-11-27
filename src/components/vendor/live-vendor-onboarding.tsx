@@ -44,7 +44,7 @@ export function LiveVendorOnboarding() {
   })
   const [serviceForm, setServiceForm] = useState({
     service_title: '', slug: '', category: '', custom_category: '', tagline: '', description: '', price_range: '',
-    contact_preference: 'whatsapp', contact_whatsapp: '', fulfilment_options: ['customer_visit'] as string[],
+    contact_preference: 'both', fulfilment_options: ['customer_visit'] as string[],
   })
 
   const loadStatus = useCallback(async () => {
@@ -147,7 +147,6 @@ export function LiveVendorOnboarding() {
           price_range: serviceForm.price_range.trim(),
           fulfilment_options: serviceForm.fulfilment_options,
           contact_preference: serviceForm.contact_preference,
-          contact_whatsapp: serviceForm.contact_whatsapp.trim(),
         }),
       })
       const statusLoaded = await loadStatus()
@@ -290,7 +289,7 @@ export function LiveVendorOnboarding() {
                 </label>
               ))}
             </fieldset>
-                        <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
+                        <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="call">Phone call</option><option value="both">Phone call and SMS</option></select></label>
             </fieldset>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
           </form>
