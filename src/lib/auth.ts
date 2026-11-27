@@ -1,7 +1,7 @@
 import { isMockMode } from '@/lib/mock-api'
 import { apiJson } from '@/lib/api'
 
-const API_BASE = (process.env.NODE_ENV === 'production' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001')).replace(/\/$/, '')
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001').replace(/\/$/, '')
 const MOCK_USER_KEY = 'kamba_demo_user'
 
 export type AuthInput = {
