@@ -32,7 +32,7 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
       setLoading(false)
       return
     }
-    apiJson<{ service_profile?: ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }; service?: ServiceProfile }>(`/vendors/services/${slug}`)
+    apiJson<{ service_profile?: ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; contact_phone?: string | null; contact_phone_verified_method?: 'sms' | null; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }; service?: ServiceProfile }>(`/vendors/services/${slug}`)
       .then((data) => {
         const raw = (data.service_profile || data.service) as (ServiceProfile & { service_title?: string; location_text?: string; service_area_text?: string; vendor_profiles?: { is_verified?: boolean; verification_tier?: string } }) | undefined
         if (!raw) throw new Error('This service is not available.')
@@ -242,7 +242,7 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
                         <div className="flex items-center gap-3 p-3 bg-ink-raised/30 rounded-xl">
                           <Phone className="w-5 h-5 text-coral" />
                           <div>
-                            <p className="text-xs text-text-tertiary">Phone</p>
+                            <p className="text-xs text-text-tertiary">Phone · SMS verified</p>
                             <a href={`tel:${service.phone}`} className="font-medium text-coral hover:text-coral/80 transition-colors">
                               {service.phone}
                             </a>
@@ -425,12 +425,20 @@ export default function ServiceDetailPage({ initialService }: { initialService?:
               </CardHeader>
               <CardContent className="space-y-3">
                 {service.phone && (
-                  <a href={`tel:${service.phone}`}>
-                    <Button variant="default" className="w-full justify-start gap-3">
-                      <Phone className="w-5 h-5" />
-                      <span>Call Now</span>
-                    </Button>
-                  </a>
+                  <>
+                    <a href={`tel:${service.phone}`}>
+                      <Button variant="default" className="w-full justify-start gap-3">
+                        <Phone className="w-5 h-5" />
+                        <span>Call Now</span>
+                      </Button>
+                    </a>
+                    <a href={`sms:${service.phone}`}>
+                      <Button variant="outline" className="w-full justify-start gap-3">
+                        <MessageSquare className="w-5 h-5" />
+                        <span>Send SMS</span>
+                      </Button>
+                    </a>
+                  </>
                 )}
                 {service.email && (
                   <a href={`mailto:${service.email}`}>
