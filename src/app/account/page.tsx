@@ -57,7 +57,7 @@ const tabs = [
 type TabId = typeof tabs[number]['id']
 
 export default function AccountPage() {
-  const { updateUser, logout } = useAuth()
+  const { updateUser, refreshProfile, logout } = useAuth()
   const { addToast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
