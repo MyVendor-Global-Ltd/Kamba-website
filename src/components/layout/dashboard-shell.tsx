@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
-  Activity, Bell, ChevronLeft, ChevronRight, CreditCard, LayoutDashboard, LogOut,
-  MapPin, Menu, Package, Search, Settings, ShoppingBag, Store, UserRound, X
+  Activity, ChevronLeft, ChevronRight, LayoutDashboard, LogOut,
+  Menu, Package, Search, Settings, ShoppingBag, Store, UserRound, X
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { apiJson } from '@/lib/api'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { KambaLogo } from '@/components/layout/kamba-logo'
 import { cn } from '@/lib/utils'
@@ -21,7 +22,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { state, logout } = useAuth()
   const [expanded, setExpanded] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [vendorWorkspaceEnabled, setVendorWorkspaceEnabled] = useState(false)
   const isVendor = state.user?.role === 'vendor'
+  useEffect(() => {
+    let cancelled = false
+    if (!isVendor) { setVendorWorkspaceEnabled(false); return }
+    void apiJson<{ stage?: string }>('/vendors/onboard/status').then((status) => {
+      if (!cancelled) setVendorWorkspaceEnabled(status.stage === 'complete')
+    }).catch(() => { if (!cancelled) setVendorWorkspaceEnabled(false) })
+    return () => { cancelled = true }
+  }, [isVendor, state.user?.id])
   const needsAccountVerification = Boolean(state.user && (!state.user.email_verified || !state.user.phone_verified))
 
   const groups: { label: string; items: NavItem[] }[] = [
@@ -29,21 +39,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     {
       label: 'Workspace',
       items: [
-        ...(isVendor
+        ...(vendorWorkspaceEnabled
           ? [
               { label: 'Vendor dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
               { label: 'Business settings', href: '/vendor/profile', icon: Settings },
             ]
           : [
               { label: 'Dashboard', href: '/account?tab=overview', icon: LayoutDashboard },
-              { label: 'Become a vendor', href: '/vendor/onboard', icon: Store },
+              { label: isVendor ? 'Finish store setup' : 'Become a vendor', href: '/vendor/onboard', icon: Store },
             ]),
       ],
     },
     {
       label: 'Your activity',
       items: [
-        { label: 'Notifications', href: '/notifications', icon: Bell },
         { label: isVendor ? 'My purchases' : 'Orders & delivery tracking', href: '/orders', icon: ShoppingBag },
         { label: 'Service requests', href: '/service-requests', icon: Activity },
         { label: 'Shopping cart', href: '/cart', icon: Package },
@@ -53,8 +62,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       label: 'Account & security',
       items: [
         { label: 'Profile', href: '/account?tab=profile', icon: UserRound },
-        { label: 'Delivery addresses', href: '/account?tab=addresses', icon: MapPin },
-        { label: 'Payment methods', href: '/account?tab=payment', icon: CreditCard },
         { label: 'Preferences & security', href: '/account?tab=settings', icon: Settings },
       ],
     },
@@ -66,7 +73,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   const sidebar = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className={cn('flex h-[72px] items-center border-b border-border px-4', expanded ? 'justify-between' : 'justify-center')}>
         {expanded && <KambaLogo iconSize={30} href="/search" replace />}
         <button
@@ -83,7 +90,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Dashboard navigation">
+      <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-5" aria-label="Dashboard navigation">
         {groups.map((group) => (
           <section key={group.label}>
             {expanded && <p className="mb-2 px-3 text-[10px] leading-4 font-bold uppercase tracking-[0.14em] text-text-tertiary">{group.label}</p>}
@@ -111,7 +118,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     )}
                   >
                     <span className="relative shrink-0"><Icon className="h-[18px] w-[18px]" />{needsAccountVerification && isAccountItem && requestedTab === 'profile' && <span aria-label="Email or phone verification incomplete" title="Email or phone verification incomplete" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />}</span>
-                    {expanded && <span className="truncate">{item.label}</span>}
+                    {expanded && <><span className="min-w-0 flex-1 truncate text-left">{item.label}</span>{vendorWorkspaceEnabled && (item.href === '/vendor/dashboard' || item.href === '/vendor/profile') && <span className="rounded-md border border-primary/15 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary/80">New</span>}</>}
                   </button>
                 )
               })}
@@ -141,7 +148,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[calc(100vh-0px)] bg-background">
       <div className="flex min-h-screen">
-        <aside className={cn('hidden shrink-0 border-r border-border bg-surface transition-[width] duration-200 lg:block', expanded ? 'w-64' : 'w-[76px]')}>
+        <aside className={cn('sticky top-0 hidden h-screen shrink-0 border-r border-border bg-surface transition-[width] duration-200 lg:block', expanded ? 'w-64' : 'w-[76px]')}>
           {sidebar}
         </aside>
 
