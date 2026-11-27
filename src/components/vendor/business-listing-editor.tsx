@@ -60,7 +60,6 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [priceRange, setPriceRange] = useState('')
   const [tags, setTags] = useState('')
   const [tagDraft, setTagDraft] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
   const [contactPreference, setContactPreference] = useState<'whatsapp' | 'call' | 'both'>('whatsapp')
   const [locationMode, setLocationMode] = useState<LocationMode>('physical')
   const [locationText, setLocationText] = useState('')
@@ -93,7 +92,8 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setSameCoverAsLogo(!!current.store_image_url && current.store_image_url === current.store_logo_url)
       setSlideshowImages(current.store_slideshow_images || [])
       setLogoInSlideshow(current.store_logo_in_slideshow === true)
-      setCategory(current.category || '')
+      setCategory(cats.includes(current.category || '') ? (current.category || '') : current.category ? 'Other' : '')
+      setCustomCategory(cats.includes(current.category || '') ? '' : (current.category || ''))
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
       setTags((current.tags || []).join(', '))
@@ -207,7 +207,6 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         category: (category === 'Other' ? customCategory : category).trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-        contact_whatsapp: whatsapp.trim() || null,
         ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility } : {}),
         ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
       }
@@ -315,8 +314,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               </div>
               <p className="text-xs text-text-tertiary">Separate keywords with commas or press Enter. These help buyers find your business.</p>
             </div>
-            <Input label="Business WhatsApp number" type="tel" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} placeholder="+234…" />
-            {isService && (
+                        {isService && (
               <label className="block text-sm font-medium text-text-secondary">Preferred contact method
                 <select value={contactPreference} onChange={(event) => setContactPreference(event.target.value as typeof contactPreference)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                   <option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option>
