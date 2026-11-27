@@ -1,18 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "kambastore.vercel.app"
-        }
-      ],
-      "destination": "https://kamba.ng/:path*",
-      "permanent": true
-    }
-  ],
   "git": {
     "deploymentEnabled": {
       "main": true,
