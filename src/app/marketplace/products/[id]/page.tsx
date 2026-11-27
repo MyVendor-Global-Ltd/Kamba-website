@@ -29,7 +29,7 @@ async function loadProduct(id: string): Promise<ProductSeo | null> {
   const value = await getSeoProduct(id)
   if (!value || typeof value !== 'object' || !('id' in value)) return null
   const product = value as ProductSeo
-  return { ...product, image_url: product.image_url || product.images?.[0] }
+  return { ...product, is_active: product.is_active ?? true, image_url: product.image_url || product.images?.[0] }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ProductDetailPage({ params }: PageProps) {
   const { id } = await params
   const product = await loadProduct(id)
-  const inStock = Boolean(product && product.is_active && product.stock_quantity > 0)
+  const inStock = Boolean(product && product.is_active !== false && (product.in_stock ?? product.stock_quantity > 0))
   const price = product ? (product.price / 100).toFixed(2) : undefined
   const schema = product ? {
     '@context': 'https://schema.org',
