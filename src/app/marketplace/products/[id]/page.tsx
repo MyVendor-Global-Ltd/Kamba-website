@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = `${product.name} price in Nigeria`
   const description = product.description?.trim()
-    ? `${product.description.trim().slice(0, 145)} — Listed by ${product.store_name || 'a local seller'} on Kamba.`
+    ? `${product.description.trim().slice(0, 110)} Listed for ${formatNaira(product.price)} by ${product.store_name || 'a local seller'} on Kamba.`
     : `Check the current price of ${product.name} from ${product.store_name || 'a local seller'} on Kamba. Discover products from independent Nigerian stores.`
   const images = (product.images?.length ? product.images : product.image_url ? [product.image_url] : []).filter(Boolean) as string[]
   const url = productUrl(id)
