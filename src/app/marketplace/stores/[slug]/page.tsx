@@ -80,7 +80,6 @@ export default async function StoreDetailPage({ params }: PageProps) {
     ? store.business_profiles.location_text || store.location_text
     : null
   const serviceArea = store?.business_profiles?.service_area_text
-  const image = store?.store_image_url || store?.store_logo_url
   const schema = store ? {
     '@context': 'https://schema.org',
     '@type': 'OnlineStore',
