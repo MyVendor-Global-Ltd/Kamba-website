@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiJson } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -25,48 +25,6 @@ interface OnboardingStatus {
   verification_deadline_at?: string
 }
 
-async function fileToBase64(file: File) {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    throw new Error('Choose a JPEG, PNG or WebP image.')
-  }
-  if (file.size > 5 * 1024 * 1024) throw new Error('Each image must be 5 MB or smaller.')
-
-  // Resize and encode locally before sending base64 through the API. This keeps
-  // large phone-camera images from making the onboarding request unnecessarily heavy.
-  let uploadBlob: Blob = file
-  let mimeType = file.type
-  try {
-    const bitmap = await createImageBitmap(file)
-    const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height))
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
-    const context = canvas.getContext('2d')
-    if (context) {
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-      const optimized = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82))
-      if (optimized && optimized.size < file.size) {
-        uploadBlob = optimized
-        mimeType = optimized.type || 'image/webp'
-      }
-    }
-    bitmap.close()
-  } catch {
-    // Keep the original image if browser decoding or WebP encoding is unavailable.
-  }
-
-  return new Promise<{ base64: string; mime_type: string }>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      const base64 = result.split(',')[1]
-      if (!base64) reject(new Error('Could not read the selected image.'))
-      else resolve({ base64, mime_type: mimeType })
-    }
-    reader.onerror = () => reject(new Error('Could not read the selected image.'))
-    reader.readAsDataURL(uploadBlob)
-  })
-}
 
 export function LiveVendorOnboarding() {
   const router = useRouter()
@@ -81,9 +39,6 @@ export function LiveVendorOnboarding() {
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
 
-  const [storePhotos, setStorePhotos] = useState<File[]>([])
-  const storePhotoPreviews = useMemo(() => storePhotos.map((file) => ({ file, url: URL.createObjectURL(file) })), [storePhotos])
-  useEffect(() => () => { storePhotoPreviews.forEach(({ url }) => URL.revokeObjectURL(url)) }, [storePhotoPreviews])
   const [storeForm, setStoreForm] = useState({
     store_name: '', slug: '', category: '', custom_category: '', tagline: '', description: '',
     location_mode: 'physical' as LocationMode, location_text: '', service_area_text: '', online_url: '', location_visibility: 'private' as 'private' | 'public', contact_whatsapp: '',
@@ -214,30 +169,6 @@ export function LiveVendorOnboarding() {
     } finally { setSubmitting(false) }
   }
 
-  const uploadPhotos = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (storePhotos.length < 2 || storePhotos.length > 6) {
-      setError('Choose between 2 and 6 location photos.')
-      return
-    }
-    setSubmitting(true); setError(''); setSuccess('')
-    try {
-      const photos = await Promise.all(storePhotos.map(fileToBase64))
-      const result = await apiJson<{ count?: number }>('/vendors/onboard/location-photos', {
-        method: 'POST',
-        body: JSON.stringify({ photos }),
-      })
-      if (!Number.isInteger(result.count) || (result.count ?? 0) < 2) {
-        throw new Error('The server did not confirm at least two uploaded location photos.')
-      }
-      const statusLoaded = await loadStatus()
-      setSuccess(statusLoaded
-        ? `${result.count} store location photos uploaded.`
-        : 'Photos uploaded, but onboarding status could not refresh. Use Retry to confirm the result.')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not upload store location photos.')
-    } finally { setSubmitting(false) }
-  }
 
   const makeSlug = (value: string) => value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
   const updateStore = <K extends keyof typeof storeForm>(field: K, value: (typeof storeForm)[K]) => setStoreForm((previous) => ({ ...previous, [field]: value, ...(field === 'store_name' ? { slug: makeSlug(String(value)) } : {}) }))
@@ -322,7 +253,8 @@ export function LiveVendorOnboarding() {
                 <legend className="px-1 text-sm font-semibold text-text-primary">Business details</legend>
                 <Input label="Business / store name" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required />
                 <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Store URL slug</label><Input value={storeForm.slug || 'your-store-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name. Use letters, numbers and hyphens; the URL updates as you type.</p></div>
-                <Input label="Product category" value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required placeholder="e.g. Fashion, Electronics, Home" />
+                <label className="block text-sm font-medium text-text-secondary">Product category<select value={storeForm.category} onChange={(event) => updateStore('category', event.target.value)} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="">Choose a category</option><option value="Electronics & Gadgets">Electronics & Gadgets</option><option value="Fashion & Clothing">Fashion & Clothing</option><option value="Beauty & Personal Care">Beauty & Personal Care</option><option value="Food & Groceries">Food & Groceries</option><option value="Home & Living">Home & Living</option><option value="Health & Wellness">Health & Wellness</option><option value="Books & Stationery">Books & Stationery</option><option value="Sports & Fitness">Sports & Fitness</option><option value="Automotive">Automotive</option><option value="Home Services">Home Services</option><option value="Repairs & Maintenance">Repairs & Maintenance</option><option value="Professional Services">Professional Services</option><option value="Education & Tutoring">Education & Tutoring</option><option value="Events & Photography">Events & Photography</option><option value="Other">Other</option></select></label>
+                {storeForm.category === 'Other' && <Input label="Your category" value={storeForm.custom_category} onChange={(event) => updateStore('custom_category', event.target.value)} required maxLength={100} placeholder="Enter your product category" />}
                 <label className="block text-sm font-medium text-text-secondary">Description<textarea value={storeForm.description} onChange={(event) => updateStore('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
               </fieldset>
               <fieldset className="space-y-4 rounded-xl border border-border p-4">
@@ -331,7 +263,6 @@ export function LiveVendorOnboarding() {
               {showLocationFields(storeForm.location_mode, (field, value) => updateStore(field, value), storeForm)}
               {(storeForm.location_mode === 'physical' || storeForm.location_mode === 'hybrid') && <div className="rounded-lg border border-border p-3"><label className="flex items-start gap-2 text-sm text-text-primary"><input type="checkbox" checked={storeForm.location_visibility === 'public'} onChange={(event) => updateStore('location_visibility', event.target.checked ? 'public' : 'private')} className="mt-1" /><span><strong>Show exact business address publicly</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">Off by default. When off, public pages hide your street address. Any service area you enter can still be shown. Kamba can use the saved business location for pickup and fulfilment.</span></span></label></div>}
               </fieldset>
-              <Input label="Business WhatsApp number" value={storeForm.contact_whatsapp} onChange={(event) => updateStore('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
               <Button type="submit" disabled={submitting}>{submitting ? 'Creating store…' : 'Create storefront'}</Button>
             </form>
           </CardContent></Card>
@@ -363,7 +294,8 @@ export function LiveVendorOnboarding() {
               <div className="rounded-lg border border-border p-3"><p className="text-xs text-text-tertiary">Business name</p><p className="mt-1 font-semibold text-text-primary">{storeForm.store_name}</p><p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/store/{storeForm.slug || 'your-business-name'}</p></div>
               {vendorType === 'both' && <p className="text-xs leading-5 text-text-tertiary">Your business name is the same as the storefront name you entered earlier. This field names the service you offer, not a second business. The service URL is generated from your shared business name.</p>}
             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Public URL slug</label><Input value={serviceForm.slug || 'your-business-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name.</p></div>
-            <Input label="Service category" value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required placeholder="e.g. Repairs, Cleaning, Photography" />
+            <label className="block text-sm font-medium text-text-secondary">Service category<select value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="">Choose a category</option><option value="Electronics & Gadgets">Electronics & Gadgets</option><option value="Fashion & Clothing">Fashion & Clothing</option><option value="Beauty & Personal Care">Beauty & Personal Care</option><option value="Food & Groceries">Food & Groceries</option><option value="Home & Living">Home & Living</option><option value="Health & Wellness">Health & Wellness</option><option value="Books & Stationery">Books & Stationery</option><option value="Sports & Fitness">Sports & Fitness</option><option value="Automotive">Automotive</option><option value="Home Services">Home Services</option><option value="Repairs & Maintenance">Repairs & Maintenance</option><option value="Professional Services">Professional Services</option><option value="Education & Tutoring">Education & Tutoring</option><option value="Events & Photography">Events & Photography</option><option value="Other">Other</option></select></label>
+            {serviceForm.category === 'Other' && <Input label="Your category" value={serviceForm.custom_category} onChange={(event) => updateService('custom_category', event.target.value)} required maxLength={100} placeholder="Enter your service category" />}
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={serviceForm.description} onChange={(event) => updateService('description', event.target.value)} required rows={3} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary" /></label>
             <Input label="Price range or starting price" value={serviceForm.price_range} onChange={(event) => updateService('price_range', event.target.value)} placeholder="e.g. From ₦15,000" />
             {vendorType !== 'both' && <label className="block text-sm font-medium text-text-secondary">Business location type<select value={serviceForm.location_mode} onChange={(event) => { const mode = event.target.value as LocationMode; updateService('location_mode', mode); updateService('fulfilment_options', mode === 'physical' ? ['on_site'] : mode === 'online' ? ['online'] : mode === 'hybrid' ? ['on_site', 'customer_visit', 'online'] : ['customer_visit']); }} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="physical">Physical location</option><option value="service_area">Service area</option><option value="mobile">Mobile business</option><option value="online">Online</option><option value="hybrid">Hybrid</option></select></label>}
@@ -384,7 +316,6 @@ export function LiveVendorOnboarding() {
               ))}
             </fieldset>
                         <label className="block text-sm font-medium text-text-secondary">Preferred contact method<select value={serviceForm.contact_preference} onChange={(event) => updateService('contact_preference', event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option></select></label>
-            <Input label="Business WhatsApp number" value={serviceForm.contact_whatsapp} onChange={(event) => updateService('contact_whatsapp', event.target.value)} placeholder="Optional business contact" />
             </fieldset>
             <Button type="submit" disabled={submitting}>{submitting ? 'Creating service…' : 'Create service profile'}</Button>
           </form>
@@ -396,21 +327,11 @@ export function LiveVendorOnboarding() {
           <Badge variant="success">Storefront live</Badge>
           <p className="text-sm leading-6 text-text-secondary">Your public business page is live. You can keep building it from your vendor dashboard. Identity and business verification are separate and can be completed later.</p>
           
-          {(status?.vendor_type || vendorType) !== 'services' && !status?.location_photos_uploaded && (
-            <form onSubmit={uploadPhotos} className="space-y-3 rounded-lg border border-border p-4">
-              <h3 className="font-semibold text-text-primary">Add business location photos (optional)</h3>
-              <p className="text-sm text-text-secondary">You can add 2–6 photos of your actual business location to help customers recognise your business. This is optional.</p>
-              <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setStorePhotos(Array.from(event.target.files || []).slice(0, 6))} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-4 file:py-2 file:font-medium file:text-secondary-foreground" />
-              {storePhotoPreviews.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{storePhotoPreviews.map(({ file, url }, index) => (
-                <div key={url} className="overflow-hidden rounded-lg border border-border">
-                  <img src={url} alt={file.name} className="h-28 w-full object-cover" />
-                  <div className="flex items-center justify-between gap-2 p-2"><span className="min-w-0 truncate text-xs text-text-secondary">{file.name}</span><button type="button" onClick={() => setStorePhotos((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="shrink-0 text-xs font-semibold text-destructive">Remove</button></div>
-                </div>
-              ))}</div>}
-              <p className="text-xs text-text-tertiary">{storePhotos.length} photo(s) selected. Preview and remove any image before uploading.</p>
-              <Button type="submit" variant="outline" disabled={submitting || storePhotos.length < 2}>{submitting ? 'Uploading…' : 'Upload location photos'}</Button>
-            </form>
-          )}
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="font-semibold text-text-primary">Add your business branding</h3>
+            <p className="mt-1 text-sm leading-6 text-text-secondary">Use a business cover photo or logo instead of uploading photos of your physical location. You can add both, and choose to reuse the same image for both, from Business settings.</p>
+            <Button type="button" variant="outline" onClick={() => router.push('/vendor/profile?section=business')}>Set up cover photo and logo</Button>
+          </div>
           <Button onClick={() => router.push('/vendor/dashboard')}>Go to vendor dashboard</Button>
         </CardContent></Card>
       )}

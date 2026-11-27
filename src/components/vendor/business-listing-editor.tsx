@@ -40,6 +40,8 @@ function firstBusiness(value: ExistingListing['business_profiles']): BusinessDet
   return Array.isArray(value) ? value[0] || null : value || null
 }
 
+const BUSINESS_CATEGORIES = ["Electronics & Gadgets","Fashion & Clothing","Beauty & Personal Care","Food & Groceries","Home & Living","Health & Wellness","Books & Stationery","Sports & Fitness","Automotive","Home Services","Repairs & Maintenance","Professional Services","Education & Tutoring","Events & Photography","Repairs","Photography","Cleaning","Other"]
+
 export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const isService = kind === 'service'
   const endpoint = isService ? '/vendors/service' : '/vendors/store'
@@ -48,14 +50,18 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [slug, setSlug] = useState('')
   const [storeImageUrl, setStoreImageUrl] = useState('')
   const [storeLogoUrl, setStoreLogoUrl] = useState('')
+  const [coverPreview, setCoverPreview] = useState('')
+  const [logoPreview, setLogoPreview] = useState('')
+  const [sameCoverAsLogo, setSameCoverAsLogo] = useState(false)
   const [slideshowImages, setSlideshowImages] = useState<string[]>([])
   const [logoInSlideshow, setLogoInSlideshow] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [category, setCategory] = useState('')
+  const [customCategory, setCustomCategory] = useState('')
   const [description, setDescription] = useState('')
   const [priceRange, setPriceRange] = useState('')
   const [tags, setTags] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
+  const [tagDraft, setTagDraft] = useState('')
   const [contactPreference, setContactPreference] = useState<'whatsapp' | 'call' | 'both'>('whatsapp')
   const [locationMode, setLocationMode] = useState<LocationMode>('physical')
   const [locationText, setLocationText] = useState('')
@@ -85,13 +91,14 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setSlug(current.slug || '')
       setStoreImageUrl(current.store_image_url || '')
       setStoreLogoUrl(current.store_logo_url || '')
+      setSameCoverAsLogo(!!current.store_image_url && current.store_image_url === current.store_logo_url)
       setSlideshowImages(current.store_slideshow_images || [])
       setLogoInSlideshow(current.store_logo_in_slideshow === true)
-      setCategory(current.category || '')
+      setCategory(BUSINESS_CATEGORIES.includes(current.category || '') ? (current.category || '') : current.category ? 'Other' : '')
+      setCustomCategory(BUSINESS_CATEGORIES.includes(current.category || '') ? '' : (current.category || ''))
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
       setTags((current.tags || []).join(', '))
-      setWhatsapp(current.contact_whatsapp || '')
       setContactPreference(current.contact_preference || 'whatsapp')
       setLocationMode(business?.location_mode || (business?.location_text || current.location_text ? 'physical' : 'service_area'))
       setLocationText(business?.location_text || current.location_text || '')
@@ -122,6 +129,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       return
     }
 
+    const previewUrl = URL.createObjectURL(file)
+    if (target === 'cover' || (target === 'logo' && sameCoverAsLogo)) setCoverPreview(previewUrl)
+    if (target === 'logo') setLogoPreview(previewUrl)
     setUploadingImage(true)
     setError('')
     setSuccess('')
@@ -139,20 +149,24 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
 
       const field = target === 'cover' ? 'store_image_url' : target === 'logo' ? 'store_logo_url' : 'store_slideshow_images'
       const value = target === 'slideshow' ? [...slideshowImages, upload.public_url] : upload.public_url
+      const payload = target === 'slideshow' ? { [field]: value } : sameCoverAsLogo ? { store_image_url: upload.public_url, store_logo_url: upload.public_url } : { [field]: value }
       const updated = await apiJson<{ store: ExistingListing }>('/vendors/store', {
         method: 'PATCH',
-        body: JSON.stringify({ [field]: value }),
+        body: JSON.stringify(payload),
       })
       if (!updated.store) throw new Error('The server did not confirm your brand image.')
       setListing((current) => current ? { ...current, ...updated.store } : updated.store)
-      if (target === 'cover') setStoreImageUrl(upload.public_url)
-      if (target === 'logo') setStoreLogoUrl(upload.public_url)
+      if (target === 'cover') { setStoreImageUrl(upload.public_url); if (sameCoverAsLogo) setStoreLogoUrl(upload.public_url) }
+      if (target === 'logo') { setStoreLogoUrl(upload.public_url); if (sameCoverAsLogo) setStoreImageUrl(upload.public_url) }
       if (target === 'slideshow') setSlideshowImages((current) => [...current, upload.public_url])
       setSuccess(target === 'cover' ? 'Your storefront cover has been updated.' : target === 'logo' ? 'Your business logo has been updated.' : 'Slideshow image added.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not upload this brand image.')
     } finally {
       setUploadingImage(false)
+      setCoverPreview('')
+      setLogoPreview('')
+      URL.revokeObjectURL(previewUrl)
     }
   }
 
@@ -191,10 +205,9 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       const payload = {
         [isService ? 'service_title' : 'store_name']: title.trim(),
         ...(!isService ? { store_image_url: storeImageUrl || null, store_logo_url: storeLogoUrl || null, store_slideshow_images: slideshowImages, store_logo_in_slideshow: logoInSlideshow } : {}),
-        category: category.trim(),
+        category: (category === 'Other' ? customCategory : category).trim(),
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-        contact_whatsapp: whatsapp.trim() || null,
         ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility } : {}),
         ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
       }
@@ -250,16 +263,32 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 <h2 className="text-sm font-semibold text-text-primary">Storefront cover</h2>
                 <p className="mt-1 text-xs leading-5 text-text-tertiary">Choose a strong landscape or portrait image that represents your brand. JPEG, PNG or WebP · up to 5 MB.</p>
               </div>
-              {storeImageUrl ? <img src={storeImageUrl} alt="Current storefront cover" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">Your brand image will appear here</div>}
+              {(coverPreview || storeImageUrl) ? <img src={coverPreview || storeImageUrl} alt="Current storefront cover" className="h-48 w-full rounded-lg object-cover" /> : <div className="grid h-40 place-items-center rounded-lg bg-gradient-to-br from-[#e9e4d8] to-[#c9c0ae] text-sm text-[#716b5d]">Your brand image will appear here</div>}
               <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-ink-raised">
                 {uploadingImage ? 'Uploading image…' : storeImageUrl ? 'Replace cover image' : 'Upload cover image'}
                 <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'cover') }} />
+              </label>
+              <label className="flex items-start gap-2 rounded-lg bg-secondary/50 p-3 text-sm text-text-secondary">
+                <input type="checkbox" checked={sameCoverAsLogo} onChange={async (event) => {
+                  const checked = event.target.checked
+                  setSameCoverAsLogo(checked)
+                  if (checked && (storeLogoUrl || storeImageUrl)) {
+                    const sharedUrl = storeLogoUrl || storeImageUrl
+                    try {
+                      const updated = await apiJson<{ store?: ExistingListing }>('/vendors/store', { method: 'PATCH', body: JSON.stringify({ store_image_url: sharedUrl, store_logo_url: sharedUrl }) })
+                      const savedStore = updated.store
+                      if (!savedStore) throw new Error('The server did not confirm the shared cover and logo.')
+                      setStoreImageUrl(sharedUrl); setStoreLogoUrl(sharedUrl); setListing((current) => current ? { ...current, ...savedStore } : savedStore)
+                    } catch (err) { setSameCoverAsLogo(false); setError(err instanceof Error ? err.message : 'Could not link the cover and logo.') }
+                  }
+                }} className="mt-1" />
+                <span><strong className="block text-text-primary">My cover photo and logo are the same</strong><span className="text-xs">Upload once and use the same image for both.</span></span>
               </label>
               <div className="border-t border-border pt-4">
                 <h3 className="text-sm font-semibold text-text-primary">Business logo</h3>
                 <p className="mt-1 text-xs leading-5 text-text-tertiary">A square logo works best. It appears beside your business name across the storefront.</p>
                 <div className="mt-3 flex items-center gap-4">
-                  {storeLogoUrl ? <img src={storeLogoUrl} alt="Business logo" className="h-20 w-20 rounded-full border border-border bg-white object-contain p-2" /> : <div className="grid h-20 w-20 place-items-center rounded-full border border-dashed border-border text-xs text-text-tertiary">No logo</div>}
+                  {(logoPreview || storeLogoUrl) ? <img src={logoPreview || storeLogoUrl} alt="Business logo" className="h-20 w-20 rounded-full border border-border bg-white object-contain p-2" /> : <div className="grid h-20 w-20 place-items-center rounded-full border border-dashed border-border text-xs text-text-tertiary">No logo</div>}
                   <label className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-ink-raised">
                     {uploadingImage ? 'Uploading…' : storeLogoUrl ? 'Replace logo' : 'Upload logo'}
                     <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage || saving} className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void uploadStoreAsset(file, 'logo') }} />
@@ -276,12 +305,19 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
                 <label className="flex items-start gap-2 text-sm text-text-secondary"><input type="checkbox" checked={logoInSlideshow} disabled={!storeLogoUrl || saving || uploadingImage} onChange={async (event) => { const checked = event.target.checked; setLogoInSlideshow(checked); try { await apiJson('/vendors/store', { method: 'PATCH', body: JSON.stringify({ store_logo_in_slideshow: checked }) }); setSuccess(checked ? 'Your logo will display for 10 seconds in the slideshow.' : 'Your logo will remain as the storefront mark, outside the slideshow.') } catch (err) { setLogoInSlideshow(!checked); setError(err instanceof Error ? err.message : 'Could not save slideshow settings.') } }} className="mt-1" /><span>Include my logo in the slideshow for 10 seconds</span></label>
               </div>
             </div>}
-            <Input label="Category" value={category} onChange={(event) => setCategory(event.target.value)} required maxLength={100} />
+            <label className="block text-sm font-medium text-text-secondary">Category<select value={category} onChange={(event) => setCategory(event.target.value)} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="">Choose a category</option><option value="Electronics & Gadgets">Electronics & Gadgets</option><option value="Fashion & Clothing">Fashion & Clothing</option><option value="Beauty & Personal Care">Beauty & Personal Care</option><option value="Food & Groceries">Food & Groceries</option><option value="Home & Living">Home & Living</option><option value="Health & Wellness">Health & Wellness</option><option value="Books & Stationery">Books & Stationery</option><option value="Sports & Fitness">Sports & Fitness</option><option value="Automotive">Automotive</option><option value="Home Services">Home Services</option><option value="Repairs & Maintenance">Repairs & Maintenance</option><option value="Professional Services">Professional Services</option><option value="Education & Tutoring">Education & Tutoring</option><option value="Events & Photography">Events & Photography</option><option value="Other">Other</option></select></label>
+            {category === 'Other' && <Input label="Your category" value={customCategory} onChange={(event) => setCustomCategory(event.target.value)} required maxLength={100} placeholder="Enter your business category" />}
             <label className="block text-sm font-medium text-text-secondary">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={5000} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-primary" /></label>
             {isService && <Input label="Price range or starting price" value={priceRange} onChange={(event) => setPriceRange(event.target.value)} placeholder="e.g. From ₦15,000" />}
-            <Input label="Tags (comma-separated)" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="e.g. repairs, home service" />
-            <Input label="Business WhatsApp number" type="tel" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} placeholder="+234…" />
-            {isService && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-text-secondary">Search keywords / tags</label>
+              <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
+                {tags.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => <span key={tag.toLowerCase()} className="inline-flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{tag}<button type="button" aria-label={'Remove '+tag} onClick={() => setTags(tags.split(',').map((item) => item.trim()).filter((item) => item && item.toLowerCase() !== tag.toLowerCase()).join(', '))} className="ml-1 text-primary/70 hover:text-primary">×</button></span>)}
+                <input value={tagDraft} onChange={(event) => { const value = event.target.value; if (value.includes(',')) { const parts = value.split(','); const additions = parts.slice(0,-1).map((part) => part.trim()).filter(Boolean); setTags([...tags.split(',').map((part) => part.trim()).filter(Boolean), ...additions].filter((item,index,all)=>all.findIndex((x)=>x.toLowerCase()===item.toLowerCase())===index).join(', ')); setTagDraft(parts[parts.length-1]) } else setTagDraft(value) }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); const next = tagDraft.trim(); if (next) setTags([...tags.split(',').map((part) => part.trim()).filter(Boolean), next].filter((item,index,all)=>all.findIndex((x)=>x.toLowerCase()===item.toLowerCase())===index).join(', ')); setTagDraft('') } else if (event.key === 'Backspace' && !tagDraft && tags) setTags(tags.split(',').slice(0,-1).join(', ')) }} placeholder={tags ? 'Add another keyword…' : 'Type a keyword and press comma or Enter'} className="min-w-[180px] flex-1 bg-transparent py-1 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
+              </div>
+              <p className="text-xs text-text-tertiary">Separate keywords with commas or press Enter. These help buyers find your business.</p>
+            </div>
+                        {isService && (
               <label className="block text-sm font-medium text-text-secondary">Preferred contact method
                 <select value={contactPreference} onChange={(event) => setContactPreference(event.target.value as typeof contactPreference)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
                   <option value="whatsapp">WhatsApp</option><option value="call">Phone call</option><option value="both">WhatsApp and phone call</option>

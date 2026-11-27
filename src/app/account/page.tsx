@@ -50,10 +50,8 @@ interface NotificationPreferences {
 const tabs = [
   { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, group: 'Dashboard' },
   { id: 'profile', label: 'Profile & personal details', icon: User, group: 'Account' },
-  { id: 'addresses', label: 'Delivery addresses', icon: MapPin, group: 'Account' },
   { id: 'orders', label: 'Order history', icon: Package, group: 'Activity' },
-  { id: 'payment', label: 'Payment preferences', icon: CreditCard, group: 'Preferences' },
-  { id: 'settings', label: 'Notifications & security', icon: Settings, group: 'Preferences' },
+  { id: 'settings', label: 'Preferences & security', icon: Settings, group: 'Preferences' },
 ] as const
 
 type TabId = typeof tabs[number]['id']
@@ -505,32 +503,6 @@ export default function AccountPage() {
           </div>
         )}
 
-        {/* Addresses Tab */}
-        {activeTab === 'addresses' && (
-          <div className="mt-6 space-y-6">
-            <h2 className="text-xl font-semibold text-text-primary">Saved Addresses</h2>
-            <Card variant="outlined" className="p-8 text-center">
-              <MapPin className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
-              <h3 className="text-lg font-semibold text-text-primary mb-2">Saved addresses are not available yet</h3>
-              <p className="text-text-secondary mb-4">The current backend does not expose persistent saved-address management. Add your delivery address during checkout; this page will not pretend to save it.</p>
-              <Link href="/marketplace/"><Button variant="outline">Browse marketplace</Button></Link>
-            </Card>
-          </div>
-        )}
-
-        {/* Payment Methods Tab */}
-        {activeTab === 'payment' && (
-          <div className="mt-6 space-y-6">
-            <h2 className="text-xl font-semibold text-text-primary">Payment Methods</h2>
-            <Card variant="outlined" className="p-8 text-center">
-              <CreditCard className="w-16 h-16 mx-auto text-text-tertiary mb-4" />
-              <h3 className="text-lg font-semibold text-text-primary mb-2">Payments are managed at checkout</h3>
-              <p className="text-text-secondary mb-4">Kamba does not store card numbers, CVVs or bank credentials in account settings. Choose an available payment method securely when placing an order.</p>
-              <Link href="/marketplace/"><Button variant="outline">Browse marketplace</Button></Link>
-            </Card>
-          </div>
-        )}
-
         {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div className="mt-6 space-y-6">
@@ -637,6 +609,20 @@ export default function AccountPage() {
             </Card>
 
             <NotificationContacts />
+
+            <Card variant="outlined">
+              <CardHeader><CardTitle className="flex items-center gap-2 text-text-primary"><MapPin className="h-5 w-5" /> Delivery addresses <Badge variant="secondary">Coming soon</Badge></CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-text-secondary">Saved delivery address management is not available yet. You can still enter a delivery address during checkout.</p>
+              </CardContent>
+            </Card>
+
+            <Card variant="outlined">
+              <CardHeader><CardTitle className="flex items-center gap-2 text-text-primary"><CreditCard className="h-5 w-5" /> Payment methods <Badge variant="secondary">Coming soon</Badge></CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-text-secondary">Kamba does not save card details. Choose an available payment method securely at checkout when placing an order.</p>
+              </CardContent>
+            </Card>
 
             <Card variant="elevated">
               <CardHeader>
