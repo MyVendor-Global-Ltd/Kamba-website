@@ -35,7 +35,6 @@ interface ExistingListing {
   price_range?: string | null
   tags?: string[] | null
   contact_phone?: string | null
-  contact_preference?: 'call' | 'both'
   location_text?: string | null
   location_lat?: number | null
   location_lng?: number | null
@@ -120,7 +119,6 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
   const [priceRange, setPriceRange] = useState('')
   const [tags, setTags] = useState('')
   const [tagDraft, setTagDraft] = useState('')
-  const [contactPreference, setContactPreference] = useState<'call' | 'both'>('both')
   const [locationMode, setLocationMode] = useState<LocationMode>('physical')
   const [locationText, setLocationText] = useState('')
   const [locationLat, setLocationLat] = useState<number | null>(null)
@@ -161,7 +159,6 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
       setDescription(current.description || '')
       setPriceRange(current.price_range || '')
       setTags((current.tags || []).join(', '))
-      setContactPreference(current.contact_preference === 'call' ? 'call' : 'both')
       setLocationMode(business?.location_mode || (business?.location_text || current.location_text ? 'physical' : 'service_area'))
       setLocationText(business?.location_text || current.location_text || '')
       setLocationLat(business?.location_lat ?? current.location_lat ?? null)
@@ -342,7 +339,7 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
         description: description.trim(),
         tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
         ...(!isService || vendorType !== 'both' ? { location_mode: locationMode, location_text: locationText.trim(), location_lat: locationLat, location_lng: locationLng, service_area_text: serviceAreaText.trim(), online_url: onlineUrl.trim(), location_visibility: locationVisibility, is_home_based: isHomeBased, public_location_text: publicLocationText.trim() } : {}),
-        ...(isService ? { price_range: priceRange.trim(), contact_preference: contactPreference } : {}),
+        ...(isService ? { price_range: priceRange.trim(), contact_preference: 'both' } : {}),
       }
       const response = await apiJson<{ store?: ExistingListing; service_profile?: ExistingListing }>(endpoint, {
         method: 'PATCH',
@@ -461,13 +458,6 @@ export function BusinessListingEditor({ kind }: { kind: EditorKind }) {
               </div>
               <p className="text-xs text-text-tertiary">Separate keywords with commas or press Enter. These help buyers find your business.</p>
             </div>
-                        {isService && (
-              <label className="block text-sm font-medium text-text-secondary">How customers can reach you
-                <select value={contactPreference} onChange={(event) => setContactPreference(event.target.value as typeof contactPreference)} className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary">
-                  <option value="call">Phone call</option><option value="both">Phone call and SMS</option>
-                </select>
-              </label>
-            )}
             {isService && vendorType === 'both' ? <div className="rounded-lg border border-border p-4"><h2 className="font-semibold text-text-primary">Shared business location</h2><p className="mt-1 text-sm text-text-secondary">This service uses the same business and pickup location as your storefront. Edit the address and its visibility from Storefront settings so the two listings stay in sync.</p></div> : <div className="border-t border-border pt-4">
               <h2 className="font-semibold text-text-primary">Business location and contact</h2>
               <p className="mt-1 text-sm text-text-secondary">Your account phone number is used as the business contact only when it has been verified by SMS. Customers can then call or text it. WhatsApp verification is not currently enabled, so this number will not be labelled WhatsApp verified.</p>
