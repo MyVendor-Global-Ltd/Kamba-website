@@ -16,7 +16,7 @@ function MockVendorOnboardPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const businessSlug = businessName.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
+  const businessSlug = businessName.toLowerCase().normalize('NFKD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
