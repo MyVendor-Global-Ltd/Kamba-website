@@ -37,7 +37,6 @@ export function LiveVendorOnboarding() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [createdStoreSlug, setCreatedStoreSlug] = useState('')
   const [businessSlug, setBusinessSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
 
@@ -126,7 +125,7 @@ export function LiveVendorOnboarding() {
     event.preventDefault()
     setSubmitting(true); setError(''); setSuccess('')
     try {
-      const created = await apiJson<{ store?: { slug?: string } }>('/vendors/onboard/store', {
+      await apiJson('/vendors/onboard/store', {
         method: 'POST',
         body: JSON.stringify({
           business_name: storeForm.store_name.trim(),
@@ -137,7 +136,6 @@ export function LiveVendorOnboarding() {
         }),
       })
       const statusLoaded = await loadStatus()
-      if (created.store?.slug) setCreatedStoreSlug(created.store.slug)
       setServiceForm((previous) => ({ ...previous, slug: makeSlug(storeForm.store_name) }))
       setSuccess(statusLoaded
         ? 'Store profile created. Continue with the next onboarding step.'
@@ -212,7 +210,7 @@ export function LiveVendorOnboarding() {
       <header className="max-w-2xl space-y-3"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Kamba for business</p><h1 className="font-display text-3xl font-semibold tracking-tight text-text-primary sm:text-4xl">Bring your business to Kamba.</h1><p className="max-w-xl text-sm leading-6 text-text-secondary sm:text-base">Create one business identity. Sell products, offer services, or do both — you can add more later without starting over.</p></header>
       <Card variant="outlined"><CardContent className="p-4 sm:p-5"><ol className="grid grid-cols-3 gap-3 sm:gap-5" aria-label="Business setup progress">{timelineSteps.map((step, index) => { const done = index < timelineStep; const current = index === timelineStep; return <li key={step.title} className="relative flex min-w-0 items-start gap-2"><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${done ? 'bg-primary text-white' : current ? 'border-2 border-primary text-primary' : 'border border-border text-text-tertiary'}`}>{done ? '✓' : index + 1}</span><span className="min-w-0"><span className={`block text-xs font-semibold sm:text-sm ${current || done ? 'text-text-primary' : 'text-text-tertiary'}`}>{step.title}</span><span className="mt-0.5 block text-[11px] leading-4 text-text-tertiary">{step.detail}</span></span></li> })}</ol></CardContent></Card>
       {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>}
-      {success && <div role="status" className="space-y-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><p>{success}</p>{createdStoreSlug && <a href={'/store/' + createdStoreSlug} target="_blank" rel="noreferrer" className="inline-flex font-semibold underline underline-offset-4">Open your Store page ↗</a>}</div>}
+      {success && <div role="status" className="space-y-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><p>{success}</p>{businessSlug && <a href={'/' + businessSlug} target="_blank" rel="noreferrer" className="inline-flex font-semibold underline underline-offset-4">View your business page · kamba.ng/{businessSlug} ↗</a>}</div>}
 
       {(stage === 'not_eligible' || (stage === 'liveness_required' && !eligibility.eligible)) && (
         <Card variant="outlined"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-gold" /> Complete these account requirements first</CardTitle></CardHeader><CardContent className="space-y-3">
