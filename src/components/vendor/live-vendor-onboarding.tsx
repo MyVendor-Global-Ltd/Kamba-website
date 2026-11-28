@@ -336,7 +336,7 @@ export function LiveVendorOnboarding() {
       )}
 
       {stage === 'complete' && (
-        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Your business is live</CardTitle></CardHeader><CardContent className="space-y-4">
+        <Card variant="elevated"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" /> Your business setup is ready</CardTitle></CardHeader><CardContent className="space-y-4">
           <Badge variant="success">Business profile created</Badge>
           <p className="text-sm leading-6 text-text-secondary">{vendorType === 'both' ? 'Your Store and Services profiles are ready under one business identity.' : vendorType === 'services' ? 'Your Services profile is ready. You can add a Store later without creating another business account.' : 'Your Store profile is ready. You can add Services later without creating another business account.'} Continue to your workspace to finish your public profile and start adding your first products or work.</p>
           
