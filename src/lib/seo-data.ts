@@ -41,3 +41,8 @@ export const getSeoService = cache(async (slug: string) => {
   )
   return data?.service_profile ?? data?.service ?? null
 })
+
+export const getSeoBusiness = cache(async (slug: string) => {
+  const data = await publicApi<{ business?: Record<string, any> }>(`/vendors/business/${encodeURIComponent(slug)}`)
+  return data?.business ?? null
+})
