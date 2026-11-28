@@ -20,6 +20,8 @@ interface OnboardingStatus {
   stage: string
   next_step: string
   vendor_type?: VendorType
+  business_name?: string | null
+  business_slug?: string | null
   location_photos_uploaded?: boolean
   verification_deadline_at?: string
 }
@@ -36,6 +38,7 @@ export function LiveVendorOnboarding() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [createdStoreSlug, setCreatedStoreSlug] = useState('')
+  const [businessSlug, setBusinessSlug] = useState('')
   const [vendorType, setVendorType] = useState<VendorType>('products')
 
   const [storeForm, setStoreForm] = useState({
@@ -57,6 +60,15 @@ export function LiveVendorOnboarding() {
       ])
       setEligibility(eligibilityData)
       setStatus(statusData)
+      if (statusData.business_slug) setBusinessSlug(statusData.business_slug)
+      if (statusData.business_name) {
+        setStoreForm((previous) => previous.store_name
+          ? previous
+          : { ...previous, store_name: statusData.business_name || '', slug: makeSlug(statusData.business_name || '') })
+        setServiceForm((previous) => previous.service_title
+          ? previous
+          : { ...previous, service_title: statusData.business_name || '', slug: makeSlug(statusData.business_name || '') })
+      }
       try {
         const saved = await apiJson<{ draft?: { vendor_type?: VendorType; storeForm?: Partial<typeof storeForm>; serviceForm?: Partial<typeof serviceForm> } }>('/vendors/onboard/draft')
         if (saved.draft?.vendor_type) setVendorType(saved.draft.vendor_type)
@@ -98,7 +110,11 @@ export function LiveVendorOnboarding() {
     event.preventDefault()
     setSubmitting(true); setError(''); setSuccess('')
     try {
-      await apiJson('/vendors/onboard/basic', { method: 'POST', body: JSON.stringify({ vendor_type: vendorType }) })
+      const created = await apiJson<{ business_profile?: { business_slug?: string } }>('/vendors/onboard/basic', {
+        method: 'POST',
+        body: JSON.stringify({ vendor_type: vendorType, business_name: storeForm.store_name.trim() }),
+      })
+      if (created.business_profile?.business_slug) setBusinessSlug(created.business_profile.business_slug)
       setServiceForm((previous) => ({ ...previous, service_title: storeForm.store_name.trim(), slug: makeSlug(storeForm.store_name) }))
       const statusLoaded = await loadStatus()
       try { await refreshProfile() } catch { /* Status is authoritative for onboarding continuation. */ }
@@ -182,7 +198,8 @@ export function LiveVendorOnboarding() {
   const stage = status.stage || 'not_eligible'
   const needsStore = status?.next_step === 'create_store'
   const needsService = status?.next_step === 'create_service'
-  const previewStoreSlug = storeForm.slug || makeSlug(storeForm.store_name) || 'your-store-name'
+  const previewStoreSlug = storeForm.slug || makeSlug(storeForm.store_name) || 'your-business-name'
+  const previewBusinessSlug = businessSlug || previewStoreSlug
   const timelineStep = stage === 'profile_setup' ? 1 : stage === 'complete' ? 2 : 0
   const timelineSteps = [
     { title: 'Business identity', detail: 'Name and what you offer' },
@@ -218,7 +235,7 @@ export function LiveVendorOnboarding() {
                 <Input label="Business name" placeholder="e.g. The Campus Closet" value={storeForm.store_name} onChange={(event) => updateStore('store_name', event.target.value)} required maxLength={160} />
                 <div className="rounded-xl border border-border bg-background px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Business link preview</p>
-                  <p className="mt-1 break-all text-sm font-semibold text-text-primary">kamba.ng/{storeForm.slug || 'your-business-name'}</p>
+                  <p className="mt-1 break-all text-sm font-semibold text-text-primary">kamba.ng/{previewBusinessSlug}</p>
                   <p className="mt-1 text-xs leading-5 text-text-tertiary">A clean link using your business name — no extra prefix. Your final public link is confirmed when your business profile is created.</p>
                 </div>
               </div>
@@ -270,7 +287,7 @@ export function LiveVendorOnboarding() {
               <div className="rounded-xl border border-border bg-surface-muted/40 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Your business</p>
                 <p className="mt-1 font-semibold text-text-primary">{storeForm.store_name}</p>
-                <p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/{storeForm.slug || 'your-business-name'}</p>
+                <p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/{previewBusinessSlug}</p>
                 <p className="mt-2 text-xs text-text-tertiary">This is the same business identity customers will see across your Store and Services.</p>
               </div>
               <fieldset className="space-y-4 rounded-xl border border-border p-4">
@@ -294,7 +311,7 @@ export function LiveVendorOnboarding() {
               <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/70">{storeForm.description || 'A short introduction to what makes your store worth discovering.'}</p>
               <div className="mt-8 border-t border-white/20 pt-4">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">Business link preview</p>
-                <p className="mt-2 break-all text-sm font-medium text-white">kamba.ng/{previewStoreSlug}</p>
+                <p className="mt-2 break-all text-sm font-medium text-white">kamba.ng/{previewBusinessSlug}</p>
               </div>
             </div>
             <div className="px-5 py-4 text-xs leading-5 text-white/60">After creating your store, upload a cover image from Storefront settings to complete the editorial look.</div>
@@ -307,7 +324,7 @@ export function LiveVendorOnboarding() {
           <form onSubmit={createService} className="space-y-4">
             <fieldset className="space-y-4 rounded-xl border border-border p-4">
               <legend className="px-1 text-sm font-semibold text-text-primary">Service details and fulfilment</legend>
-              <div className="rounded-lg border border-border bg-surface-muted/40 p-3"><p className="text-xs text-text-tertiary">One business identity</p><p className="mt-1 font-semibold text-text-primary">{storeForm.store_name}</p><p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/{storeForm.slug || 'your-business-name'}</p></div>
+              <div className="rounded-lg border border-border bg-surface-muted/40 p-3"><p className="text-xs text-text-tertiary">One business identity</p><p className="mt-1 font-semibold text-text-primary">{storeForm.store_name}</p><p className="mt-1 break-all text-xs text-text-secondary">kamba.ng/{previewBusinessSlug}</p></div>
               {vendorType === 'both' && <p className="text-xs leading-5 text-text-tertiary">Your business name is the same as the storefront name you entered earlier. This field names the service you offer, not a second business. The service URL is generated from your shared business name.</p>}
             <div className="space-y-1"><label className="text-sm font-medium text-text-secondary">Public URL slug</label><Input value={serviceForm.slug || 'your-business-name'} readOnly aria-readonly="true" /><p className="text-xs text-text-tertiary">Generated automatically from your business name.</p></div>
             <label className="block text-sm font-medium text-text-secondary">Service category<select value={serviceForm.category} onChange={(event) => updateService('category', event.target.value)} required className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-text-primary"><option value="">Choose a category</option><option value="Electronics & Gadgets">Electronics & Gadgets</option><option value="Fashion & Clothing">Fashion & Clothing</option><option value="Beauty & Personal Care">Beauty & Personal Care</option><option value="Food & Groceries">Food & Groceries</option><option value="Home & Living">Home & Living</option><option value="Health & Wellness">Health & Wellness</option><option value="Books & Stationery">Books & Stationery</option><option value="Sports & Fitness">Sports & Fitness</option><option value="Automotive">Automotive</option><option value="Home Services">Home Services</option><option value="Repairs & Maintenance">Repairs & Maintenance</option><option value="Professional Services">Professional Services</option><option value="Education & Tutoring">Education & Tutoring</option><option value="Events & Photography">Events & Photography</option><option value="Other">Other</option></select></label>
